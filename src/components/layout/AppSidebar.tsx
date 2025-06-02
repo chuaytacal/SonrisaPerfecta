@@ -9,8 +9,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  // SidebarMenuSub, // Not directly used, sub-menus handled by Accordion
-  // SidebarMenuSubButton, // Not directly used
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import Logo from '@/components/Logo';
@@ -31,8 +29,6 @@ import {
   ClipboardType,
   FilePlus,
   BarChart3,
-  ChevronDown, // Still needed for AccordionTrigger's default icon if not overridden
-  ChevronUp,   // Potentially for custom use, but not for AccordionTrigger's default
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import React, { useState } from 'react';
@@ -45,10 +41,12 @@ const sidebarNavItems = [
   {
     label: 'Gestión Usuario',
     icon: Users,
+    basePathForActive: '/gestion-usuario',
     subItems: [
       {
         label: 'Pacientes',
-        icon: Users, // Or a specific patient icon
+        icon: Users, 
+        basePathForActive: '/gestion-usuario/pacientes',
         subSubItems: [
           { href: '/gestion-usuario/pacientes/registrar', label: 'Registrar Paciente', icon: UserPlus },
           { href: '/gestion-usuario/pacientes/lista', label: 'Lista de Pacientes', icon: List },
@@ -58,6 +56,7 @@ const sidebarNavItems = [
       {
         label: 'Personal',
         icon: Briefcase,
+        basePathForActive: '/gestion-usuario/personal',
         subSubItems: [
           { href: '/gestion-usuario/personal/registrar', label: 'Registrar Personal', icon: UserPlus },
           { href: '/gestion-usuario/personal/lista', label: 'Lista de Personal', icon: List },
@@ -68,6 +67,7 @@ const sidebarNavItems = [
   {
     label: 'Inventario',
     icon: Archive,
+    basePathForActive: '/inventario',
     subItems: [
       { href: '/inventario/productos/lista', label: 'Lista de Productos', icon: List },
       { href: '/inventario/productos/registrar', label: 'Registrar Productos', icon: PlusSquare },
@@ -76,6 +76,7 @@ const sidebarNavItems = [
   {
     label: 'Administración',
     icon: Settings,
+    basePathForActive: '/administracion',
     subItems: [
       { href: '/administracion/perfiles/gestion', label: 'Gestión de Perfiles', icon: UserCog },
       { href: '/administracion/perfiles/lista', label: 'Lista de Perfiles', icon: List },
@@ -84,6 +85,7 @@ const sidebarNavItems = [
   {
     label: 'Historial de Pago',
     icon: History,
+    basePathForActive: '/historial-pago',
     subItems: [
       { href: '/historial-pago/registrar', label: 'Registrar Pago', icon: CircleDollarSign },
       { href: '/historial-pago/lista', label: 'Lista de Pagos', icon: List },
@@ -92,6 +94,7 @@ const sidebarNavItems = [
   {
     label: 'Recetas',
     icon: ClipboardType,
+    basePathForActive: '/recetas',
     subItems: [
       { href: '/recetas/registrar', label: 'Registrar Recetas', icon: FilePlus },
       { href: '/recetas/etiquetas', label: 'Etiquetas', icon: Tag },
@@ -102,39 +105,46 @@ const sidebarNavItems = [
 
 export default function AppSidebar() {
   const pathname = usePathname();
-  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+  const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(() => {
+    // Initially open accordion items if the current path is within their sub-items
+    const activeItems: string[] = [];
+    function findActive(items: any[], currentPath: string) {
+      for (const item of items) {
+        if (item.basePathForActive && currentPath.startsWith(item.basePathForActive)) {
+          activeItems.push(item.label);
+          if (item.subItems || item.subSubItems) {
+            findActive(item.subItems || item.subSubItems, currentPath);
+          }
+        }
+      }
+    }
+    findActive(sidebarNavItems, pathname);
+    return activeItems;
+  });
 
-  const toggleMenu = (label: string) => {
-    setOpenMenus(prev => ({ ...prev, [label]: !prev[label] }));
-  };
 
   const renderNavItems = (items: any[], level = 0) => {
     return items.map((item) => {
       const Icon = item.icon;
       const isActive = item.href && pathname === item.href;
-      // const isMenuOpen = openMenus[item.label] || false; // Not needed if AccordionTrigger handles its own icon state
-
+      
       if (item.subItems || item.subSubItems) {
         const subItems = item.subItems || item.subSubItems;
+        const isParentActive = item.basePathForActive && pathname.startsWith(item.basePathForActive);
+
         return (
           <SidebarMenuItem key={item.label}>
-            <Accordion type="single" collapsible className="w-full">
+            <Accordion type="multiple" value={openAccordionItems} onValueChange={setOpenAccordionItems} className="w-full">
               <AccordionItem value={item.label} className="border-none">
                 <AccordionTrigger
-                  onClick={() => toggleMenu(item.label)} // toggleMenu might still be useful for other logic if needed
                   className={cn(
                     "flex w-full items-center gap-2 rounded-md p-2 text-left text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring outline-none",
                     level > 0 && "pl-6",
-                     // AccordionTrigger itself doesn't usually have an 'isActive' state tied to path,
-                     // but if a parent group is active, you might style it.
-                     // For now, assuming isActive here is for styling the trigger if its content is active.
-                     // However, the default AccordionTrigger styling for 'open' state might be sufficient.
-                     // pathname.startsWith(item.basePathForActive) && "bg-sidebar-accent text-sidebar-accent-foreground" // Example if you had basePathForActive
+                    isParentActive && !isActive && "text-sidebar-primary font-medium" // Style parent if active but not the link itself
                   )}
                 >
-                  {Icon && <Icon className="h-4 w-4" />}
+                  {Icon && <Icon className={cn("h-4 w-4", isParentActive && "text-sidebar-primary")} />}
                   <span>{item.label}</span>
-                  {/* Chevron is now handled by AccordionTrigger directly from shadcn/ui */}
                 </AccordionTrigger>
                 <AccordionContent className="pt-0 pb-0">
                   <SidebarMenu className={cn("pl-4", level > 0 && "pl-8")}>
@@ -168,7 +178,7 @@ export default function AppSidebar() {
 
 
   return (
-    <Sidebar side="right" collapsible="icon" className="border-l">
+    <Sidebar side="left" collapsible="icon" className="border-r">
       <SidebarHeader className="p-2 flex items-center justify-between">
         <Logo />
         <SidebarTrigger className="ml-auto hidden md:flex" />

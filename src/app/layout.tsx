@@ -28,7 +28,9 @@ export default function RootLayout({
           <div className="flex min-h-screen">
             <AppSidebar />
             <SidebarInset className="flex-1 flex flex-col">
-              <header className="sticky top-0 z-30 flex h-14 items-center justify-end border-b bg-background px-4 py-3 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+              <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background px-4 py-3 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+                {/* Placeholder for potential breadcrumbs or global actions */}
+                <div></div>
                 <div className="md:hidden">
                   <SidebarTrigger>
                     <Button variant="outline" size="icon">
