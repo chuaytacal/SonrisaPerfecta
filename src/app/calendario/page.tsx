@@ -1,7 +1,8 @@
+
 "use client";
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { Calendar as BigCalendar, dateFnsLocalizer, Views, NavigateAction } from 'react-big-calendar';
+import { Calendar as BigCalendar, dateFnsLocalizer, Views, Navigate } from 'react-big-calendar';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
 import startOfWeek from 'date-fns/startOfWeek';
@@ -52,8 +53,8 @@ export default function CalendarioPage() {
   const { toast } = useToast();
 
   const handleSelectSlot = useCallback(({ start, end }: { start: Date; end: Date }) => {
-    setSelectedSlotInfo({ 
-      start, 
+    setSelectedSlotInfo({
+      start,
       end,
       startDate: start,
       startTime: format(start, 'HH:mm'),
@@ -100,15 +101,15 @@ export default function CalendarioPage() {
     }),
     []
   );
-  
+
   const CustomToolbar = ({ date, view, views, label, onNavigate, onView }: any) => {
     return (
       <div className="rbc-toolbar mb-4 p-2 border border-border rounded-md bg-card shadow-sm">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
             <div className="flex items-center gap-1">
-                <Button variant="outline" size="icon" onClick={() => onNavigate(NavigateAction.PREVIOUS)}><ChevronLeft className="h-5 w-5" /></Button>
-                <Button variant="outline" onClick={() => onNavigate(NavigateAction.TODAY)} className="px-3 py-1.5 h-auto text-sm">Hoy</Button>
-                <Button variant="outline" size="icon" onClick={() => onNavigate(NavigateAction.NEXT)}><ChevronRight className="h-5 w-5" /></Button>
+                <Button variant="outline" size="icon" onClick={() => onNavigate(Navigate.PREVIOUS)}><ChevronLeft className="h-5 w-5" /></Button>
+                <Button variant="outline" onClick={() => onNavigate(Navigate.TODAY)} className="px-3 py-1.5 h-auto text-sm">Hoy</Button>
+                <Button variant="outline" size="icon" onClick={() => onNavigate(Navigate.NEXT)}><ChevronRight className="h-5 w-5" /></Button>
             </div>
             <h2 className="text-lg font-semibold text-foreground flex-grow text-center sm:text-left my-2 sm:my-0">{label}</h2>
             <div className="flex items-center gap-1">
@@ -138,7 +139,7 @@ export default function CalendarioPage() {
   return (
     <div className="flex flex-col h-full relative">
       <h1 className="text-3xl font-bold text-foreground mb-6">Calendario de Citas</h1>
-      
+
       <div className="flex-grow relative" style={{ height: 'calc(100vh - 180px)' }}> {/* Adjust height as needed */}
         <BigCalendar
           localizer={localizer}
@@ -167,11 +168,11 @@ export default function CalendarioPage() {
             timeGutterFormat: (date, culture, localizer) =>
               localizer ? localizer.format(date, 'HH:mm', culture) : '',
             eventTimeRangeFormat: ({ start, end }, culture, localizer) =>
-              localizer 
+              localizer
                 ? `${localizer.format(start, 'HH:mm', culture)} - ${localizer.format(end, 'HH:mm', culture)}`
                 : '',
             agendaTimeRangeFormat: ({ start, end }, culture, localizer) =>
-               localizer 
+               localizer
                 ? `${localizer.format(start, 'HH:mm', culture)} - ${localizer.format(end, 'HH:mm', culture)}`
                 : '',
              dayFormat: (date, culture, localizer) =>
