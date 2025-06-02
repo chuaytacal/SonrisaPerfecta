@@ -3,6 +3,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Styles for react-big-calendar - THIS IS THE CORRECT PLACEMENT */
+@import 'react-big-calendar/lib/css/react-big-calendar.css';
+
 
 @layer base {
   :root {
@@ -89,32 +92,150 @@
   }
 }
 
-/* Styles for react-big-calendar */
-.rbc-event {
-  @apply bg-primary text-primary-foreground border-primary-foreground/50;
-}
-.rbc-event.rbc-selected {
-  @apply bg-accent text-accent-foreground;
-}
-.rbc-slot-selection {
-  @apply bg-accent/30;
-}
-.rbc-toolbar button {
-    @apply text-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground disabled:text-muted-foreground;
-}
-.rbc-toolbar button.rbc-active {
-    @apply bg-primary text-primary-foreground shadow-sm hover:bg-primary/90;
-}
-
-/* Ensure calendar height fills available space */
+/* Custom Styles for react-big-calendar to align with ShadCN theme */
+/* These styles should come AFTER the @import and AFTER @layer base */
 .rbc-calendar {
-  height: 100%;
+  @apply bg-card text-card-foreground rounded-lg shadow-md;
+  height: 100%; /* Ensure calendar takes full height of its container */
   display: flex;
   flex-direction: column;
 }
-.rbc-time-view, .rbc-month-view {
-  flex-grow: 1;
+
+.rbc-toolbar {
+  /* CustomToolbar component handles its own styling via ShadCN Button and layout classes */
+  @apply mb-4 p-3 border border-border rounded-lg bg-card shadow-sm; /* This class is on the CustomToolbar div */
 }
-.rbc-time-content {
-  min-height: 400px; /* Or any suitable minimum height */
+
+.rbc-btn-group button { /* Default buttons if not using CustomToolbar fully */
+  @apply text-foreground bg-transparent hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground disabled:text-muted-foreground;
+  @apply px-3 py-1.5 rounded-md border border-input;
+}
+
+.rbc-btn-group button.rbc-active {
+  @apply bg-primary text-primary-foreground shadow-sm hover:bg-primary/90;
+}
+
+.rbc-header {
+  @apply text-center py-2 border-b border-border text-sm font-medium text-foreground;
+}
+
+.rbc-month-view, .rbc-time-view {
+  @apply border-0 flex-grow; /* Remove default borders if they conflict, allow growth */
+}
+
+.rbc-month-row {
+  @apply flex overflow-hidden;
+  min-height: 100px; /* Ensure rows have some minimum height */
+}
+
+.rbc-day-bg {
+  @apply border-l border-border;
+}
+.rbc-day-bg:first-child {
+  @apply border-l-0;
+}
+.rbc-off-range-bg {
+  @apply bg-muted/30;
+}
+
+.rbc-today {
+  @apply bg-secondary; /* Highlight today's date background */
+}
+
+.rbc-event {
+  @apply p-1 text-xs rounded-md shadow-sm transition-colors duration-150 ease-in-out;
+  /* Default event colors are handled by eventPropGetter for specific event colors */
+  /* Fallback if no specific color: */
+  @apply bg-primary text-primary-foreground border-primary;
+}
+
+.rbc-event-label { /* Text inside event for title */
+  @apply font-medium;
+}
+.rbc-event-content { /* Content for multi-line events or agenda */
+  @apply text-xs;
+}
+
+.rbc-event.rbc-selected {
+  @apply bg-accent text-accent-foreground ring-2 ring-ring ring-offset-1;
+}
+
+.rbc-slot-selection { /* When dragging to select a time slot */
+  @apply bg-accent/40 rounded;
+}
+
+.rbc-time-gutter {
+  @apply border-r border-border;
+}
+.rbc-time-header-gutter, .rbc-time-gutter .rbc-timeslot-group {
+   min-height: 40px; /* Ensure slots are tall enough */
+}
+.rbc-timeslot-group {
+  @apply border-b border-border;
+}
+.rbc-time-slot {
+  /* Individual time slot in the gutter or grid, often empty or just for lines */
+}
+.rbc-label { /* Labels in the time gutter e.g. 8:00 AM */
+  @apply p-2 text-xs text-muted-foreground text-right;
+}
+
+.rbc-current-time-indicator {
+  @apply bg-destructive h-0.5; /* Red line for current time */
+}
+
+
+.rbc-agenda-view table {
+  @apply w-full border-collapse;
+}
+.rbc-agenda-view table tbody tr td {
+  @apply p-2 border-b border-border;
+}
+.rbc-agenda-date-cell, .rbc-agenda-time-cell {
+  @apply text-muted-foreground;
+}
+
+.rbc-addons-dnd .rbc-addons-dnd-resizable-month-event {
+    position: relative;
+}
+.rbc-addons-dnd .rbc-addons-dnd-resize-month-event-anchor:first-child {
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+}
+.rbc-addons-dnd .rbc-addons-dnd-resize-month-event-anchor:last-child {
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+}
+
+/* Ensure calendar content area grows */
+.rbc-time-content, .rbc-month-view > .rbc-row > .rbc-row-content {
+  flex-grow: 1;
+  min-height: 400px; /* Adjust as needed for a good minimum scroll area */
+}
+
+.rbc-month-view .rbc-row-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* Needed for month view day cells to expand */
+}
+
+.rbc-month-view .rbc-day-bg {
+  flex: 1 0 0%; /* Allow day cells to expand */
+}
+
+.rbc-show-more {
+  @apply text-primary text-xs mt-1 block hover:underline;
+}
+
+/* Fix for popups (like +X more events) to appear above other elements */
+.rbc-overlay {
+  @apply z-50 bg-popover text-popover-foreground border border-border rounded-md shadow-lg p-2;
+}
+.rbc-overlay .rbc-event {
+  /* Style events within the popup if needed */
+  @apply my-0.5;
 }

@@ -95,40 +95,57 @@ export default function CalendarioPage() {
       ...(event.eventColor && {
         style: {
           backgroundColor: event.eventColor,
-          borderColor: event.eventColor,
+          borderColor: event.eventColor, // Consider a slightly darker shade or a contrasting border for better visibility
         },
       }),
+      className: 'cursor-pointer',
     }),
     []
   );
 
   const CustomToolbar = ({ date, view, views, label, onNavigate, onView }: any) => {
+    const viewIcons: Record<string, React.ElementType> = {
+      [Views.MONTH]: LayoutGrid,
+      [Views.WEEK]: Rows3,
+      [Views.DAY]: CalendarDays,
+      [Views.AGENDA]: ListFilter,
+    };
+
     return (
-      <div className="rbc-toolbar mb-4 p-2 border border-border rounded-md bg-card shadow-sm">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div className="rbc-toolbar mb-4 p-3 border border-border rounded-lg bg-card shadow-md">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4">
             <div className="flex items-center gap-1">
-                <Button variant="outline" size="icon" onClick={() => onNavigate(Navigate.PREVIOUS)}><ChevronLeft className="h-5 w-5" /></Button>
-                <Button variant="outline" onClick={() => onNavigate(Navigate.TODAY)} className="px-3 py-1.5 h-auto text-sm">Hoy</Button>
-                <Button variant="outline" size="icon" onClick={() => onNavigate(Navigate.NEXT)}><ChevronRight className="h-5 w-5" /></Button>
-            </div>
-            <h2 className="text-lg font-semibold text-foreground flex-grow text-center sm:text-left my-2 sm:my-0">{label}</h2>
-            <div className="flex items-center gap-1">
-                {(views as string[]).map((viewName) => (
-                <Button
-                    key={viewName}
-                    variant={view === viewName ? 'default' : 'outline'}
-                    onClick={() => onView(viewName)}
-                    size="sm"
-                    className="px-2 py-1 h-auto text-xs sm:text-sm"
-                >
-                    {viewName === Views.MONTH && <LayoutGrid className="mr-1 h-4 w-4 sm:hidden" />}
-                    {viewName === Views.WEEK && <Rows3 className="mr-1 h-4 w-4 sm:hidden" />}
-                    {viewName === Views.DAY && <CalendarDays className="mr-1 h-4 w-4 sm:hidden" />}
-                    {viewName === Views.AGENDA && <ListFilter className="mr-1 h-4 w-4 sm:hidden" />}
-                    <span className="hidden sm:inline">{messages[viewName as keyof typeof messages] || viewName.charAt(0).toUpperCase() + viewName.slice(1)}</span>
-                    <span className="sm:hidden">{messages[viewName as keyof typeof messages]?.substring(0,1) || viewName.charAt(0).toUpperCase()}</span>
+                <Button variant="outline" size="icon" onClick={() => onNavigate(Navigate.PREVIOUS)} aria-label="Anterior">
+                    <ChevronLeft className="h-5 w-5" />
                 </Button>
-                ))}
+                <Button variant="outline" onClick={() => onNavigate(Navigate.TODAY)} className="px-4 py-2 text-sm font-medium">
+                    Hoy
+                </Button>
+                <Button variant="outline" size="icon" onClick={() => onNavigate(Navigate.NEXT)} aria-label="Siguiente">
+                    <ChevronRight className="h-5 w-5" />
+                </Button>
+            </div>
+            <h2 className="text-xl font-semibold text-foreground flex-grow text-center my-2 sm:my-0 order-first sm:order-none">
+                {label}
+            </h2>
+            <div className="flex items-center gap-1">
+                {(views as string[]).map((viewName) => {
+                  const IconComponent = viewIcons[viewName];
+                  const viewLabel = messages[viewName as keyof typeof messages] || viewName.charAt(0).toUpperCase() + viewName.slice(1);
+                  return (
+                    <Button
+                        key={viewName}
+                        variant={view === viewName ? 'default' : 'outline'}
+                        onClick={() => onView(viewName)}
+                        size="sm"
+                        className="px-3 py-2 text-sm" // Adjusted padding for better spacing with icon
+                        aria-label={`Vista ${viewLabel}`}
+                    >
+                        {IconComponent && <IconComponent className="mr-2 h-4 w-4" />}
+                        {viewLabel}
+                    </Button>
+                  );
+                })}
             </div>
         </div>
       </div>
@@ -140,7 +157,7 @@ export default function CalendarioPage() {
     <div className="flex flex-col h-full relative">
       <h1 className="text-3xl font-bold text-foreground mb-6">Calendario de Citas</h1>
 
-      <div className="flex-grow relative" style={{ height: 'calc(100vh - 180px)' }}> {/* Adjust height as needed */}
+      <div className="flex-grow relative" style={{ height: 'calc(100vh - 200px)' }}> {/* Adjusted height slightly */}
         <BigCalendar
           localizer={localizer}
           events={appointments}
@@ -153,7 +170,7 @@ export default function CalendarioPage() {
           views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
           messages={messages}
           culture="es"
-          className="bg-card text-card-foreground p-0 border-none rounded-lg shadow-md"
+          className="bg-card text-card-foreground p-0 border-none rounded-lg shadow-md" // Ensure no extra padding that might shrink calendar
           components={{
             toolbar: CustomToolbar,
           }}
@@ -165,19 +182,28 @@ export default function CalendarioPage() {
           min={new Date(0,0,0, 7,0,0)} // 7 AM
           max={new Date(0,0,0, 21,0,0)} // 9 PM
           formats={{
-            timeGutterFormat: (date, culture, localizer) =>
-              localizer ? localizer.format(date, 'HH:mm', culture) : '',
-            eventTimeRangeFormat: ({ start, end }, culture, localizer) =>
-              localizer
-                ? `${localizer.format(start, 'HH:mm', culture)} - ${localizer.format(end, 'HH:mm', culture)}`
+            timeGutterFormat: (date, culture, localizerRef) =>
+              localizerRef ? localizerRef.format(date, 'HH:mm', culture) : '',
+            eventTimeRangeFormat: ({ start, end }, culture, localizerRef) =>
+              localizerRef
+                ? `${localizerRef.format(start, 'HH:mm', culture)} - ${localizerRef.format(end, 'HH:mm', culture)}`
                 : '',
-            agendaTimeRangeFormat: ({ start, end }, culture, localizer) =>
-               localizer
-                ? `${localizer.format(start, 'HH:mm', culture)} - ${localizer.format(end, 'HH:mm', culture)}`
+            agendaTimeRangeFormat: ({ start, end }, culture, localizerRef) =>
+               localizerRef
+                ? `${localizerRef.format(start, 'HH:mm', culture)} - ${localizerRef.format(end, 'HH:mm', culture)}`
                 : '',
-             dayFormat: (date, culture, localizer) =>
-              localizer ? localizer.format(date, 'EEE d', culture) : '', // 'Lun 5'
+             dayFormat: (date, culture, localizerRef) => // Short day name and day number e.g. "Lun 5"
+              localizerRef ? localizerRef.format(date, 'EEE d', culture) : '',
+             monthHeaderFormat: (date, culture, localizerRef) => // Full month name and year e.g. "Junio 2025" for month view header
+              localizerRef ? localizerRef.format(date, 'LLLL yyyy', culture) : '',
+             dayHeaderFormat: (date, culture, localizerRef) => // Day name, month, day number e.g. "lunes, jun. 2" for day view header
+              localizerRef ? localizerRef.format(date, 'eeee, MMM d', culture) : '',
+             agendaHeaderFormat: ({ start, end }, culture, localizerRef) => // Range for agenda view e.g. "6 jun. – 12 jun."
+              localizerRef ? `${localizerRef.format(start, 'd MMM', culture)} – ${localizerRef.format(end, 'd MMM', culture)}` : '',
+
           }}
+          dayLayoutAlgorithm="no-overlap" // Helps with event display
+          popup // Enables the default "+X more" popup for overlapped events
         />
       </div>
 
@@ -190,6 +216,7 @@ export default function CalendarioPage() {
           setEditingAppointment(null);
           setIsModalOpen(true);
         }}
+        aria-label="Añadir nueva cita"
       >
         <Plus className="h-7 w-7" />
         <span className="sr-only">Añadir Cita</span>
@@ -211,3 +238,4 @@ export default function CalendarioPage() {
     </div>
   );
 }
+
