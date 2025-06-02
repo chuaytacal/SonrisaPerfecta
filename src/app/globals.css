@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import 'react-big-calendar/lib/css/react-big-calendar.css';
+
 @layer base {
   :root {
     --background: 210 17% 98%; /* #F9FAFB */
@@ -85,4 +87,33 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.rbc-event {
+  @apply bg-primary text-primary-foreground border-primary-foreground/50;
+}
+.rbc-event.rbc-selected {
+  @apply bg-accent text-accent-foreground;
+}
+.rbc-slot-selection {
+  @apply bg-accent/30;
+}
+.rbc-toolbar button {
+    @apply text-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground disabled:text-muted-foreground;
+}
+.rbc-toolbar button.rbc-active {
+    @apply bg-primary text-primary-foreground shadow-sm hover:bg-primary/90;
+}
+
+/* Ensure calendar height fills available space */
+.rbc-calendar {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.rbc-time-view, .rbc-month-view {
+  flex-grow: 1;
+}
+.rbc-time-content {
+  min-height: 400px; /* Or any suitable minimum height */
 }
