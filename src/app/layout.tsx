@@ -25,9 +25,9 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased bg-background">
         <SidebarProvider defaultOpen>
-          <div className="flex min-h-screen">
+          <div className="flex min-h-screen w-full"> {/* Added w-full */}
             <AppSidebar />
-            <SidebarInset className="flex-1 flex flex-col">
+            <SidebarInset> {/* Removed redundant flex-1 flex-col */}
               <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background px-4 py-3 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
                 {/* Placeholder for potential breadcrumbs or global actions */}
                 <div></div>
@@ -40,9 +40,10 @@ export default function RootLayout({
                 </div>
                 {/* Future: User menu / notifications can go here */}
               </header>
-              <main className="flex-1 p-4 md:p-6 overflow-auto">
+              {/* Changed inner main to div, SidebarInset is the main semantic wrapper */}
+              <div className="flex-1 p-4 md:p-6 overflow-auto">
                 {children}
-              </main>
+              </div>
             </SidebarInset>
           </div>
           <Toaster />

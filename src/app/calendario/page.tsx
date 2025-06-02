@@ -138,7 +138,7 @@ export default function CalendarioPage() {
                         variant={view === viewName ? 'default' : 'outline'}
                         onClick={() => onView(viewName)}
                         size="sm"
-                        className="px-3 py-2 text-sm" // Adjusted padding for better spacing with icon
+                        className="px-3 py-2 text-sm" 
                         aria-label={`Vista ${viewLabel}`}
                     >
                         {IconComponent && <IconComponent className="mr-2 h-4 w-4" />}
@@ -157,7 +157,8 @@ export default function CalendarioPage() {
     <div className="flex flex-col h-full relative">
       <h1 className="text-3xl font-bold text-foreground mb-6">Calendario de Citas</h1>
 
-      <div className="flex-grow relative" style={{ height: 'calc(100vh - 200px)' }}> {/* Adjusted height slightly */}
+      {/* Rely on flex-grow for height */}
+      <div className="flex-grow relative"> 
         <BigCalendar
           localizer={localizer}
           events={appointments}
@@ -170,7 +171,7 @@ export default function CalendarioPage() {
           views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
           messages={messages}
           culture="es"
-          className="bg-card text-card-foreground p-0 border-none rounded-lg shadow-md" // Ensure no extra padding that might shrink calendar
+          className="bg-card text-card-foreground p-0 border-none rounded-lg shadow-md" 
           components={{
             toolbar: CustomToolbar,
           }}
@@ -192,18 +193,18 @@ export default function CalendarioPage() {
                localizerRef
                 ? `${localizerRef.format(start, 'HH:mm', culture)} - ${localizerRef.format(end, 'HH:mm', culture)}`
                 : '',
-             dayFormat: (date, culture, localizerRef) => // Short day name and day number e.g. "Lun 5"
+             dayFormat: (date, culture, localizerRef) => 
               localizerRef ? localizerRef.format(date, 'EEE d', culture) : '',
-             monthHeaderFormat: (date, culture, localizerRef) => // Full month name and year e.g. "Junio 2025" for month view header
+             monthHeaderFormat: (date, culture, localizerRef) => 
               localizerRef ? localizerRef.format(date, 'LLLL yyyy', culture) : '',
-             dayHeaderFormat: (date, culture, localizerRef) => // Day name, month, day number e.g. "lunes, jun. 2" for day view header
+             dayHeaderFormat: (date, culture, localizerRef) => 
               localizerRef ? localizerRef.format(date, 'eeee, MMM d', culture) : '',
-             agendaHeaderFormat: ({ start, end }, culture, localizerRef) => // Range for agenda view e.g. "6 jun. – 12 jun."
+             agendaHeaderFormat: ({ start, end }, culture, localizerRef) => 
               localizerRef ? `${localizerRef.format(start, 'd MMM', culture)} – ${localizerRef.format(end, 'd MMM', culture)}` : '',
 
           }}
-          dayLayoutAlgorithm="no-overlap" // Helps with event display
-          popup // Enables the default "+X more" popup for overlapped events
+          dayLayoutAlgorithm="no-overlap" 
+          popup 
         />
       </div>
 
