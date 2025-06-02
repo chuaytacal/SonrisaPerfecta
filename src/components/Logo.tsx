@@ -1,28 +1,53 @@
 import Link from 'next/link';
 
-const ToothIcon = () => (
+const LoayzaLogoIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
+    width="48" // Increased size for better visibility of details
+    height="48"
+    viewBox="0 0 150 100" // Adjusted viewBox for new logo proportions
     fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="h-8 w-8 text-primary"
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-10 w-auto text-primary" // Adjusted height, width auto
   >
-    <path d="M9.95312 3.40625C8.17188 4.0625 6.84375 5.6875 6.65625 7.625C6.46875 9.5625 7.59375 11.4375 9.375 12.25C9.375 12.25 9.375 12.25 9.375 12.25C9.375 12.25 9.375 12.25 9.375 12.25C10.0938 12.625 10.5 13.4062 10.5 14.2188C10.5 15.25 9.75 16.0938 8.8125 16.25C7.125 16.5312 5.4375 17.625 4.84375 19.25C4.25 20.875 4.875 22.75 6.25 23.75C9.25 25.625 14.6562 25.625 17.6562 23.75C19.0312 22.75 19.6562 20.875 19.0625 19.25C18.4688 17.625 16.7812 16.5312 15.0938 16.25C14.1562 16.0938 13.4062 15.25 13.4062 14.2188C13.4062 13.4062 13.8125 12.625 14.5312 12.25C14.5312 12.25 14.5312 12.25 14.5312 12.25C14.5312 12.25 14.5312 12.25 14.5312 12.25C16.3438 11.4375 17.4375 9.5625 17.25 7.625C17.0625 5.6875 15.7344 4.0625 13.9531 3.40625C13.0312 3.09375 11.875 3.09375 10.9531 3.40625H9.95312Z" />
+    {/* Stylized L/Tooth shape on the left */}
+    <path
+      d="M35.789 16.1065C30.9091 17.2695 27.2941 21.075 26.9231 25.636C26.5521 30.197 29.0956 34.5615 34.0226 36.263C34.0226 36.263 34.0226 36.263 34.0226 36.263C34.0226 36.263 34.0226 36.263 34.0226 36.263C36.2716 37.0555 37.3541 39.0795 37.3541 41.0611C37.3541 43.6535 34.9216 45.443 32.6116 45.8165C28.4581 46.424 24.8041 49.1075 23.3116 52.87C21.8191 56.6325 23.3956 60.935 27.0341 63.185C34.3306 67.6475 47.5006 67.6475 54.7971 63.185C58.4356 60.935 60.0121 56.6325 58.5196 52.87C57.0271 49.1075 53.3731 46.424 49.2196 45.8165C46.9096 45.443 44.4771 43.6535 44.4771 41.0611C44.4771 39.0795 45.5596 37.0555 47.8321 36.263C47.8321 36.263 47.8321 36.263 47.8321 36.263C47.8321 36.263 47.8321 36.263 47.8321 36.263C52.8446 34.5615 55.3261 30.197 54.9551 25.636C54.5841 21.075 50.9691 17.2695 46.0891 16.1065C43.8676 15.579 40.9541 15.579 38.7326 16.1065H35.789Z"
+      fill="currentColor" // Use currentColor to inherit text-primary
+    />
+    {/* Text: "Centro Dental Especializado" */}
+    <text
+      x="68"
+      y="38" // Positioned above LOAYZA
+      fontFamily="Inter, sans-serif"
+      fontSize="12" // Smaller font size
+      fill="currentColor"
+    >
+      Centro Dental Especializado
+    </text>
+    {/* Text: "LOAYZA" */}
+    <text
+      x="68"
+      y="65" // Positioned below the first line
+      fontFamily="Inter, sans-serif"
+      fontSize="28" // Larger font size
+      fontWeight="bold"
+      fill="currentColor"
+      letterSpacing="0.05em" // Slight letter spacing for stylized look
+    >
+      LOAYZA
+    </text>
   </svg>
 );
 
+
 export default function Logo() {
   return (
-    <Link href="/" className="flex items-center space-x-2">
-      <ToothIcon />
-      <span className="font-headline text-2xl font-bold text-primary">
-        Sonrisa Perfecta
+    <Link href="/dashboard" className="flex items-center space-x-2">
+      <LoayzaLogoIcon />
+      {/* The text is now part of the SVG, so this span can be removed or simplified if needed */}
+      {/* For accessibility, you might want to keep a screen-reader friendly version of the name */}
+      <span className="sr-only">
+        Centro Dental Especializado Loayza
       </span>
     </Link>
   );
