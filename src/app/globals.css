@@ -3,9 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Styles for react-big-calendar - THIS IS THE CORRECT PLACEMENT */
 @import 'react-big-calendar/lib/css/react-big-calendar.css';
-
 
 @layer base {
   :root {
