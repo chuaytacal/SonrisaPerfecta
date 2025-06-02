@@ -101,7 +101,8 @@
 
 .rbc-toolbar {
   /* CustomToolbar component handles its own styling via ShadCN Button and layout classes */
-  @apply mb-4 p-3 border border-border rounded-lg bg-card shadow-sm; /* This class is on the CustomToolbar div */
+  /* Ensure this matches the div in CustomToolbar if needed, or style directly */
+   @apply mb-4 p-3 border border-border rounded-lg bg-card shadow-sm;
 }
 
 .rbc-btn-group button { /* Default buttons if not using CustomToolbar fully */
