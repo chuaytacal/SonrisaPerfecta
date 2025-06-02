@@ -30,7 +30,7 @@ export default function RootLayout({
             <SidebarInset className="flex-1 flex flex-col">
               <header className="sticky top-0 z-30 flex h-14 items-center justify-end border-b bg-background px-4 py-3 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
                 <div className="md:hidden">
-                  <SidebarTrigger asChild>
+                  <SidebarTrigger>
                     <Button variant="outline" size="icon">
                       <Menu className="h-6 w-6" />
                     </Button>
