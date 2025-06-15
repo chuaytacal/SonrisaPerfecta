@@ -47,7 +47,7 @@ export default function CalendarioPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSlotInfo, setSelectedSlotInfo] = useState<Partial<AppointmentFormData> & { start?: Date; end?: Date } | null>(null);
-  const [currentView, setCurrentView] = useState<keyof typeof Views>(Views.WEEK);
+  const [currentView, setCurrentView] = useState<keyof typeof Views>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const { toast } = useToast();
@@ -84,7 +84,7 @@ export default function CalendarioPage() {
     toast({
       title: editingAppointment ? "Cita Actualizada" : "Cita Creada",
       description: `La cita "${appointmentData.title}" ha sido ${editingAppointment ? 'actualizada' : 'programada'}.`,
-      variant: 'default'
+      variant: 'default' // Explicitly using default for success, destructive for errors
     });
     setIsModalOpen(false);
     setEditingAppointment(null);
@@ -153,12 +153,47 @@ export default function CalendarioPage() {
     );
   };
 
+  const calendarFormats = useMemo(() => ({
+    // Format for the day number in month view cells
+    dateFormat: 'd',
+    // Format for day headers in Month view (e.g., "lun.", "mar.")
+    dayFormat: (date: Date, culture?: string, localizerInstance?: any) =>
+      localizerInstance.format(date, 'EEE', culture).toLowerCase(),
+    // Format for day headers in Week view (e.g., "lun. 17")
+    weekdayFormat: (date: Date, culture?: string, localizerInstance?: any) =>
+      localizerInstance.format(date, 'EEE d', culture).toLowerCase(),
+    // Format for time slots in the gutter of Day/Week views (e.g., "09:00")
+    timeGutterFormat: (date: Date, culture?: string, localizerInstance?: any) =>
+      localizerInstance.format(date, 'HH:mm', culture),
+    // Format for event times in Day/Week/Agenda views
+    eventTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) =>
+      `${localizerInstance.format(start, 'HH:mm', culture)} - ${localizerInstance.format(end, 'HH:mm', culture)}`,
+    // Format for the date part in Agenda view rows
+    agendaDateFormat: (date: Date, culture?: string, localizerInstance?: any) =>
+      localizerInstance.format(date, 'EEE, d MMM', culture),
+    // Format for the time part in Agenda view rows
+    agendaTimeFormat: (date: Date, culture?: string, localizerInstance?: any) =>
+      localizerInstance.format(date, 'HH:mm', culture),
+    // Format for time range in Agenda view
+    agendaTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) =>
+      `${localizerInstance.format(start, 'HH:mm', culture)} – ${localizerInstance.format(end, 'HH:mm', culture)}`,
+    // Format for the main header in Month view (e.g., "junio 2025")
+    monthHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) =>
+      localizerInstance.format(date, 'MMMM yyyy', culture),
+    // Format for the main header in Week view (e.g., "16 - 22 junio 2025")
+    dayRangeHeaderFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) =>
+      `${localizerInstance.format(start, 'd', culture)} - ${localizerInstance.format(end, 'd MMMM yyyy', culture)}`,
+    // Format for the main header in Day view (e.g., "lunes, 16 junio 2025")
+    dayHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) =>
+      localizerInstance.format(date, 'eeee, d MMMM yyyy', culture),
+  }), []);
+
 
   return (
     <div className="flex flex-col h-full relative">
       <h1 className="text-3xl font-bold text-foreground mb-6">Calendario de Citas</h1>
 
-      <div className="flex-grow relative"> {/* This div will handle flexible height */}
+      <div className="flex-grow relative">
         <BigCalendar
           localizer={localizer}
           events={appointments}
@@ -167,7 +202,7 @@ export default function CalendarioPage() {
           selectable
           onSelectSlot={handleSelectSlot}
           onSelectEvent={handleSelectEvent}
-          defaultView={Views.WEEK}
+          defaultView={Views.MONTH}
           views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
           messages={messages}
           culture="es"
@@ -182,37 +217,10 @@ export default function CalendarioPage() {
           eventPropGetter={eventPropGetter}
           min={new Date(0,0,0, 7,0,0)} // 7 AM
           max={new Date(0,0,0, 21,0,0)} // 9 PM
-          formats={{
-            timeGutterFormat: (date, culture, localizerRef) =>
-              localizerRef ? localizerRef.format(date, 'HH:mm', culture) : '',
-            eventTimeRangeFormat: ({ start, end }, culture, localizerRef) =>
-              localizerRef
-                ? `${localizerRef.format(start, 'HH:mm', culture)} - ${localizerRef.format(end, 'HH:mm', culture)}`
-                : '',
-            agendaTimeRangeFormat: ({ start, end }, culture, localizerRef) =>
-               localizerRef
-                ? `${localizerRef.format(start, 'HH:mm', culture)} - ${localizerRef.format(end, 'HH:mm', culture)}`
-                : '',
-             // Format for month view day headers (Sun, Mon, etc.)
-             dayFormat: (date, culture, localizerRef) => 
-              localizerRef ? localizerRef.format(date, currentView === Views.MONTH ? 'EEE' : 'EEE d', culture) : '', // Short day name for month, day+num for week/day
-             // Format for the main label in Month view (e.g., "June 2024")
-             monthHeaderFormat: (date, culture, localizerRef) => 
-              localizerRef ? localizerRef.format(date, 'LLLL yyyy', culture) : '',
-             // Format for the header in Day view (e.g., "Sunday, Jun 16")
-             dayHeaderFormat: (date, culture, localizerRef) => 
-              localizerRef ? localizerRef.format(date, 'eeee, MMM d', culture) : '',
-             // Format for the header in Agenda view (e.g., "Jun 16 – Jun 22")
-             agendaHeaderFormat: ({ start, end }, culture, localizerRef) => 
-              localizerRef ? `${localizerRef.format(start, 'd MMM', culture)} – ${localizerRef.format(end, 'd MMM', culture)}` : '',
-             // Format for date cells in Agenda view
-             agendaDateFormat: (date, culture, localizerRef) =>
-              localizerRef ? localizerRef.format(date, 'EEE, d MMM', culture) : '',
-
-          }}
+          formats={calendarFormats}
           dayLayoutAlgorithm="no-overlap" 
           popup 
-          style={{ height: '100%' }} // Ensure BigCalendar itself tries to fill height
+          style={{ height: '100%' }} 
         />
       </div>
 
@@ -247,3 +255,4 @@ export default function CalendarioPage() {
     </div>
   );
 }
+
