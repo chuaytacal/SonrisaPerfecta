@@ -84,6 +84,7 @@ export default function CalendarioPage() {
     toast({
       title: editingAppointment ? "Cita Actualizada" : "Cita Creada",
       description: `La cita "${appointmentData.title}" ha sido ${editingAppointment ? 'actualizada' : 'programada'}.`,
+      variant: 'default'
     });
     setIsModalOpen(false);
     setEditingAppointment(null);
@@ -95,7 +96,7 @@ export default function CalendarioPage() {
       ...(event.eventColor && {
         style: {
           backgroundColor: event.eventColor,
-          borderColor: event.eventColor, // Consider a slightly darker shade or a contrasting border for better visibility
+          borderColor: event.eventColor,
         },
       }),
       className: 'cursor-pointer',
@@ -157,8 +158,7 @@ export default function CalendarioPage() {
     <div className="flex flex-col h-full relative">
       <h1 className="text-3xl font-bold text-foreground mb-6">Calendario de Citas</h1>
 
-      {/* Rely on flex-grow for height */}
-      <div className="flex-grow relative"> 
+      <div className="flex-grow relative"> {/* This div will handle flexible height */}
         <BigCalendar
           localizer={localizer}
           events={appointments}
@@ -193,18 +193,26 @@ export default function CalendarioPage() {
                localizerRef
                 ? `${localizerRef.format(start, 'HH:mm', culture)} - ${localizerRef.format(end, 'HH:mm', culture)}`
                 : '',
+             // Format for month view day headers (Sun, Mon, etc.)
              dayFormat: (date, culture, localizerRef) => 
-              localizerRef ? localizerRef.format(date, 'EEE d', culture) : '',
+              localizerRef ? localizerRef.format(date, currentView === Views.MONTH ? 'EEE' : 'EEE d', culture) : '', // Short day name for month, day+num for week/day
+             // Format for the main label in Month view (e.g., "June 2024")
              monthHeaderFormat: (date, culture, localizerRef) => 
               localizerRef ? localizerRef.format(date, 'LLLL yyyy', culture) : '',
+             // Format for the header in Day view (e.g., "Sunday, Jun 16")
              dayHeaderFormat: (date, culture, localizerRef) => 
               localizerRef ? localizerRef.format(date, 'eeee, MMM d', culture) : '',
+             // Format for the header in Agenda view (e.g., "Jun 16 – Jun 22")
              agendaHeaderFormat: ({ start, end }, culture, localizerRef) => 
               localizerRef ? `${localizerRef.format(start, 'd MMM', culture)} – ${localizerRef.format(end, 'd MMM', culture)}` : '',
+             // Format for date cells in Agenda view
+             agendaDateFormat: (date, culture, localizerRef) =>
+              localizerRef ? localizerRef.format(date, 'EEE, d MMM', culture) : '',
 
           }}
           dayLayoutAlgorithm="no-overlap" 
           popup 
+          style={{ height: '100%' }} // Ensure BigCalendar itself tries to fill height
         />
       </div>
 
@@ -239,4 +247,3 @@ export default function CalendarioPage() {
     </div>
   );
 }
-
