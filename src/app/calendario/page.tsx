@@ -173,9 +173,12 @@ export default function CalendarioPage() {
         style.color = 'hsl(var(--primary-foreground))'; // Assume white text is good for most event colors
 
         if (currentView === Views.AGENDA) {
-          style.padding = '0.625rem'; // 10px padding for agenda items
+          style.padding = '0.625rem'; 
+          style.margin = '0px'; // Ensure no extra margin for agenda items
           style.borderRadius = '0px';
-          style.color = 'hsl(var(--card-foreground))'; // Darker text for agenda
+          style.color = 'hsl(var(--card-foreground))'; 
+          // CSS variable for agenda item border color
+          style['--agenda-event-color' as string] = event.eventColor;
         }
       }
       return {
@@ -326,3 +329,4 @@ export default function CalendarioPage() {
     </div>
   );
 }
+
