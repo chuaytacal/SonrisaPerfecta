@@ -1,13 +1,14 @@
 
 "use client";
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Calendar as BigCalendar, dateFnsLocalizer, Views, Navigate } from 'react-big-calendar';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
 import startOfWeek from 'date-fns/startOfWeek';
 import getDay from 'date-fns/getDay';
 import es from 'date-fns/locale/es';
+import { addDays, setHours, setMinutes } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Plus, ChevronLeft, ChevronRight, CalendarDays, ListFilter, LayoutGrid, Rows3 } from 'lucide-react';
 import { AppointmentModal } from '@/components/calendario/AppointmentModal';
@@ -42,6 +43,62 @@ const messages = {
   showMore: (total: number) => `+ Ver más (${total})`,
 };
 
+const generateInitialAppointments = (): Appointment[] => {
+  const today = new Date();
+  const tomorrow = addDays(today, 1);
+  const dayAfterTomorrow = addDays(today, 2);
+  const nextWeek = addDays(today, 7);
+
+  return [
+    {
+      id: crypto.randomUUID(),
+      title: 'Consulta Dr. Pérez',
+      start: setMinutes(setHours(today, 10), 0),
+      end: setMinutes(setHours(today, 11), 0),
+      paciente: 'Ana García',
+      doctor: 'Dr. Pérez',
+      tipoCita: 'consulta',
+      eventColor: 'hsl(var(--chart-1))',
+    },
+    {
+      id: crypto.randomUUID(),
+      title: 'Limpieza Dental',
+      start: setMinutes(setHours(today, 14), 0),
+      end: setMinutes(setHours(today, 15), 30),
+      paciente: 'Carlos López',
+      tipoCita: 'limpieza',
+      eventColor: 'hsl(var(--chart-2))',
+    },
+    {
+      id: crypto.randomUUID(),
+      title: 'Ortodoncia Seguimiento',
+      start: setMinutes(setHours(tomorrow, 9), 0),
+      end: setMinutes(setHours(tomorrow, 11), 0),
+      paciente: 'Sofía Torres',
+      doctor: 'Dra. Ramos',
+      tipoCita: 'control',
+      eventColor: 'hsl(var(--chart-3))',
+    },
+    {
+      id: crypto.randomUUID(),
+      title: 'Endodoncia',
+      start: setMinutes(setHours(dayAfterTomorrow, 11), 0),
+      end: setMinutes(setHours(dayAfterTomorrow, 12), 0),
+      paciente: 'Juan Rodríguez',
+      tipoCita: 'tratamiento',
+      eventColor: 'hsl(var(--chart-4))',
+    },
+     {
+      id: crypto.randomUUID(),
+      title: 'Reunión de equipo',
+      start: setMinutes(setHours(nextWeek, 15), 0),
+      end: setMinutes(setHours(nextWeek, 16), 0),
+      tipoCita: 'otro',
+      eventColor: 'hsl(var(--chart-5))',
+    }
+  ];
+};
+
 
 export default function CalendarioPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -51,6 +108,10 @@ export default function CalendarioPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    setAppointments(generateInitialAppointments());
+  }, []);
 
   const handleSelectSlot = useCallback(({ start, end }: { start: Date; end: Date }) => {
     setSelectedSlotInfo({
@@ -84,7 +145,7 @@ export default function CalendarioPage() {
     toast({
       title: editingAppointment ? "Cita Actualizada" : "Cita Creada",
       description: `La cita "${appointmentData.title}" ha sido ${editingAppointment ? 'actualizada' : 'programada'}.`,
-      variant: 'default' // Explicitly using default for success, destructive for errors
+      variant: 'default'
     });
     setIsModalOpen(false);
     setEditingAppointment(null);
@@ -126,7 +187,7 @@ export default function CalendarioPage() {
                     <ChevronRight className="h-5 w-5" />
                 </Button>
             </div>
-            <h2 className="text-xl font-semibold text-foreground flex-grow text-center my-2 sm:my-0 order-first sm:order-none">
+            <h2 className="text-xl font-semibold text-foreground flex-grow text-center my-2 sm:my-0 order-first sm:order-none capitalize">
                 {label}
             </h2>
             <div className="flex items-center gap-1">
@@ -154,23 +215,23 @@ export default function CalendarioPage() {
   };
 
   const calendarFormats = useMemo(() => ({
-    // Format for the day number in month view cells
+    // Format for the day number in month view cells (e.g., "1", "15", "31")
     dateFormat: 'd',
-    // Format for day headers in Month view (e.g., "lun.", "mar.")
+    // Format for day headers in Month view (e.g., "lun", "mar")
     dayFormat: (date: Date, culture?: string, localizerInstance?: any) =>
       localizerInstance.format(date, 'EEE', culture).toLowerCase(),
-    // Format for day headers in Week view (e.g., "lun. 17")
+    // Format for day headers in Week view (e.g., "lun 17/6")
     weekdayFormat: (date: Date, culture?: string, localizerInstance?: any) =>
-      localizerInstance.format(date, 'EEE d', culture).toLowerCase(),
+      localizerInstance.format(date, 'EEE d/M', culture).toLowerCase(),
     // Format for time slots in the gutter of Day/Week views (e.g., "09:00")
     timeGutterFormat: (date: Date, culture?: string, localizerInstance?: any) =>
       localizerInstance.format(date, 'HH:mm', culture),
     // Format for event times in Day/Week/Agenda views
     eventTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) =>
       `${localizerInstance.format(start, 'HH:mm', culture)} - ${localizerInstance.format(end, 'HH:mm', culture)}`,
-    // Format for the date part in Agenda view rows
+    // Format for the date part in Agenda view rows (e.g., "lun, 16 jun")
     agendaDateFormat: (date: Date, culture?: string, localizerInstance?: any) =>
-      localizerInstance.format(date, 'EEE, d MMM', culture),
+      localizerInstance.format(date, 'EEE, d MMM', culture).toLowerCase(),
     // Format for the time part in Agenda view rows
     agendaTimeFormat: (date: Date, culture?: string, localizerInstance?: any) =>
       localizerInstance.format(date, 'HH:mm', culture),
@@ -180,7 +241,7 @@ export default function CalendarioPage() {
     // Format for the main header in Month view (e.g., "junio 2025")
     monthHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) =>
       localizerInstance.format(date, 'MMMM yyyy', culture),
-    // Format for the main header in Week view (e.g., "16 - 22 junio 2025")
+    // Format for the main header in Week view (e.g., "16 - 22 junio 2025") - Note: Toolbar label handles this primarily
     dayRangeHeaderFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) =>
       `${localizerInstance.format(start, 'd', culture)} - ${localizerInstance.format(end, 'd MMMM yyyy', culture)}`,
     // Format for the main header in Day view (e.g., "lunes, 16 junio 2025")
@@ -255,4 +316,3 @@ export default function CalendarioPage() {
     </div>
   );
 }
-

@@ -3,9 +3,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Ensure this is at the very top if you decide to use it again, but per user request, it's removed.
-   @import 'react-big-calendar/lib/css/react-big-calendar.css'; 
-*/
+/* Ensure this is at the very top */
+/* @import 'react-big-calendar/lib/css/react-big-calendar.css'; */
+/* User requested to remove the above import, styles will be handled customly */
 
 @layer base {
   :root {
@@ -35,7 +35,7 @@
     --chart-5: 217 80% 70%;
     --radius: 0.5rem;
 
-    /* Sidebar variables aligned with the theme, though not explicitly used in a sidebar layout for this iteration */
+    /* Sidebar variables aligned with the theme */
     --sidebar-background: 210 17% 98%;
     --sidebar-foreground: 220 17% 17%;
     --sidebar-primary: 195 100% 50%;
@@ -47,20 +47,20 @@
   }
 
   .dark {
-    --background: 220 17% 10%; /* Dark Gray/Blue */
-    --foreground: 210 17% 90%; /* Light Gray */
+    --background: 220 17% 10%; 
+    --foreground: 210 17% 90%; 
     --card: 220 17% 15%;
     --card-foreground: 210 17% 90%;
     --popover: 220 17% 15%;
     --popover-foreground: 210 17% 90%;
-    --primary: 195 100% 60%; /* Lighter Deep Sky Blue */
-    --primary-foreground: 220 17% 5%; /* Very Dark for contrast */
-    --secondary: 202 100% 20%; /* Darker shade of E6F4FF base */
-    --secondary-foreground: 202 100% 85%; /* Lighter text for dark secondary */
+    --primary: 195 100% 60%; 
+    --primary-foreground: 220 17% 5%; 
+    --secondary: 202 100% 20%; 
+    --secondary-foreground: 202 100% 85%;
     --muted: 220 17% 20%;
     --muted-foreground: 210 17% 65%;
-    --accent: 217 100% 60%; /* Lighter Accent Blue */
-    --accent-foreground: 0 0% 100%; /* White */
+    --accent: 217 100% 60%; 
+    --accent-foreground: 0 0% 100%; 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
     --border: 220 17% 25%;
@@ -97,24 +97,26 @@
 /* General Calendar Container */
 .rbc-calendar {
   @apply bg-card text-card-foreground rounded-lg shadow-md;
-  height: 100%; /* Ensure calendar takes full height of its flex container */
+  height: 100%; 
   display: flex;
   flex-direction: column;
 }
 
-/* Toolbar */
+/* Toolbar: Already customized via CustomToolbar component, but some base styles might be useful */
 .rbc-toolbar {
-  @apply mb-4 p-3 border-b border-border rounded-t-lg bg-card shadow-sm flex flex-wrap items-center justify-between gap-2;
+  /* Basic structure if not using custom component: */
+  /* @apply mb-4 p-3 border-b border-border rounded-t-lg bg-card shadow-sm flex flex-wrap items-center justify-between gap-2; */
 }
+/* Example for default rbc buttons if not using ShadCN buttons in custom toolbar */
 .rbc-toolbar .rbc-btn-group button {
-  @apply text-foreground bg-transparent hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground disabled:text-muted-foreground;
-  @apply px-3 py-1.5 rounded-md border border-input text-sm;
+  /* @apply text-foreground bg-transparent hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground disabled:text-muted-foreground; */
+  /* @apply px-3 py-1.5 rounded-md border border-input text-sm; */
 }
 .rbc-toolbar .rbc-btn-group button.rbc-active {
-  @apply bg-primary text-primary-foreground shadow-sm hover:bg-primary/90;
+  /* @apply bg-primary text-primary-foreground shadow-sm hover:bg-primary/90; */
 }
-.rbc-toolbar-label {
-  @apply text-xl font-semibold text-foreground flex-grow text-center;
+.rbc-toolbar-label { /* This is the "June 2025" or "Monday, June 16 2025" label in toolbar */
+   /* @apply text-xl font-semibold text-foreground flex-grow text-center; */ /* Handled by CustomToolbar */
 }
 
 /* General Header for Day names in Month/Week/Day views */
@@ -122,58 +124,50 @@
   @apply text-center py-2 px-1 border-b border-r border-border text-sm font-medium text-foreground capitalize;
 }
 .rbc-header:last-child {
-  @apply border-r-0; /* Remove right border for the last header cell */
+  @apply border-r-0; 
 }
 
 /* Month View Specifics */
 .rbc-month-view {
-  @apply border-0 flex-grow flex flex-col; /* Allow month view to grow */
+  @apply border-0 flex-grow flex flex-col; 
 }
-.rbc-month-header { /* Container for day names (Sun, Mon...) */
-  @apply flex flex-row flex-none; /* Prevent shrinking */
+.rbc-month-header { /* Container for day names (Lun, Mar...) */
+  @apply flex flex-row flex-none; 
 }
-.rbc-month-header .rbc-header { /* Individual day name cell */
-   @apply flex-1 border-b-2 border-border pb-2; 
+.rbc-month-header .rbc-header { /* Individual day name cell: "Lun", "Mar" */
+   @apply flex-1 border-b-2 border-border pb-2 text-muted-foreground; 
 }
 .rbc-month-row {
-  @apply flex flex-row flex-grow overflow-hidden relative; /* Ensure rows take up space */
-  min-height: 100px; /* Minimum height for a row in month view */
+  @apply flex flex-row flex-grow overflow-hidden relative; 
+  min-height: 100px; 
 }
 .rbc-row-bg { /* Backgrounds of days in a week row */
-  @apply flex flex-row flex-1; /* Each day cell takes equal width */
+  @apply flex flex-row flex-1; 
 }
 .rbc-day-bg { /* Individual day cell background in month/week view */
-  @apply border-l border-t border-border flex-1 relative; /* flex-1 for equal width, add top border */
-  min-width: 0; /* Prevent flex items from overflowing */
+  @apply border-l border-t border-border flex-1 relative; 
+  min-width: 0; 
 }
 .rbc-month-row .rbc-day-bg:first-child {
-  @apply border-l-0; /* No left border for the first day of the week */
+  @apply border-l-0; 
 }
 .rbc-month-row:first-child .rbc-day-bg {
-    /* No top border for the first row of day cells, header already has bottom border */
     border-top: none; 
 }
 .rbc-off-range-bg { /* Days not in the current month */
   @apply bg-muted/30;
 }
-.rbc-today { /* Highlight for today's date background */
+.rbc-today { 
   @apply bg-secondary !important; 
 }
-.rbc-date-cell { /* The number for the day in month view */
-  @apply text-right p-1 text-sm text-foreground;
+.rbc-date-cell { /* The number for the day in month view: "1", "15" */
+  @apply text-center p-1 text-sm text-foreground; /* Changed from text-right */
 }
 .rbc-row-content { /* Wraps event segments in month view's day cell */
-  @apply relative z-[1]; /* Ensure events are above background */
+  @apply relative z-[1]; 
 }
 .rbc-month-view .rbc-event { /* Events in month view */
   @apply block text-xs p-0.5 my-0.5 rounded-sm overflow-hidden text-ellipsis whitespace-nowrap;
-  /* Default event color handled by eventPropGetter or .rbc-event below */
-}
-.rbc-month-view .rbc-event-label {
-    /* Not typically used if event has background color from eventPropGetter */
-}
-.rbc-month-view .rbc-event-content {
-    /* Content inside the event, if any */
 }
 .rbc-show-more { /* "+X more" link */
   @apply text-primary text-xs mt-1 block hover:underline cursor-pointer text-center;
@@ -187,59 +181,64 @@
 .rbc-time-header { /* Container for day headers and all-day events area */
   @apply flex flex-shrink-0 border-b border-border;
 }
-.rbc-time-header-content { /* Wraps the day headers (Mon 1, Tue 2...) */
-  @apply flex flex-1 min-w-0; /* min-w-0 for flex context with overflow */
+.rbc-time-header-content { /* Wraps the day headers (Mon 17/6, Tue 18/6...) */
+  @apply flex flex-1 min-w-0; 
 }
 .rbc-time-header-gutter { /* Space above time gutter, aligns with time slots */
-  @apply w-16 flex-shrink-0 border-r border-border bg-card text-center; /* Match .rbc-time-gutter width */
+  @apply w-16 flex-shrink-0 border-r border-border bg-card text-center; 
 }
-.rbc-time-header .rbc-header { /* Individual day header cell in week/day */
-  @apply flex-1; /* Already styled by general .rbc-header */
+.rbc-time-header .rbc-header { /* Individual day header cell in week/day e.g. "lun 17/6" */
+  @apply flex-1 capitalize; /* Ensure text is capitalized if locale provides lowercase */
 }
 .rbc-time-content { /* Main grid area for events, scrollable */
   @apply flex flex-grow overflow-auto;
-  min-height: 400px; /* Ensure a minimum scrollable area */
+  min-height: 400px; 
 }
 .rbc-time-gutter { /* Time labels on the left (e.g., 7 AM, 8 AM) */
-  @apply w-16 flex-shrink-0 border-r border-border bg-card; /* Fixed width */
+  @apply w-16 flex-shrink-0 border-r border-border bg-card; 
 }
 .rbc-timeslot-group { /* Group of time slots, usually one hour */
   @apply border-b border-border;
-  min-height: 40px; /* Height of one hour slot */
+  min-height: 40px; 
 }
-.rbc-time-slot { /* Individual slot, may be empty or represent a line. Can be :hover for effects */
-  /* No specific styling needed if background is inherited and lines are from .rbc-timeslot-group */
+.rbc-time-slot { 
+  /* No specific styling needed if background is inherited */
 }
 .rbc-label { /* Labels in the time gutter e.g., 07:00 */
-  @apply p-1.5 text-xs text-muted-foreground text-right block; /* block for proper spacing */
+  @apply p-1.5 text-xs text-muted-foreground text-right block; 
 }
 .rbc-day-slot { /* Vertical column for a single day in week/day views */
-  @apply relative flex-1; /* Important for column layout */
-  min-width: 100px; /* Minimum width for a day column */
+  @apply relative flex-1; 
+  min-width: 100px; 
 }
 .rbc-day-slot .rbc-event { /* Events in week/day view */
-  @apply absolute z-[2] shadow-md rounded-md overflow-hidden text-ellipsis whitespace-nowrap;
-  border: 1px solid hsl(var(--border)); /* Default border */
+  @apply absolute z-[2] shadow-md rounded-md overflow-hidden text-ellipsis; /* Removed whitespace-nowrap to allow wrapping */
+  border: 1px solid hsl(var(--border)); 
+  padding: 2px 4px; /* Added padding for better text display */
 }
-.rbc-day-slot .rbc-background-event { /* Background events if any */
+.rbc-day-slot .rbc-event-label { /* Text inside event in week/day view */
+    @apply text-xs whitespace-normal; /* Allow text to wrap */
+}
+.rbc-day-slot .rbc-event-content { /* Custom content inside event */
+    @apply text-xs whitespace-normal;
+}
+
+.rbc-day-slot .rbc-background-event { 
     @apply opacity-75;
 }
 .rbc-allday-cell { /* Area for all-day events at the top of week/day */
   @apply p-1 border-b border-border relative;
-  min-height: 30px; /* Give some space for all-day events */
+  min-height: 30px; 
   box-sizing: border-box;
 }
 .rbc-allday-cell .rbc-row-segment {
     padding: 2px 4px;
 }
-.rbc-allday-cell .rbc-event {
-  /* Default .rbc-event styles apply */
-}
+
 
 /* Current Time Indicator */
 .rbc-current-time-indicator {
   @apply absolute left-0 right-0 bg-destructive h-0.5 z-[3]; 
-  /* Ensure it's on top of time slots but below events if needed */
 }
 
 /* Event Styling (General) */
@@ -247,10 +246,10 @@
   @apply p-1 text-xs rounded-md shadow-sm transition-colors duration-150 ease-in-out;
   @apply bg-primary text-primary-foreground border-primary; /* Default if no eventColor from eventPropGetter */
 }
-.rbc-event-label { /* Used for event title when no custom content */
+.rbc-event-label { 
   @apply font-medium text-ellipsis overflow-hidden whitespace-nowrap;
 }
-.rbc-event-content { /* Custom content within an event, if provided */
+.rbc-event-content { 
   @apply text-xs;
 }
 .rbc-event.rbc-selected { /* When an event is clicked/selected */
@@ -268,10 +267,10 @@
   @apply w-full border-collapse;
 }
 .rbc-agenda-view table thead th {
-  @apply text-left p-2.5 border-b-2 border-border bg-muted/50 font-semibold text-sm;
+  @apply text-left p-2.5 border-b-2 border-border bg-muted/50 font-semibold text-sm capitalize;
 }
 .rbc-agenda-view table tbody tr td {
-  @apply p-2.5 border-b border-border align-top; /* align-top for better layout if content wraps */
+  @apply p-2.5 border-b border-border align-top; 
 }
 .rbc-agenda-view table tbody tr:last-child td {
     border-bottom: none;
@@ -280,18 +279,17 @@
   @apply text-muted-foreground whitespace-nowrap text-sm;
 }
 .rbc-agenda-time-cell {
-   @apply pr-4; /* Space between time and event title */
+   @apply pr-4; 
 }
-.rbc-agenda-event-cell .rbc-event { /* Ensure event colors apply textually in agenda if needed */
-  background-color: transparent !important; /* Override if only text color from eventColor is desired */
+.rbc-agenda-event-cell .rbc-event { /* Event styling in agenda */
+  background-color: transparent !important; 
   border: none !important;
   padding: 0 !important;
   box-shadow: none !important;
-  /* Text color can be set by eventPropGetter if event.eventColor is a valid text color */
+  /* Text color should be set by eventPropGetter or a default if not provided */
 }
 .rbc-agenda-event-cell .rbc-event span { /* Text of the event in agenda */
-  /* Color can be inherited or styled directly here */
-  @apply font-medium text-foreground;
+  @apply font-medium text-foreground; /* Default text color for agenda events */
 }
 
 
@@ -300,7 +298,7 @@
   @apply absolute z-50 bg-popover text-popover-foreground border border-border rounded-md shadow-lg p-2 min-w-[200px];
 }
 .rbc-overlay .rbc-event {
-  @apply my-0.5 cursor-pointer; /* Make events in overlay clickable */
+  @apply my-0.5 cursor-pointer; 
 }
 .rbc-overlay-header {
   @apply text-sm font-medium mb-1 border-b border-border pb-1;
@@ -309,28 +307,28 @@
 /* Fixes for small screen responsiveness if needed */
 @media (max-width: 768px) {
   .rbc-toolbar {
-    @apply flex-col items-stretch; /* Stack toolbar items on small screens */
+    /* Ensure this doesn't conflict with CustomToolbar styling */
+    /* @apply flex-col items-stretch; */
   }
   .rbc-toolbar .rbc-btn-group {
-    @apply w-full flex justify-around; /* Space out buttons */
+    /* @apply w-full flex justify-around; */
   }
   .rbc-toolbar-label {
-    @apply text-lg my-2; /* Adjust label size and margin */
+    /* @apply text-lg my-2; */
   }
   .rbc-time-header-gutter, .rbc-time-gutter {
-    @apply w-12; /* Slightly reduce gutter width */
+    @apply w-12; 
   }
   .rbc-label {
-    @apply text-[10px] p-1; /* Smaller time labels */
+    @apply text-[10px] p-1; 
   }
 }
 
-/* Ensure calendar content area grows, particularly for time and month views */
+/* Ensure calendar content area grows */
 .rbc-month-view,
 .rbc-time-view .rbc-time-content { 
-  min-height: 400px; /* Adjust as needed for a good minimum scroll area */
+  min-height: 400px; 
 }
 .rbc-time-view .rbc-time-content {
-  overflow-y: auto; /* Explicitly allow vertical scroll for time grid */
+  overflow-y: auto; 
 }
-  
