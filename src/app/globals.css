@@ -3,7 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* No react-big-calendar.css import per user request */
+/* No react-big-calendar.css import as per user request */
 
 @layer base {
   :root {
@@ -233,12 +233,10 @@
     @apply opacity-75;
 }
 .rbc-allday-cell { /* Area for all-day events at the top of week/day */
-  @apply p-1 border-b border-border relative;
-  min-height: 30px;
-  box-sizing: border-box;
+  @apply hidden; /* Hide the all-day cell as requested */
 }
 .rbc-allday-cell .rbc-row-segment {
-    padding: 2px 4px;
+    /* Styles for segments within all-day cell, hidden due to parent */
 }
 
 
