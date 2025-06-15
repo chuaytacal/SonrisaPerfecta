@@ -157,9 +157,6 @@
 .rbc-row-content .rbc-row { /* A row of date cells or event segments */
   @apply flex flex-row flex-1; /* Ensures it takes up available vertical space if multiple event rows */
 }
-.rbc-row-content .rbc-row:first-child { /* Specifically the row for date numbers */
-    /* No specific style needed if .rbc-date-cell handles flex-1 */
-}
 .rbc-date-cell { /* The number for the day in month view: "1", "15" */
   @apply flex-1 text-center p-1 text-sm text-foreground; /* flex-1 makes cells share width, text-center for number */
 }
@@ -179,19 +176,23 @@
   @apply flex flex-col flex-grow border-t border-border;
 }
 .rbc-time-header { /* Container for day headers and all-day events area */
-  @apply flex flex-shrink-0 border-b border-border;
+  @apply flex flex-row flex-shrink-0 border-b border-border; /* Ensure this is a row */
 }
 .rbc-time-header-content { /* Wraps the day headers (Mon 17/6, Tue 18/6...) */
-  @apply flex flex-1 min-w-0;
+  @apply flex flex-row flex-1 min-w-0; /* Ensure this is a row and takes up space */
 }
 .rbc-time-header-gutter { /* Space above time gutter, aligns with time slots */
-  @apply w-16 flex-shrink-0 border-r border-border bg-card text-center;
+  @apply w-16 flex-shrink-0 border-r border-border bg-card text-center; /* Fixed width */
 }
 .rbc-time-header .rbc-header { /* Individual day header cell in week/day e.g. "lun 17/6" */
-  @apply flex-1 capitalize; /* Ensure text is capitalized if locale provides lowercase */
+  @apply flex-1 border-r border-border py-2 px-1 text-center text-sm font-medium text-foreground capitalize;
+  min-width: 100px; /* Give each day header a minimum width */
+}
+.rbc-time-header .rbc-header:last-child {
+  @apply border-r-0;
 }
 .rbc-time-content { /* Main grid area for events, scrollable */
-  @apply flex flex-grow overflow-auto;
+  @apply flex flex-row flex-grow overflow-auto; /* Ensure this is a row */
   min-height: 400px;
 }
 .rbc-time-gutter { /* Time labels on the left (e.g., 7 AM, 8 AM) */
@@ -209,7 +210,7 @@
 }
 .rbc-day-slot { /* Vertical column for a single day in week/day views */
   @apply relative flex-1 border-l border-border; /* Add left border to separate days */
-  min-width: 100px;
+  min-width: 100px;  /* Give each day column a minimum width */
 }
 .rbc-day-slot:first-child {
     @apply border-l-0; /* Remove left border for the first day column */
@@ -328,3 +329,5 @@
 .rbc-time-view .rbc-time-content {
   overflow-y: auto; /* Allow vertical scrolling for time views */
 }
+
+    
