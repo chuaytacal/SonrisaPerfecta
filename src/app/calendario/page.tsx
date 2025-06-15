@@ -36,9 +36,9 @@ const messages = {
   week: 'Semana',
   day: 'Día',
   agenda: 'Agenda',
-  date: 'Fecha',
-  time: 'Hora',
-  event: 'Evento',
+  date: 'Fecha', // For Agenda table header
+  time: 'Hora',   // For Agenda table header
+  event: 'Evento', // For Agenda table header
   noEventsInRange: 'No hay citas en este rango.',
   showMore: (total: number) => `+ Ver más (${total})`,
 };
@@ -165,13 +165,17 @@ export default function CalendarioPage() {
     (event: Appointment) => {
       const style: React.CSSProperties = {};
       if (event.eventColor) {
+        style.backgroundColor = event.eventColor;
+        style.borderColor = event.eventColor; // Match border to background for solid look
+        style.color = 'hsl(var(--primary-foreground))'; // Assume white text is good for all event colors
+
         if (currentView === Views.AGENDA) {
-          style['--event-dot-color'] = event.eventColor;
-          style.backgroundColor = 'transparent';
-          style.borderColor = 'transparent'; // Avoid borders in agenda items from other views
+          // For agenda, the event item itself gets padding to appear as a full colored row
+          style.padding = '0.75rem 1rem'; // Adjust as needed, to match desired cell padding
+          style.margin = '0px'; // Ensure it fills the cell
+          style.borderRadius = '0px'; // No rounded corners for agenda rows
         } else {
-          style.backgroundColor = event.eventColor;
-          style.borderColor = event.eventColor;
+           // For other views, no specific padding override needed here
         }
       }
       return {
@@ -236,23 +240,23 @@ export default function CalendarioPage() {
     dayFormat: (date: Date, culture?: string, localizerInstance?: any) => 
       localizerInstance.format(date, 'EEE', culture).toLowerCase(),
     weekdayFormat: (date: Date, culture?: string, localizerInstance?: any) => 
-      localizerInstance.format(date, 'EEE d/M', culture).toLowerCase(),
+      localizerInstance.format(date, 'EEE d/M', culture).toLowerCase(), // For week view header e.g. "lun 15/6"
     timeGutterFormat: (date: Date, culture?: string, localizerInstance?: any) => 
       localizerInstance.format(date, 'HH:mm', culture),
     eventTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) =>
       `${localizerInstance.format(start, 'HH:mm', culture)} - ${localizerInstance.format(end, 'HH:mm', culture)}`,
     agendaDateFormat: (date: Date, culture?: string, localizerInstance?: any) => 
-      localizerInstance.format(date, 'EEEE, d \'de\' MMMM \'de\' yyyy', culture), // e.g., "domingo, 15 de junio de 2025"
+      localizerInstance.format(date, 'EEE, d MMM', culture), // For agenda cell e.g. "dom, 15 jun"
     agendaTimeFormat: (date: Date, culture?: string, localizerInstance?: any) => 
-      localizerInstance.format(date, 'HH:mm', culture),
+      localizerInstance.format(date, 'HH:mm', culture), // For agenda cell time, if not using range
     agendaTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) =>
-      `${localizerInstance.format(start, 'HH:mm', culture)} – ${localizerInstance.format(end, 'HH:mm', culture)}`,
+      `${localizerInstance.format(start, 'HH:mm', culture)} – ${localizerInstance.format(end, 'HH:mm', culture)}`, // For agenda cell time range
     monthHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) => 
-      localizerInstance.format(date, 'MMMM yyyy', culture),
+      localizerInstance.format(date, 'MMMM yyyy', culture), // For month view toolbar
     dayRangeHeaderFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) => 
-      `${localizerInstance.format(start, 'd', culture)} - ${localizerInstance.format(end, 'd MMMM yyyy', culture)}`,
+      `${localizerInstance.format(start, 'd', culture)} - ${localizerInstance.format(end, 'd MMMM yyyy', culture)}`, // For week/day view toolbar
     dayHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) => 
-      localizerInstance.format(date, 'eeee, d MMMM yyyy', culture),
+      localizerInstance.format(date, 'eeee, d MMMM yyyy', culture), // For day view toolbar
   }), []);
 
 
@@ -322,3 +326,4 @@ export default function CalendarioPage() {
     </div>
   );
 }
+

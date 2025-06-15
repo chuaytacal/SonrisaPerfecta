@@ -3,7 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* No react-big-calendar.css import as per user request */
+/* react-big-calendar.css is not imported as per user request */
 
 @layer base {
   :root {
@@ -174,50 +174,50 @@
 .rbc-time-view {
   @apply flex flex-col flex-grow border-t border-border;
 }
-.rbc-time-header { 
+.rbc-time-header { /* Container for day headers and all-day slot */
   @apply flex flex-row flex-shrink-0 border-b border-border; 
 }
-.rbc-time-header-content { 
-  @apply flex flex-row flex-1 min-w-0; 
+.rbc-time-header-content { /* Wraps day headers row and all-day events row */
+  @apply flex flex-col flex-1 min-w-0; 
 }
-.rbc-time-header-gutter { 
+.rbc-time-header-gutter { /* Space above time scale */
   @apply w-16 flex-shrink-0 border-r border-border bg-card text-center; 
 }
-.rbc-time-header-content .rbc-row { 
+.rbc-time-header-content .rbc-row { /* Ensure rows within time header content are flex rows */
   @apply flex flex-row flex-1;
 }
-.rbc-time-header .rbc-header { 
+.rbc-time-header .rbc-header { /* Individual day header cell in Week/Day view */
   @apply flex-1 border-r border-border py-2 px-1 text-center text-sm font-medium text-foreground capitalize;
   min-width: 100px; 
 }
 .rbc-time-header .rbc-header:last-child {
   @apply border-r-0;
 }
-.rbc-time-content { 
+.rbc-time-content { /* Main scrollable area for timeslots and events */
   @apply flex flex-row flex-grow overflow-auto; 
   min-height: 400px;
 }
-.rbc-time-gutter { 
+.rbc-time-gutter { /* Vertical time scale */
   @apply w-16 flex-shrink-0 border-r border-border bg-card;
 }
-.rbc-timeslot-group { 
+.rbc-timeslot-group { /* Group of timeslots (e.g., an hour block) */
   @apply border-b border-border;
   min-height: 40px;
 }
 .rbc-time-slot {
   /* No specific styling needed if background is inherited */
 }
-.rbc-label { 
+.rbc-label { /* Time labels in the gutter */
   @apply p-1.5 text-xs text-muted-foreground text-right block;
 }
-.rbc-day-slot { 
+.rbc-day-slot { /* Vertical column for a single day in Week/Day view */
   @apply relative flex-1 border-l border-border; 
   min-width: 100px;  
 }
 .rbc-day-slot:first-child {
     @apply border-l-0; 
 }
-.rbc-day-slot .rbc-event { 
+.rbc-day-slot .rbc-event { /* Event in Week/Day view */
   @apply absolute z-[2] shadow-md rounded-md overflow-hidden text-ellipsis cursor-pointer;
   border: 1px solid hsl(var(--border));
   padding: 2px 4px;
@@ -232,8 +232,8 @@
 .rbc-day-slot .rbc-background-event {
     @apply opacity-75;
 }
-.rbc-allday-cell { 
-  @apply hidden; 
+.rbc-allday-cell { /* Area for all-day events at the top of week/day */
+  @apply hidden; /* Hide the all-day cell as requested by user */
 }
 
 
@@ -256,72 +256,47 @@
 .rbc-event.rbc-selected { 
   @apply bg-accent text-accent-foreground ring-2 ring-ring ring-offset-1;
 }
-.rbc-slot-selection {  
+.rbc-slot-selection {  /* When dragging to select a time slot */
   @apply bg-accent/40 rounded z-[1];
 }
 
 /* Agenda View Specifics */
 .rbc-agenda-view {
-  @apply flex-grow overflow-auto p-2 bg-card;
+  @apply flex-grow overflow-auto p-0 bg-card; /* No padding for full-width table */
 }
 .rbc-agenda-view table.rbc-agenda-table {
   @apply w-full border-collapse;
 }
-/* Hide default table headers for agenda */
-.rbc-agenda-view table.rbc-agenda-table thead {
-  @apply hidden;
+.rbc-agenda-view table.rbc-agenda-table thead th {
+  @apply py-3 px-4 text-left text-sm font-medium text-foreground bg-muted border-b border-border capitalize;
+}
+.rbc-agenda-view table.rbc-agenda-table tbody tr td {
+  @apply py-0 px-0 align-middle border-b border-border; /* Cell padding to 0, event itself will have padding */
 }
 
-/* Style each day's "header" row (which is actually the first rbc-agenda-date-cell of a day group) */
-.rbc-agenda-view tbody tr:has(td.rbc-agenda-date-cell:not(:empty)) {
-   /* This targets rows that "start" a new day's listing */
+.rbc-agenda-view table.rbc-agenda-table tbody tr:last-child td {
+  @apply border-b-0;
 }
 
-.rbc-agenda-view td.rbc-agenda-date-cell {
-  @apply py-3 px-4 text-left font-semibold text-foreground capitalize border-t border-b border-border;
-  /* This will display "Domingo, 15 de junio de 2025" as a header */
-}
-.rbc-agenda-view td.rbc-agenda-date-cell:not(:first-child) {
-  /* If rbc-agenda-date-cell is not the first child (due to rowspan), hide it or style differently */
-  @apply hidden; /* Hides subsequent date cells if rowspan is not working as expected */
+.rbc-agenda-date-cell, /* Date column content in Agenda */
+.rbc-agenda-time-cell { /* Time column content in Agenda */
+  @apply text-sm text-muted-foreground whitespace-nowrap py-3 px-4; /* Add padding back to these specific non-event cells */
 }
 
-
-.rbc-agenda-view table tbody tr td {
-  @apply p-2.5 align-middle; 
-}
-.rbc-agenda-view table tbody tr:not(:has(td.rbc-agenda-date-cell:not(:empty))) td {
-    @apply border-b border-border; /* Border only for event rows, not day headers */
-}
-.rbc-agenda-view table tbody tr:last-child td {
-    border-bottom: none; /* No bottom border for the very last item in the agenda */
-}
-
-
-.rbc-agenda-time-cell {
-  @apply text-muted-foreground whitespace-nowrap text-sm pr-4 w-[150px] text-right; /* Fixed width for time, right align */
+.rbc-agenda-event-cell { /* Event title column content in Agenda */
+   /* This cell itself has no padding, the .rbc-event inside will take full space and add its own padding */
 }
 
 /* Event styling in agenda */
-.rbc-agenda-event-cell {
-  @apply relative pl-5; /* Space for the dot */
-}
-.rbc-agenda-event-cell .rbc-event {
-  background-color: transparent !important;
-  border: none !important;
-  padding: 0 !important;
-  box-shadow: none !important;
-  color: hsl(var(--foreground)) !important; /* Ensure text color is readable */
-}
-
-.rbc-agenda-event-cell .rbc-event::before {
-  content: '';
-  @apply inline-block w-2.5 h-2.5 rounded-full absolute left-0 top-1/2 -translate-y-1/2;
-  background-color: var(--event-dot-color, hsl(var(--primary))); /* Fallback color */
+.rbc-agenda-view .rbc-event {
+  /* backgroundColor and color will be set by eventPropGetter */
+  @apply block w-full text-ellipsis overflow-hidden whitespace-nowrap; 
+  /* Padding is now controlled by eventPropGetter for agenda view to make it look like a full row color */
+  /* Example padding will be: style.padding = '0.75rem 1rem'; */
 }
 
 
-/* Popup for "+X more" events */
+/* Popup for "+X more" events in Month View */
 .rbc-overlay {
   @apply absolute z-50 bg-popover text-popover-foreground border border-border rounded-md shadow-lg p-2 min-w-[200px];
 }
@@ -356,3 +331,4 @@
 .rbc-time-view .rbc-time-content {
   overflow-y: auto; 
 }
+
