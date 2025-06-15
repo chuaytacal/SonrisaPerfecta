@@ -22,7 +22,7 @@ const locales = {
 const localizer = dateFnsLocalizer({
   format,
   parse,
-  startOfWeek: (date) => startOfWeek(date, { weekStartsOn: 1 }), // Lunes como inicio de semana
+  startOfWeek: (date) => startOfWeek(date, { weekStartsOn: 1 }), 
   getDay,
   locales,
 });
@@ -161,23 +161,35 @@ export default function CalendarioPage() {
     setSelectedSlotInfo(null);
   };
 
+  const handleDeleteAppointment = (appointmentId: string) => {
+    const appointmentToDelete = appointments.find(app => app.id === appointmentId);
+    setAppointments(prev => prev.filter(app => app.id !== appointmentId));
+    toast({
+      title: "Cita Eliminada",
+      description: `La cita "${appointmentToDelete?.title || 'seleccionada'}" ha sido eliminada.`,
+      variant: 'destructive' 
+    });
+    setIsModalOpen(false);
+    setEditingAppointment(null);
+    setSelectedSlotInfo(null);
+  };
+  
   const eventPropGetter = useCallback(
     (event: Appointment) => {
       const style: React.CSSProperties = {
-        padding: '2px 5px', // Default padding for events
-        borderRadius: '4px', // Default border radius
+        padding: '2px 5px', 
+        borderRadius: '4px', 
         border: 'none',
       };
       if (event.eventColor) {
         style.backgroundColor = event.eventColor;
-        style.color = 'hsl(var(--primary-foreground))'; // Assume white text is good for most event colors
+        style.color = 'hsl(var(--primary-foreground))';
 
         if (currentView === Views.AGENDA) {
           style.padding = '0.625rem'; 
-          style.margin = '0px'; // Ensure no extra margin for agenda items
+          style.margin = '0px';
           style.borderRadius = '0px';
           style.color = 'hsl(var(--card-foreground))'; 
-          // CSS variable for agenda item border color
           style['--agenda-event-color' as string] = event.eventColor;
         }
       }
@@ -241,25 +253,25 @@ export default function CalendarioPage() {
   const calendarFormats = useMemo(() => ({
     dateFormat: 'd',
     dayFormat: (date: Date, culture?: string, localizerInstance?: any) =>
-      localizerInstance.format(date, 'EEE', culture).toLowerCase(), // For Month view header: "lun", "mar"
+      localizerInstance.format(date, 'EEE', culture).toLowerCase(),
     weekdayFormat: (date: Date, culture?: string, localizerInstance?: any) =>
-      localizerInstance.format(date, 'EEE d/M', culture).toLowerCase(), // For Week view header: "lun 15/6"
+      localizerInstance.format(date, 'EEE d/M', culture).toLowerCase(),
     timeGutterFormat: (date: Date, culture?: string, localizerInstance?: any) =>
       localizerInstance.format(date, 'HH:mm', culture),
     eventTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) =>
       `${localizerInstance.format(start, 'HH:mm', culture)} - ${localizerInstance.format(end, 'HH:mm', culture)}`,
     agendaDateFormat: (date: Date, culture?: string, localizerInstance?: any) =>
-      localizerInstance.format(date, 'EEE, d MMM', culture), // For Agenda view: "lun, 17 jun"
+      localizerInstance.format(date, 'EEE, d MMM', culture), 
     agendaTimeFormat: (date: Date, culture?: string, localizerInstance?: any) =>
       localizerInstance.format(date, 'HH:mm', culture),
     agendaTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) =>
       `${localizerInstance.format(start, 'HH:mm', culture)} – ${localizerInstance.format(end, 'HH:mm', culture)}`,
     monthHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) =>
-      localizerInstance.format(date, 'MMMM yyyy', culture), // For Month view toolbar label: "junio 2025"
+      localizerInstance.format(date, 'MMMM yyyy', culture), 
     dayRangeHeaderFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) =>
-      `${localizerInstance.format(start, 'd MMM', culture)} - ${localizerInstance.format(end, 'd MMM yyyy', culture)}`, // For Week/Day view toolbar
+      `${localizerInstance.format(start, 'd MMM', culture)} - ${localizerInstance.format(end, 'd MMM yyyy', culture)}`, 
     dayHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) =>
-      localizerInstance.format(date, 'eeee, d MMMM yyyy', culture), // For Day view toolbar label: "lunes, 16 junio 2025"
+      localizerInstance.format(date, 'eeee, d MMMM yyyy', culture), 
   }), []);
 
 
@@ -322,6 +334,7 @@ export default function CalendarioPage() {
             setEditingAppointment(null);
           }}
           onSave={handleSaveAppointment}
+          onDelete={handleDeleteAppointment}
           initialData={selectedSlotInfo || undefined}
           existingAppointment={editingAppointment}
         />
@@ -330,3 +343,4 @@ export default function CalendarioPage() {
   );
 }
 
+    

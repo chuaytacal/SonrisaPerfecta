@@ -284,7 +284,7 @@
 }
 
 .rbc-agenda-event-cell { /* Event title column content in Agenda */
-   /* This cell itself has no padding, the .rbc-event inside will take full space and add its own padding */
+  @apply p-[10px] text-white; /* This cell itself has no padding, the .rbc-event inside will take full space and add its own padding */
 }
 
 /* Event styling in agenda */

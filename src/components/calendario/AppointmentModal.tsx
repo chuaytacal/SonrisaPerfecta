@@ -1,12 +1,13 @@
+
 "use client";
 
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format, parse as parseDateFns } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CalendarIcon, Plus, Palette } from 'lucide-react';
+import { CalendarIcon, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -18,7 +19,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar as CalendarPicker } from '@/components/ui/calendar';
 import {
@@ -67,7 +67,7 @@ const appointmentFormSchema = z.object({
   return endDateTime > startDateTime;
 }, {
   message: "La cita debe terminar después de que comience.",
-  path: ["endDate"], // You can also use ["endTime"] or a general message without path
+  path: ["endDate"],
 });
 
 
@@ -75,6 +75,7 @@ interface AppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (appointmentData: Appointment) => void;
+  onDelete?: (appointmentId: string) => void;
   initialData?: Partial<AppointmentFormData> & { start?: Date; end?: Date };
   existingAppointment?: Appointment | null;
 }
@@ -87,7 +88,7 @@ const eventColors = [
     { label: 'Púrpura', value: '#9C27B0' },
 ];
 
-export function AppointmentModal({ isOpen, onClose, onSave, initialData, existingAppointment }: AppointmentModalProps) {
+export function AppointmentModal({ isOpen, onClose, onSave, onDelete, initialData, existingAppointment }: AppointmentModalProps) {
   const form = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentFormSchema),
     defaultValues: {
@@ -163,10 +164,17 @@ export function AppointmentModal({ isOpen, onClose, onSave, initialData, existin
       tipoCita: data.tipoCita,
       notas: data.notas,
       eventColor: data.eventColor,
-      allDay: false, // Assuming not all-day events for now
+      allDay: false, 
     };
     onSave(appointmentToSave);
     onClose();
+  };
+
+  const handleDeleteClick = () => {
+    if (existingAppointment && onDelete) {
+      onDelete(existingAppointment.id);
+      onClose();
+    }
   };
 
   return (
@@ -179,7 +187,7 @@ export function AppointmentModal({ isOpen, onClose, onSave, initialData, existin
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-2">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-2 px-1">
             <FormField
               control={form.control}
               name="title"
@@ -225,7 +233,7 @@ export function AppointmentModal({ isOpen, onClose, onSave, initialData, existin
                 control={form.control}
                 name="startTime"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Hora de Inicio</FormLabel>
                     <FormControl>
                       <Input type="time" {...field} />
@@ -267,7 +275,7 @@ export function AppointmentModal({ isOpen, onClose, onSave, initialData, existin
                 control={form.control}
                 name="endTime"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Hora de Fin</FormLabel>
                     <FormControl>
                       <Input type="time" {...field} />
@@ -299,7 +307,6 @@ export function AppointmentModal({ isOpen, onClose, onSave, initialData, existin
                 <FormItem>
                   <FormLabel>Doctor/Personal (Opcional)</FormLabel>
                   <FormControl>
-                    {/* This would ideally be a Select populated with staff data */}
                     <Input placeholder="Nombre del doctor o personal" {...field} />
                   </FormControl>
                   <FormMessage />
@@ -373,13 +380,28 @@ export function AppointmentModal({ isOpen, onClose, onSave, initialData, existin
                 </FormItem>
               )}
             />
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? (existingAppointment ? 'Guardando...' : 'Creando...') : (existingAppointment ? 'Guardar Cambios' : 'Crear Cita')}
-              </Button>
+            <DialogFooter className="pt-4 flex justify-between">
+              <div>
+                {existingAppointment && onDelete && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={handleDeleteClick}
+                    className="mr-auto"
+                    aria-label="Eliminar cita"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={onClose}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? (existingAppointment ? 'Guardando...' : 'Creando...') : (existingAppointment ? 'Guardar Cambios' : 'Crear Cita')}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </Form>
@@ -387,3 +409,5 @@ export function AppointmentModal({ isOpen, onClose, onSave, initialData, existin
     </Dialog>
   );
 }
+
+    
