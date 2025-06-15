@@ -271,7 +271,7 @@
   @apply py-3 px-4 text-left text-sm font-medium text-foreground bg-muted border-b border-border capitalize;
 }
 .rbc-agenda-view table.rbc-agenda-table tbody tr td {
-  @apply py-0 px-0 align-middle border-b border-border; /* Cell padding to 0, event itself will have padding */
+  @apply align-middle border-b border-border; /* Cell padding to 0, event itself will have padding */
 }
 
 .rbc-agenda-view table.rbc-agenda-table tbody tr:last-child td {
@@ -280,7 +280,7 @@
 
 .rbc-agenda-date-cell, /* Date column content in Agenda */
 .rbc-agenda-time-cell { /* Time column content in Agenda */
-  @apply text-sm text-muted-foreground whitespace-nowrap py-3 px-4; /* Add padding back to these specific non-event cells */
+  @apply text-sm text-muted-foreground whitespace-nowrap p-[10px] text-white; /* Add padding back to these specific non-event cells */
 }
 
 .rbc-agenda-event-cell { /* Event title column content in Agenda */
