@@ -3,8 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* @import 'react-big-calendar/lib/css/react-big-calendar.css'; */
-/* User requested to remove the above import, styles will be handled customly */
+/* No react-big-calendar.css import per user request */
 
 @layer base {
   :root {
@@ -132,7 +131,7 @@
   min-height: 100px; /* Or a more dynamic value like flex-basis-0 */
 }
 .rbc-row-bg { /* Backgrounds of days in a week row */
-  @apply flex flex-row flex-1 w-full h-full; /* Should fill the .rbc-month-row */
+  @apply flex flex-row flex-1 w-full h-full absolute top-0 left-0 z-0;
 }
 .rbc-day-bg { /* Individual day cell background in month/week view */
   @apply border-l border-t border-border flex-1; /* flex-1 to divide space equally */
@@ -183,6 +182,9 @@
 }
 .rbc-time-header-gutter { /* Space above time gutter, aligns with time slots */
   @apply w-16 flex-shrink-0 border-r border-border bg-card text-center; /* Fixed width */
+}
+.rbc-time-header-content .rbc-row { /* Ensure rows within time header content are flex rows */
+  @apply flex flex-row flex-1;
 }
 .rbc-time-header .rbc-header { /* Individual day header cell in week/day e.g. "lun 17/6" */
   @apply flex-1 border-r border-border py-2 px-1 text-center text-sm font-medium text-foreground capitalize;
@@ -329,5 +331,4 @@
 .rbc-time-view .rbc-time-content {
   overflow-y: auto; /* Allow vertical scrolling for time views */
 }
-
     
