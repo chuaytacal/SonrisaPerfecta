@@ -179,7 +179,7 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, initialDat
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[525px] md:max-w-[650px]">
+      <DialogContent className="w-[90vw] max-w-lg">
         <DialogHeader>
           <DialogTitle>{existingAppointment ? 'Editar Cita' : 'Crear Nueva Cita'}</DialogTitle>
           <DialogDescription>
@@ -202,7 +202,7 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, initialDat
               )}
             />
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="startDate"
@@ -244,7 +244,7 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, initialDat
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="endDate"
@@ -380,25 +380,25 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, initialDat
                 </FormItem>
               )}
             />
-            <DialogFooter className="pt-4 flex justify-between">
-              <div>
+            <DialogFooter className="pt-4 flex flex-col-reverse sm:flex-row sm:justify-between gap-3">
+              <div className="w-full sm:w-auto">
                 {existingAppointment && onDelete && (
                   <Button
                     type="button"
                     variant="destructive"
                     onClick={handleDeleteClick}
-                    className="mr-auto"
+                    className="w-full sm:w-auto"
                     aria-label="Eliminar cita"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" /> <span className="sm:hidden ml-2">Eliminar</span>
                   </Button>
                 )}
               </div>
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={onClose}>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:justify-end">
+                <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={form.formState.isSubmitting}>
+                <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
                   {form.formState.isSubmitting ? (existingAppointment ? 'Guardando...' : 'Creando...') : (existingAppointment ? 'Guardar Cambios' : 'Crear Cita')}
                 </Button>
               </div>

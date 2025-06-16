@@ -186,14 +186,15 @@ export default function CalendarioPage() {
       };
       if (event.eventColor) {
         style.backgroundColor = event.eventColor;
-        style.color = 'hsl(var(--primary-foreground))';
-
+       
         if (currentView === Views.AGENDA) {
           style.padding = '0.625rem'; 
           style.margin = '0px';
           style.borderRadius = '0px';
           style.color = 'hsl(var(--card-foreground))'; 
-          style['--agenda-event-color' as string] = event.eventColor; // For potential use like border
+          style['--agenda-event-color' as string] = event.eventColor;
+        } else {
+           style.color = 'hsl(var(--primary-foreground))';
         }
       }
       return {
@@ -226,7 +227,7 @@ export default function CalendarioPage() {
                     <ChevronRight className="h-5 w-5" />
                 </Button>
             </div>
-            <h2 className="text-xl font-semibold text-foreground flex-grow text-center my-2 sm:my-0 order-first sm:order-none capitalize">
+            <h2 className="rbc-toolbar-label text-xl font-semibold text-foreground flex-grow text-center my-2 sm:my-0 order-first sm:order-none capitalize">
                 {label}
             </h2>
             <div className="flex items-center gap-1">
@@ -239,7 +240,7 @@ export default function CalendarioPage() {
                         variant={view === viewName ? 'default' : 'outline'}
                         onClick={() => onView(viewName)}
                         size="sm"
-                        className="px-3 py-2 text-sm"
+                        className="px-3 py-2 text-sm button" // Added 'button' class for media query styling
                         aria-label={`Vista ${viewLabel}`}
                     >
                         {IconComponent && <IconComponent className="mr-2 h-4 w-4" />}
@@ -254,31 +255,29 @@ export default function CalendarioPage() {
   };
 
   const calendarFormats = useMemo(() => ({
-    dayFormat: (date: Date, culture?: string, localizerInstance?: any) => // For Month view day headers: Mon, Tue, etc.
+    dayFormat: (date: Date, culture?: string, localizerInstance?: any) => 
       localizerInstance.format(date, 'EEE', culture).toLowerCase(),
-    weekdayFormat: (date: Date, culture?: string, localizerInstance?: any) => // For Week/Day view day headers: Mon 15/6
+    weekdayFormat: (date: Date, culture?: string, localizerInstance?: any) => 
       localizerInstance.format(date, 'EEE d/M', culture).toLowerCase(),
     
-    dateFormat: 'd', // Day number in Month view cells
+    dateFormat: 'd', 
     timeGutterFormat: (date: Date, culture?: string, localizerInstance?: any) =>
       localizerInstance.format(date, 'HH:mm', culture),
     eventTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) =>
       `${localizerInstance.format(start, 'HH:mm', culture)} - ${localizerInstance.format(end, 'HH:mm', culture)}`,
     
-    // Agenda formats
-    agendaDateFormat: (date: Date, culture?: string, localizerInstance?: any) => // Date for each day in Agenda
+    agendaDateFormat: (date: Date, culture?: string, localizerInstance?: any) => 
       localizerInstance.format(date, 'EEEE, d MMMM yyyy', culture), 
-    agendaTimeFormat: (date: Date, culture?: string, localizerInstance?: any) => // Start time for an event in Agenda
+    agendaTimeFormat: (date: Date, culture?: string, localizerInstance?: any) => 
       localizerInstance.format(date, 'HH:mm', culture),
-    agendaTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) => // Time range for an event in Agenda
+    agendaTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) => 
       `${localizerInstance.format(start, 'HH:mm', culture)} – ${localizerInstance.format(end, 'HH:mm', culture)}`,
     
-    // Toolbar formats
-    monthHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) => // Month and Year in toolbar
+    monthHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) => 
       localizerInstance.format(date, 'MMMM yyyy', culture), 
-    dayRangeHeaderFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) => // Date range in toolbar for Week/Day view
+    dayRangeHeaderFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) => 
       `${localizerInstance.format(start, 'd MMM', culture)} - ${localizerInstance.format(end, 'd MMM yyyy', culture)}`, 
-    dayHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) => // Single day in toolbar for Day view
+    dayHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) => 
       localizerInstance.format(date, 'eeee, d MMMM yyyy', culture), 
   }), []);
 
@@ -287,7 +286,7 @@ export default function CalendarioPage() {
     <div className="flex flex-col h-full relative">
       <h1 className="text-3xl font-bold text-foreground mb-6">Calendario de Citas</h1>
 
-      <div className="flex-grow relative" style={{ height: 'calc(100vh - 200px)' }}>
+      <div className="flex-grow relative"> {/* Removed explicit style height */}
         {currentDate ? (
           <BigCalendar
             localizer={localizer}
@@ -318,13 +317,13 @@ export default function CalendarioPage() {
             style={{ height: '100%' }}
           />
         ) : (
-          <div className="flex flex-col space-y-3 p-4 bg-card rounded-lg shadow-md">
+          <div className="flex flex-col space-y-3 p-4 bg-card rounded-lg shadow-md h-full"> {/* Ensure skeleton takes full height */}
             <Skeleton className="h-[50px] w-full rounded-lg" />
             <div className="space-y-2">
               <Skeleton className="h-4 w-[250px]" />
               <Skeleton className="h-4 w-[200px]" />
             </div>
-            <Skeleton className="h-[calc(100vh_-_350px)] w-full rounded-lg" />
+            <Skeleton className="flex-grow w-full rounded-lg" /> {/* Use flex-grow for skeleton height */}
           </div>
         )}
       </div>
@@ -361,3 +360,4 @@ export default function CalendarioPage() {
     </div>
   );
 }
+

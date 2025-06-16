@@ -180,12 +180,13 @@
 .rbc-time-header-content { /* Wraps day headers row and all-day events row */
   @apply flex flex-col flex-1 min-w-0; 
 }
-.rbc-time-header-gutter { /* Space above time scale */
-  @apply w-16 flex-shrink-0 border-r border-border bg-card text-center; 
-}
 .rbc-time-header-content .rbc-row { /* Ensure rows within time header content are flex rows */
   @apply flex flex-row flex-1;
 }
+.rbc-time-header-gutter { /* Space above time scale */
+  @apply w-16 flex-shrink-0 border-r border-border bg-card text-center; 
+}
+
 .rbc-time-header .rbc-header { /* Individual day header cell in Week/Day view */
   @apply flex-1 border-r border-border py-2 px-1 text-center text-sm font-medium text-foreground capitalize;
   min-width: 100px; 
@@ -262,7 +263,7 @@
 
 /* Agenda View Specifics */
 .rbc-agenda-view {
-  @apply flex-grow overflow-auto p-0 bg-card; /* No padding for full-width table */
+  @apply flex-grow overflow-auto p-0 bg-card;
 }
 .rbc-agenda-view table.rbc-agenda-table {
   @apply w-full border-collapse;
@@ -270,29 +271,28 @@
 .rbc-agenda-view table.rbc-agenda-table thead th {
   @apply py-3 px-4 text-left text-sm font-medium text-foreground bg-muted border-b border-border capitalize;
 }
+.rbc-agenda-view table.rbc-agenda-table tbody tr {
+   border-bottom: 4px solid transparent; /* Creates space between rows, card background shows through */
+}
 .rbc-agenda-view table.rbc-agenda-table tbody tr td {
-  @apply align-middle border-b border-border; /* Cell padding to 0, event itself will have padding */
+  @apply align-middle py-0 px-0; /* Cell padding to 0, event itself will have padding. Border will be on TR */
+  border-bottom: none; /* Remove default cell border, separation handled by TR */
+}
+.rbc-agenda-view table.rbc-agenda-table tbody tr:last-child {
+  border-bottom: none; /* No extra space after the last item */
 }
 
-.rbc-agenda-view table.rbc-agenda-table tbody tr:last-child td {
-  @apply border-b-0;
+.rbc-agenda-date-cell, 
+.rbc-agenda-time-cell { 
+  @apply text-sm text-muted-foreground whitespace-nowrap p-[10px]; 
 }
 
-.rbc-agenda-date-cell, /* Date column content in Agenda */
-.rbc-agenda-time-cell { /* Time column content in Agenda */
-  @apply text-sm text-muted-foreground whitespace-nowrap p-[10px] text-white; /* Add padding back to these specific non-event cells */
+.rbc-agenda-event-cell { 
+   /* This cell itself has no padding, the .rbc-event inside will take full space and add its own padding */
 }
 
-.rbc-agenda-event-cell { /* Event title column content in Agenda */
-  @apply p-[10px] text-white; /* This cell itself has no padding, the .rbc-event inside will take full space and add its own padding */
-}
-
-/* Event styling in agenda */
 .rbc-agenda-view .rbc-event {
-  /* backgroundColor and color will be set by eventPropGetter */
   @apply block w-full text-ellipsis overflow-hidden whitespace-nowrap; 
-  /* Padding is now controlled by eventPropGetter for agenda view to make it look like a full row color */
-  /* Example padding will be: style.padding = '0.75rem 1rem'; */
 }
 
 
@@ -308,10 +308,7 @@
 }
 
 /* Fixes for small screen responsiveness if needed */
-@media (max-width: 768px) {
-  .rbc-toolbar {
-    /* Toolbar items might stack if CustomToolbar uses flex-col for sm screens */
-  }
+@media (max-width: 768px) { /* md breakpoint */
   .rbc-time-header-gutter, .rbc-time-gutter {
     @apply w-12;
   }
@@ -322,6 +319,57 @@
     @apply w-auto text-left; /* Adjust for smaller screens */
   }
 }
+
+@media (max-width: 639px) { /* Below sm breakpoint */
+  .rbc-toolbar {
+    @apply p-2;
+  }
+  .rbc-toolbar .button { /* Shadcn Button inside toolbar */
+    @apply px-2 py-1 text-xs h-auto;
+  }
+   .rbc-toolbar .button svg { /* Lucide icons inside buttons */
+    @apply h-3 w-3 mr-1;
+  }
+  .rbc-toolbar-label {
+    @apply text-base font-medium;
+  }
+  .rbc-header { /* Day headers in month/week/day */
+    @apply text-xs py-1 px-0.5;
+  }
+  .rbc-month-view .rbc-event {
+    @apply text-[9px] p-0 leading-tight my-px;
+  }
+  .rbc-event-label, .rbc-event-content { /* Event text in week/day view */
+    @apply text-[9px] leading-tight;
+  }
+  .rbc-day-slot .rbc-event { /* Event container in week/day view */
+    @apply p-0.5;
+  }
+  .rbc-label { /* Time labels in gutter */
+    @apply text-[9px] p-0.5;
+  }
+  .rbc-time-header-gutter, .rbc-time-gutter {
+    @apply w-8; /* Narrower time gutter */
+  }
+  /* Ensure day cells can shrink and have minimal padding */
+  .rbc-month-view .rbc-day-bg {
+    min-width: 20px;
+  }
+  .rbc-month-view .rbc-date-cell {
+    @apply p-0.5;
+  }
+   .rbc-time-view .rbc-day-slot {
+     min-width: 30px;
+   }
+  .rbc-time-view .rbc-header { /* Day headers in week/day view */
+     min-width: 30px;
+     @apply px-0.5 text-xs;
+  }
+  .rbc-timeslot-group {
+    min-height: 30px;
+  }
+}
+
 
 /* Ensure calendar content area grows */
 .rbc-month-view,
