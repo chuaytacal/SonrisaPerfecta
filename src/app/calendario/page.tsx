@@ -126,6 +126,7 @@ export default function CalendarioPage() {
   }, []);
 
   const handleSelectSlot = useCallback(({ start, end }: { start: Date; end: Date }) => {
+    // console.log('Slot selected on mobile test:', start, end); // Keep for debugging if modal issues persist
     setSelectedSlotInfo({
       start,
       end,
@@ -192,7 +193,6 @@ export default function CalendarioPage() {
           style.margin = '0px';
           style.borderRadius = '0px';
           style.color = 'hsl(var(--card-foreground))'; 
-          style['--agenda-event-color' as string] = event.eventColor;
         } else {
            style.color = 'hsl(var(--primary-foreground))';
         }
@@ -267,7 +267,7 @@ export default function CalendarioPage() {
       `${localizerInstance.format(start, 'HH:mm', culture)} - ${localizerInstance.format(end, 'HH:mm', culture)}`,
     
     agendaDateFormat: (date: Date, culture?: string, localizerInstance?: any) => 
-      localizerInstance.format(date, 'EEEE, d MMMM yyyy', culture), 
+      localizerInstance.format(date, 'EEE, d MMM', culture), 
     agendaTimeFormat: (date: Date, culture?: string, localizerInstance?: any) => 
       localizerInstance.format(date, 'HH:mm', culture),
     agendaTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) => 
@@ -283,10 +283,10 @@ export default function CalendarioPage() {
 
 
   return (
-    <div className="flex flex-col h-full relative">
+    <div className="flex flex-col relative"> {/* Removed h-full */}
       <h1 className="text-3xl font-bold text-foreground mb-6">Calendario de Citas</h1>
 
-      <div className="flex-grow relative"> {/* Removed explicit style height */}
+      <div className="flex-grow relative">
         {currentDate ? (
           <BigCalendar
             localizer={localizer}
@@ -314,16 +314,16 @@ export default function CalendarioPage() {
             formats={calendarFormats}
             dayLayoutAlgorithm="no-overlap"
             popup
-            style={{ height: '100%' }}
+            style={{ height: '100%' }} 
           />
         ) : (
-          <div className="flex flex-col space-y-3 p-4 bg-card rounded-lg shadow-md h-full"> {/* Ensure skeleton takes full height */}
+          <div className="flex flex-col space-y-3 p-4 bg-card rounded-lg shadow-md h-full">
             <Skeleton className="h-[50px] w-full rounded-lg" />
             <div className="space-y-2">
               <Skeleton className="h-4 w-[250px]" />
               <Skeleton className="h-4 w-[200px]" />
             </div>
-            <Skeleton className="flex-grow w-full rounded-lg" /> {/* Use flex-grow for skeleton height */}
+            <Skeleton className="flex-grow w-full rounded-lg" />
           </div>
         )}
       </div>
