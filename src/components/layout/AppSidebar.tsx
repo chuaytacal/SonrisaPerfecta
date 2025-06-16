@@ -31,7 +31,7 @@ import {
   ClipboardType,
   FilePlus,
   BarChart3,
-  ChevronDown,
+  // ChevronDown is part of AccordionTrigger from ui/accordion.tsx
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import React, { useState, useEffect } from 'react';
@@ -115,29 +115,34 @@ export default function AppSidebar() {
     setMounted(true);
   }, []);
 
+  // Determine if the sidebar is collapsed on desktop
+  // On server and initial client render (mounted=false), isDesktopCollapsed is false
+  // After mount, it reflects the actual state.
   const isDesktopCollapsed = mounted ? (!sidebarCtx.isMobile && !sidebarCtx.open) : false;
 
 
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(() => {
+    // This initializer runs on server and client. Pathname should be consistent.
     const activeItems: string[] = [];
-    if (mounted && (sidebarCtx.open || sidebarCtx.isMobile)) {
-        function findActive(items: any[], currentPath: string) {
-          for (const item of items) {
-            if (item.basePathForActive && currentPath.startsWith(item.basePathForActive)) {
-              activeItems.push(item.label);
-              if (item.subItems || item.subSubItems) {
-                findActive(item.subItems || item.subSubItems, currentPath);
-              }
-            }
+    // Initial population of openAccordionItems should not depend on isDesktopCollapsed
+    // as it relies on 'mounted' state which differs server/client initially.
+    // The useEffect below will handle adjustments after mount.
+    function findActive(items: any[], currentPath: string) {
+      for (const item of items) {
+        if (item.basePathForActive && currentPath.startsWith(item.basePathForActive)) {
+          activeItems.push(item.label);
+          if (item.subItems || item.subSubItems) {
+            findActive(item.subItems || item.subSubItems, currentPath);
           }
         }
-        findActive(sidebarNavItems, pathname);
+      }
     }
+    findActive(sidebarNavItems, pathname);
     return activeItems;
   });
 
   useEffect(() => {
-    if (mounted) {
+    if (mounted) { // Only run this logic on the client after mount
       if (isDesktopCollapsed) {
         setOpenAccordionItems([]); 
       } else {
@@ -156,35 +161,36 @@ export default function AppSidebar() {
           setOpenAccordionItems(activeItems);
       }
     }
-  }, [isDesktopCollapsed, pathname, sidebarCtx.open, sidebarCtx.isMobile, mounted]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, isDesktopCollapsed, pathname]); // Removed sidebarCtx.open and sidebarCtx.isMobile directly, covered by isDesktopCollapsed
 
 
   const renderNavItems = (items: any[], level = 0) => {
     return items.map((item) => {
       const Icon = item.icon;
+      // isActive for direct links, isParentActive for sections containing the current path
       const isActive = item.href && pathname === item.href;
-      
+      const isParentActive = item.basePathForActive && pathname.startsWith(item.basePathForActive);
+
       if (item.subItems || item.subSubItems) {
         const subItems = item.subItems || item.subSubItems;
-        const isParentActive = item.basePathForActive && pathname.startsWith(item.basePathForActive);
-
+        
         return (
           <SidebarMenuItem key={item.label}>
-            <Accordion type="multiple" value={(mounted && isDesktopCollapsed) ? [] : openAccordionItems} onValueChange={setOpenAccordionItems} className="w-full">
+            <Accordion type="multiple" value={openAccordionItems} onValueChange={setOpenAccordionItems} className="w-full">
               <AccordionItem value={item.label} className="border-none">
                 <AccordionTrigger
                   className={cn(
                     "flex w-full items-center rounded-md p-2 text-left text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring outline-none",
                     level > 0 && "pl-6", 
                     isParentActive && !isActive && "text-sidebar-primary font-medium",
-                    mounted && isDesktopCollapsed && "!size-8 !p-2 justify-center",
-                    !(mounted && isDesktopCollapsed) && "gap-2" // Add gap only when expanded
+                    mounted && isDesktopCollapsed && "!size-8 !p-2 justify-center", // Icon-only styling when collapsed
+                    !(mounted && isDesktopCollapsed) && "gap-2" 
                   )}
                   title={ (mounted && isDesktopCollapsed) ? item.label : undefined} 
                 >
                   {Icon && <Icon className={cn("h-4 w-4 shrink-0", isParentActive && "text-sidebar-primary")} />}
                   { !(mounted && isDesktopCollapsed) && <span className="ml-0 flex-1 truncate">{item.label}</span>}
-                   {/* ChevronDown is part of AccordionTrigger from ui/accordion.tsx and styled there */}
                 </AccordionTrigger>
                 <AccordionContent className={cn("pt-0 pb-0", (mounted && isDesktopCollapsed) && "hidden")}>
                   <SidebarMenu className={cn("pl-4", level > 0 && "pl-8")}>
@@ -204,7 +210,7 @@ export default function AppSidebar() {
               asChild
               isActive={isActive}
               className={cn(level > 0 && "pl-6", mounted && isDesktopCollapsed && "justify-center")}
-              tooltip={item.label}
+              tooltip={item.label} // Tooltip for collapsed state
             >
               <a>
                 {Icon && <Icon className="shrink-0" />}
