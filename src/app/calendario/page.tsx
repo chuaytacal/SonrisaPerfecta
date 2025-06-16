@@ -10,10 +10,12 @@ import getDay from 'date-fns/getDay';
 import es from 'date-fns/locale/es';
 import { addDays, setHours, setMinutes } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Plus, ChevronLeft, ChevronRight, CalendarDays, ListFilter, LayoutGrid, Rows3 } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, CalendarDays, ListFilter, LayoutGrid, Rows3, Trash2 } from 'lucide-react';
 import { AppointmentModal } from '@/components/calendario/AppointmentModal';
 import type { Appointment, AppointmentFormData } from '@/types/calendar';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 const locales = {
   'es': es,
@@ -114,11 +116,12 @@ export default function CalendarioPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSlotInfo, setSelectedSlotInfo] = useState<Partial<AppointmentFormData> & { start?: Date; end?: Date } | null>(null);
   const [currentView, setCurrentView] = useState<keyof typeof Views>(Views.MONTH);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
+    setCurrentDate(new Date());
     setAppointments(generateInitialAppointments());
   }, []);
 
@@ -190,7 +193,7 @@ export default function CalendarioPage() {
           style.margin = '0px';
           style.borderRadius = '0px';
           style.color = 'hsl(var(--card-foreground))'; 
-          style['--agenda-event-color' as string] = event.eventColor;
+          style['--agenda-event-color' as string] = event.eventColor; // For potential use like border
         }
       }
       return {
@@ -251,26 +254,31 @@ export default function CalendarioPage() {
   };
 
   const calendarFormats = useMemo(() => ({
-    dateFormat: 'd',
-    dayFormat: (date: Date, culture?: string, localizerInstance?: any) =>
+    dayFormat: (date: Date, culture?: string, localizerInstance?: any) => // For Month view day headers: Mon, Tue, etc.
       localizerInstance.format(date, 'EEE', culture).toLowerCase(),
-    weekdayFormat: (date: Date, culture?: string, localizerInstance?: any) =>
+    weekdayFormat: (date: Date, culture?: string, localizerInstance?: any) => // For Week/Day view day headers: Mon 15/6
       localizerInstance.format(date, 'EEE d/M', culture).toLowerCase(),
+    
+    dateFormat: 'd', // Day number in Month view cells
     timeGutterFormat: (date: Date, culture?: string, localizerInstance?: any) =>
       localizerInstance.format(date, 'HH:mm', culture),
     eventTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) =>
       `${localizerInstance.format(start, 'HH:mm', culture)} - ${localizerInstance.format(end, 'HH:mm', culture)}`,
-    agendaDateFormat: (date: Date, culture?: string, localizerInstance?: any) =>
-      localizerInstance.format(date, 'EEE, d MMM', culture), 
-    agendaTimeFormat: (date: Date, culture?: string, localizerInstance?: any) =>
+    
+    // Agenda formats
+    agendaDateFormat: (date: Date, culture?: string, localizerInstance?: any) => // Date for each day in Agenda
+      localizerInstance.format(date, 'EEEE, d MMMM yyyy', culture), 
+    agendaTimeFormat: (date: Date, culture?: string, localizerInstance?: any) => // Start time for an event in Agenda
       localizerInstance.format(date, 'HH:mm', culture),
-    agendaTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) =>
+    agendaTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) => // Time range for an event in Agenda
       `${localizerInstance.format(start, 'HH:mm', culture)} – ${localizerInstance.format(end, 'HH:mm', culture)}`,
-    monthHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) =>
+    
+    // Toolbar formats
+    monthHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) => // Month and Year in toolbar
       localizerInstance.format(date, 'MMMM yyyy', culture), 
-    dayRangeHeaderFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) =>
+    dayRangeHeaderFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) => // Date range in toolbar for Week/Day view
       `${localizerInstance.format(start, 'd MMM', culture)} - ${localizerInstance.format(end, 'd MMM yyyy', culture)}`, 
-    dayHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) =>
+    dayHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) => // Single day in toolbar for Day view
       localizerInstance.format(date, 'eeee, d MMMM yyyy', culture), 
   }), []);
 
@@ -279,35 +287,46 @@ export default function CalendarioPage() {
     <div className="flex flex-col h-full relative">
       <h1 className="text-3xl font-bold text-foreground mb-6">Calendario de Citas</h1>
 
-      <div className="flex-grow relative" style={{ height: '100%' }}>
-        <BigCalendar
-          localizer={localizer}
-          events={appointments}
-          startAccessor="start"
-          endAccessor="end"
-          selectable
-          onSelectSlot={handleSelectSlot}
-          onSelectEvent={handleSelectEvent}
-          defaultView={Views.MONTH}
-          views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
-          messages={messages}
-          culture="es"
-          className="bg-card text-card-foreground p-0 border-none rounded-lg shadow-md"
-          components={{
-            toolbar: CustomToolbar,
-          }}
-          date={currentDate}
-          onNavigate={(newDate) => setCurrentDate(newDate)}
-          view={currentView}
-          onView={(newView) => setCurrentView(newView as keyof typeof Views)}
-          eventPropGetter={eventPropGetter}
-          min={new Date(0,0,0, 7,0,0)}
-          max={new Date(0,0,0, 21,0,0)}
-          formats={calendarFormats}
-          dayLayoutAlgorithm="no-overlap"
-          popup
-          style={{ height: '100%' }}
-        />
+      <div className="flex-grow relative" style={{ height: 'calc(100vh - 200px)' }}>
+        {currentDate ? (
+          <BigCalendar
+            localizer={localizer}
+            events={appointments}
+            startAccessor="start"
+            endAccessor="end"
+            selectable
+            onSelectSlot={handleSelectSlot}
+            onSelectEvent={handleSelectEvent}
+            defaultView={Views.MONTH}
+            views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
+            messages={messages}
+            culture="es"
+            className="bg-card text-card-foreground p-0 border-none rounded-lg shadow-md"
+            components={{
+              toolbar: CustomToolbar,
+            }}
+            date={currentDate}
+            onNavigate={(newDate) => setCurrentDate(newDate)}
+            view={currentView}
+            onView={(newView) => setCurrentView(newView as keyof typeof Views)}
+            eventPropGetter={eventPropGetter}
+            min={new Date(0,0,0, 7,0,0)}
+            max={new Date(0,0,0, 21,0,0)}
+            formats={calendarFormats}
+            dayLayoutAlgorithm="no-overlap"
+            popup
+            style={{ height: '100%' }}
+          />
+        ) : (
+          <div className="flex flex-col space-y-3 p-4 bg-card rounded-lg shadow-md">
+            <Skeleton className="h-[50px] w-full rounded-lg" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-[250px]" />
+              <Skeleton className="h-4 w-[200px]" />
+            </div>
+            <Skeleton className="h-[calc(100vh_-_350px)] w-full rounded-lg" />
+          </div>
+        )}
       </div>
 
       <Button
@@ -342,5 +361,3 @@ export default function CalendarioPage() {
     </div>
   );
 }
-
-    
