@@ -256,9 +256,9 @@ export default function CalendarioPage() {
 
   const calendarFormats = useMemo(() => ({
     dayFormat: (date: Date, culture?: string, localizerInstance?: any) => 
-      localizerInstance.format(date, 'EEE', culture).toLowerCase(),
-    weekdayFormat: (date: Date, culture?: string, localizerInstance?: any) => 
       localizerInstance.format(date, 'EEE d/M', culture).toLowerCase(),
+    weekdayFormat: (date: Date, culture?: string, localizerInstance?: any) => 
+      localizerInstance.format(date, 'EEE', culture).toLowerCase(),
     
     dateFormat: 'd', 
     timeGutterFormat: (date: Date, culture?: string, localizerInstance?: any) =>

@@ -275,7 +275,7 @@
    border-bottom: 4px solid transparent; /* Creates space between rows, card background shows through */
 }
 .rbc-agenda-view table.rbc-agenda-table tbody tr td {
-  @apply align-middle py-0 px-0; /* Cell padding to 0, event itself will have padding. Border will be on TR */
+  @apply align-middle; /* Cell padding to 0, event itself will have padding. Border will be on TR */
   border-bottom: none; /* Remove default cell border, separation handled by TR */
 }
 .rbc-agenda-view table.rbc-agenda-table tbody tr:last-child {
@@ -284,11 +284,11 @@
 
 .rbc-agenda-date-cell, 
 .rbc-agenda-time-cell { 
-  @apply text-sm text-muted-foreground whitespace-nowrap p-[10px]; 
+  @apply text-sm text-muted-foreground whitespace-nowrap p-[10px] text-white; 
 }
 
 .rbc-agenda-event-cell { 
-   /* This cell itself has no padding, the .rbc-event inside will take full space and add its own padding */
+  @apply p-[10px] text-white; /* This cell itself has no padding, the .rbc-event inside will take full space and add its own padding */
 }
 
 .rbc-agenda-view .rbc-event {
