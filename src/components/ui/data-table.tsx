@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -51,7 +52,7 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   searchPlaceholder?: string;
-  searchColumnId?: string; 
+  searchColumnId?: string;
   statusColumnId?: string;
   statusOptions?: { label: string; value: string }[];
   onAdd?: () => void;
@@ -100,7 +101,7 @@ export function DataTable<TData, TValue>({
   return (
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto flex-wrap">
           {searchColumnId && (
             <div className="relative w-full sm:w-auto">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -110,18 +111,18 @@ export function DataTable<TData, TValue>({
                 onChange={(event) =>
                   table.getColumn(searchColumnId)?.setFilterValue(event.target.value)
                 }
-                className="pl-8 w-full sm:w-[200px] lg:w-[250px]"
+                className="pl-8 w-full sm:min-w-[200px] lg:min-w-[250px]"
               />
             </div>
           )}
-           {!searchColumnId && ( 
+           {!searchColumnId && (
             <div className="relative w-full sm:w-auto">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={searchPlaceholder}
                 value={globalFilter ?? ""}
                 onChange={(event) => setGlobalFilter(event.target.value)}
-                className="pl-8 w-full sm:w-[200px] lg:w-[250px]"
+                className="pl-8 w-full sm:min-w-[200px] lg:min-w-[250px]"
               />
             </div>
           )}
@@ -147,10 +148,10 @@ export function DataTable<TData, TValue>({
           )}
           {children}
         </div>
-        <div className="flex items-center gap-2 w-full md:w-auto">
+        <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="ml-auto hidden sm:flex">
+              <Button variant="outline" className="ml-auto"> {/* Removed hidden sm:flex to always show */}
                 <Settings2 className="mr-2 h-4 w-4" /> Columnas
               </Button>
             </DropdownMenuTrigger>
@@ -231,73 +232,80 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
+        <div className="text-sm text-muted-foreground mb-2 sm:mb-0">
           {table.getFilteredSelectedRowModel().rows.length} de{" "}
           {table.getFilteredRowModel().rows.length} fila(s) seleccionadas.
         </div>
-        <div className="flex items-center space-x-2">
-            <span className="text-sm text-muted-foreground hidden lg:inline-block">
-              Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => table.setPageIndex(0)}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <span className="sr-only">Ir a la primera página</span>
-              <ChevronsLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <span className="sr-only">Ir a la página anterior</span>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <span className="sr-only">Ir a la página siguiente</span>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-             <Button
-              variant="outline"
-              size="icon"
-              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-              disabled={!table.getCanNextPage()}
-            >
-              <span className="sr-only">Ir a la última página</span>
-              <ChevronsRight className="h-4 w-4" />
-            </Button>
-        </div>
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-muted-foreground hidden lg:inline-block">Filas por página</span>
-          <Select
-              value={`${table.getState().pagination.pageSize}`}
-              onValueChange={(value) => {
-                table.setPageSize(Number(value))
-              }}
-            >
-              <SelectTrigger className="h-8 w-[70px]">
-                <SelectValue placeholder={table.getState().pagination.pageSize} />
-              </SelectTrigger>
-              <SelectContent side="top">
-                {[10, 20, 30, 40, 50].map((pageSize) => (
-                  <SelectItem key={pageSize} value={`${pageSize}`}>
-                    {pageSize}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="flex flex-col xs:flex-row items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center space-x-2 mb-2 xs:mb-0 w-full xs:w-auto justify-center">
+                <Button
+                variant="outline"
+                size="icon"
+                onClick={() => table.setPageIndex(0)}
+                disabled={!table.getCanPreviousPage()}
+                className="h-8 w-8"
+                >
+                <span className="sr-only">Ir a la primera página</span>
+                <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                variant="outline"
+                size="icon"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="h-8 w-8"
+                >
+                <span className="sr-only">Ir a la página anterior</span>
+                <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm text-muted-foreground px-2">
+                    Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount() > 0 ? table.getPageCount() : 1}
+                </span>
+                <Button
+                variant="outline"
+                size="icon"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                className="h-8 w-8"
+                >
+                <span className="sr-only">Ir a la página siguiente</span>
+                <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                variant="outline"
+                size="icon"
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                disabled={!table.getCanNextPage()}
+                className="h-8 w-8"
+                >
+                <span className="sr-only">Ir a la última página</span>
+                <ChevronsRight className="h-4 w-4" />
+                </Button>
+            </div>
+            <div className="flex items-center space-x-2 w-full xs:w-auto justify-center xs:justify-end">
+            <span className="text-sm text-muted-foreground hidden sm:inline-block">Filas por página</span>
+            <Select
+                value={`${table.getState().pagination.pageSize}`}
+                onValueChange={(value) => {
+                    table.setPageSize(Number(value))
+                }}
+                >
+                <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue placeholder={table.getState().pagination.pageSize} />
+                </SelectTrigger>
+                <SelectContent side="top">
+                    {[10, 20, 30, 40, 50].map((pageSize) => (
+                    <SelectItem key={pageSize} value={`${pageSize}`}>
+                        {pageSize}
+                    </SelectItem>
+                    ))}
+                </SelectContent>
+                </Select>
+            </div>
         </div>
       </div>
     </div>
   );
 }
+

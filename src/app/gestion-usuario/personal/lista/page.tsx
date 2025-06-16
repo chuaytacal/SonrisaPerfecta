@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -232,7 +233,7 @@ const columns: ColumnDef<Personal>[] = [
     cell: ({ row }) => {
       const isActive = row.original.estado === "Activo";
       return (
-        <Badge variant={isActive ? "default" : "destructive"} 
+        <Badge variant={isActive ? "default" : "destructive"}
                className={isActive ? "bg-green-500 hover:bg-green-600" : "bg-red-500 hover:bg-red-600"}>
           {row.original.estado}
         </Badge>
@@ -248,7 +249,7 @@ const columns: ColumnDef<Personal>[] = [
     cell: ({ row }) => {
       const personal = row.original;
       // eslint-disable-next-line react-hooks/rules-of-hooks
-      const [isEditing, setIsEditing] = React.useState(false); 
+      const [isEditing, setIsEditing] = React.useState(false);
       // eslint-disable-next-line react-hooks/rules-of-hooks
       const [currentPersonal, setCurrentPersonal] = React.useState<Personal | null>(null);
 
@@ -257,7 +258,7 @@ const columns: ColumnDef<Personal>[] = [
         setCurrentPersonal(personal);
         setIsEditing(true);
       };
-      
+
       const handleDelete = () => {
         // Lógica para eliminar
         alert(`Eliminar: ${personal.nombre}`);
@@ -321,19 +322,26 @@ export default function ListaPersonalPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [sortBy, setSortBy] = React.useState<string>("nombre_asc"); // Example: 'nombre_asc', 'fechaIngreso_desc'
 
-  const handleStaffAdded = () => {
-    // This is where you would refetch the data from your backend
-    // For now, we'll just re-use mock data or you could update it locally
-    console.log("Personal añadido, refrescando lista (simulado)");
-    // setPersonalList([...mockPersonalData, newStaff]); // If you had new staff data
-    setIsAddModalOpen(false);
-  };
+  const handleStaffAdded = (newOrUpdatedStaff: Personal) => {
+    if (personalList.find(p => p.id === newOrUpdatedStaff.id)) {
+        // Update existing staff
+        setPersonalList(prevList => 
+            prevList.map(p => p.id === newOrUpdatedStaff.id ? newOrUpdatedStaff : p)
+        );
+    } else {
+        // Add new staff
+        setPersonalList(prevList => [...prevList, newOrUpdatedStaff]);
+    }
+    setIsAddModalOpen(false); // Close modal for add
+    // For edit, the modal might be closed from within AddPersonalForm if onOpenChange is called with false
+};
+
 
   const statusOptions = [
     { label: "Activo", value: "Activo" },
     { label: "Inactivo", value: "Inactivo" },
   ];
-  
+
   const sortOptions = [
     { label: "Nombre (A-Z)", value: "nombre_asc" },
     { label: "Nombre (Z-A)", value: "nombre_desc" },
@@ -357,7 +365,9 @@ export default function ListaPersonalPage() {
         searchColumnId="nombre" // You might want a combined search or specific DNI search
         statusColumnId="estado"
         statusOptions={statusOptions}
-        onAdd={() => setIsAddModalOpen(true)}
+        onAdd={() => {
+            setIsAddModalOpen(true);
+        }}
         addButtonLabel="Añadir Personal"
       >
         <Select value={sortBy} onValueChange={setSortBy}>
@@ -373,9 +383,13 @@ export default function ListaPersonalPage() {
       </DataTable>
       <AddPersonalForm
         open={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
+        onOpenChange={(isOpen) => {
+            setIsAddModalOpen(isOpen);
+        }}
         onStaffAdded={handleStaffAdded}
+        // initialData will be undefined when adding new staff
       />
     </div>
   );
 }
+
