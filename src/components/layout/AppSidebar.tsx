@@ -10,6 +10,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarTrigger,
+  useSidebar, // Import useSidebar
 } from '@/components/ui/sidebar';
 import Logo from '@/components/Logo';
 import {
@@ -31,7 +32,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 
@@ -105,22 +106,47 @@ const sidebarNavItems = [
 
 export default function AppSidebar() {
   const pathname = usePathname();
+  const sidebarCtx = useSidebar(); // Get sidebar context
+  const isDesktopCollapsed = !sidebarCtx.isMobile && !sidebarCtx.open;
+
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(() => {
-    // Initially open accordion items if the current path is within their sub-items
     const activeItems: string[] = [];
-    function findActive(items: any[], currentPath: string) {
-      for (const item of items) {
-        if (item.basePathForActive && currentPath.startsWith(item.basePathForActive)) {
-          activeItems.push(item.label);
-          if (item.subItems || item.subSubItems) {
-            findActive(item.subItems || item.subSubItems, currentPath);
+    if (sidebarCtx.open || sidebarCtx.isMobile) { // Only try to open accordions if sidebar is open or on mobile
+        function findActive(items: any[], currentPath: string) {
+          for (const item of items) {
+            if (item.basePathForActive && currentPath.startsWith(item.basePathForActive)) {
+              activeItems.push(item.label);
+              if (item.subItems || item.subSubItems) {
+                findActive(item.subItems || item.subSubItems, currentPath);
+              }
+            }
           }
         }
-      }
+        findActive(sidebarNavItems, pathname);
     }
-    findActive(sidebarNavItems, pathname);
     return activeItems;
   });
+
+  useEffect(() => {
+    if (isDesktopCollapsed) {
+      setOpenAccordionItems([]); // Close all accordions when sidebar is collapsed on desktop
+    } else {
+      // Recalculate open accordions if sidebar expands or on mobile
+        const activeItems: string[] = [];
+        function findActive(items: any[], currentPath: string) {
+          for (const item of items) {
+            if (item.basePathForActive && currentPath.startsWith(item.basePathForActive)) {
+              activeItems.push(item.label);
+              if (item.subItems || item.subSubItems) {
+                findActive(item.subItems || item.subSubItems, currentPath);
+              }
+            }
+          }
+        }
+        findActive(sidebarNavItems, pathname);
+        setOpenAccordionItems(activeItems);
+    }
+  }, [isDesktopCollapsed, pathname, sidebarCtx.open, sidebarCtx.isMobile]);
 
 
   const renderNavItems = (items: any[], level = 0) => {
@@ -134,19 +160,23 @@ export default function AppSidebar() {
 
         return (
           <SidebarMenuItem key={item.label}>
-            <Accordion type="multiple" value={openAccordionItems} onValueChange={setOpenAccordionItems} className="w-full">
+            <Accordion type="multiple" value={isDesktopCollapsed ? [] : openAccordionItems} onValueChange={setOpenAccordionItems} className="w-full">
               <AccordionItem value={item.label} className="border-none">
                 <AccordionTrigger
                   className={cn(
-                    "flex w-full items-center gap-2 rounded-md p-2 text-left text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring outline-none",
-                    level > 0 && "pl-6",
-                    isParentActive && !isActive && "text-sidebar-primary font-medium" // Style parent if active but not the link itself
+                    "flex w-full items-center rounded-md p-2 text-left text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring outline-none",
+                    level > 0 && "pl-6", // Indent sub-accordions
+                    isParentActive && !isActive && "text-sidebar-primary font-medium",
+                    isDesktopCollapsed && "!size-8 !p-2 justify-center" // Collapsed styles
                   )}
+                  // When collapsed, the tooltip should show the parent item's label
+                  title={isDesktopCollapsed ? item.label : undefined} 
                 >
-                  {Icon && <Icon className={cn("h-4 w-4", isParentActive && "text-sidebar-primary")} />}
-                  <span>{item.label}</span>
+                  {Icon && <Icon className={cn("h-4 w-4 shrink-0", isParentActive && "text-sidebar-primary")} />}
+                  {isDesktopCollapsed ? null : <span className="ml-2 flex-1 truncate">{item.label}</span>}
                 </AccordionTrigger>
-                <AccordionContent className="pt-0 pb-0">
+                {/* AccordionContent is hidden by its own CSS when group-data-[collapsible=icon] is active */}
+                <AccordionContent className={cn("pt-0 pb-0", isDesktopCollapsed && "hidden")}>
                   <SidebarMenu className={cn("pl-4", level > 0 && "pl-8")}>
                      {renderNavItems(subItems, level + 1)}
                   </SidebarMenu>
@@ -163,11 +193,12 @@ export default function AppSidebar() {
             <SidebarMenuButton
               asChild
               isActive={isActive}
-              className={cn(level > 0 && "pl-6")}
+              className={cn(level > 0 && "pl-6", isDesktopCollapsed && "justify-center")}
+              tooltip={item.label} // Tooltip for all items when collapsed
             >
               <a>
-                {Icon && <Icon />}
-                <span>{item.label}</span>
+                {Icon && <Icon className="shrink-0" />}
+                {isDesktopCollapsed ? null : <span>{item.label}</span>}
               </a>
             </SidebarMenuButton>
           </Link>
@@ -178,10 +209,12 @@ export default function AppSidebar() {
 
 
   return (
-    <Sidebar side="left" collapsible="icon" className="border-r">
-      <SidebarHeader className="p-2 flex items-center justify-between">
-        <Logo />
-        <SidebarTrigger className="ml-auto hidden md:flex" />
+    <Sidebar side="left" collapsible="icon" className="border-r group/app-sidebar">
+      <SidebarHeader className={cn("p-2 flex items-center justify-between", isDesktopCollapsed && "justify-center")}>
+        <div className={cn(isDesktopCollapsed && "[&_text]:hidden")}>
+            <Logo />
+        </div>
+        <SidebarTrigger className={cn("ml-auto md:flex", isDesktopCollapsed && "hidden")} />
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
