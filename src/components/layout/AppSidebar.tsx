@@ -109,63 +109,52 @@ const sidebarNavItems = [
 export default function AppSidebar() {
   const pathname = usePathname();
   const sidebarCtx = useSidebar();
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // For pre-mount (SSR, initial client render), isDesktopCollapsed should be based on default context values
-  // sidebarCtx.isMobile is initially false, sidebarCtx.open is initially defaultOpen
-  const initialIsMobile = mounted ? sidebarCtx.isMobile : false; // Default to false before client context is certain
-  const initialSidebarOpen = mounted ? sidebarCtx.open : true; // Default to true (expanded) if context.open not certain
-
-  const isDesktopCollapsed = mounted ? 
-    (!sidebarCtx.isMobile && !sidebarCtx.open) : 
-    (!initialIsMobile && !initialSidebarOpen);
-
+  // isDesktopCollapsed determines if the desktop sidebar should show only icons.
+  // It relies on context values which are stable for server render (isMobile=false, open=defaultOpen).
+  const isDesktopCollapsed = !sidebarCtx.isMobile && !sidebarCtx.open;
 
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(() => {
     const activeItems: string[] = [];
-    function findActive(items: any[], currentPath: string) {
-      for (const item of items) {
-        if (item.basePathForActive && currentPath.startsWith(item.basePathForActive)) {
-          activeItems.push(item.label);
-          if (item.subItems || item.subSubItems) {
-            findActive(item.subItems || item.subSubItems, currentPath);
+    // Pre-calculate active items based on initial state (server/first client render)
+    // If sidebar is initially collapsed on desktop, no accordions should be open.
+    if (!(!sidebarCtx.isMobile && !sidebarCtx.open)) { // Check if NOT initially desktop collapsed
+        function findActive(items: any[], currentPath: string) {
+          for (const item of items) {
+            if (item.basePathForActive && currentPath.startsWith(item.basePathForActive)) {
+              activeItems.push(item.label);
+              if (item.subItems || item.subSubItems) {
+                findActive(item.subItems || item.subSubItems, currentPath);
+              }
+            }
           }
         }
-      }
-    }
-    // Use initialIsDesktopCollapsed for initial accordion state if relevant
-    if (!((!initialIsMobile && !initialSidebarOpen))) { // if not initially collapsed
         findActive(sidebarNavItems, pathname);
     }
     return activeItems;
   });
 
   useEffect(() => {
-    if (mounted) { 
-      if (isDesktopCollapsed) {
-        setOpenAccordionItems([]); 
-      } else {
-          const activeItems: string[] = [];
-          function findActive(items: any[], currentPath: string) {
-            for (const item of items) {
-              if (item.basePathForActive && currentPath.startsWith(item.basePathForActive)) {
-                activeItems.push(item.label);
-                if (item.subItems || item.subSubItems) {
-                  findActive(item.subItems || item.subSubItems, currentPath);
-                }
+    // This effect runs on the client after hydration and when context values change.
+    if (isDesktopCollapsed) {
+      setOpenAccordionItems([]); 
+    } else {
+        const activeItems: string[] = [];
+        function findActive(items: any[], currentPath: string) {
+          for (const item of items) {
+            if (item.basePathForActive && currentPath.startsWith(item.basePathForActive)) {
+              activeItems.push(item.label);
+              if (item.subItems || item.subSubItems) {
+                findActive(item.subItems || item.subSubItems, currentPath);
               }
             }
           }
-          findActive(sidebarNavItems, pathname);
-          setOpenAccordionItems(activeItems);
-      }
+        }
+        findActive(sidebarNavItems, pathname);
+        setOpenAccordionItems(activeItems);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, isDesktopCollapsed, pathname]);
+  // Recalculate open accordions if desktop collapsed state changes or pathname changes.
+  }, [isDesktopCollapsed, pathname]);
 
 
   const renderNavItems = (items: any[], level = 0) => {
@@ -186,15 +175,15 @@ export default function AppSidebar() {
                     "flex w-full items-center rounded-md p-2 text-left text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring outline-none",
                     level > 0 && "pl-6", 
                     isParentActive && !isActive && "text-sidebar-primary font-medium",
-                    mounted && isDesktopCollapsed && "!size-8 !p-2 justify-center",
-                    !(mounted && isDesktopCollapsed) && "gap-2"
+                    isDesktopCollapsed && "!size-8 !p-2 justify-center", // Styles for collapsed desktop
+                    !isDesktopCollapsed && "gap-2" // Gap only when expanded
                   )}
-                  title={ (mounted && isDesktopCollapsed) ? item.label : undefined} 
+                  title={isDesktopCollapsed ? item.label : undefined} 
                 >
                   {Icon && <Icon className={cn("h-4 w-4 shrink-0", isParentActive && "text-sidebar-primary")} />}
-                  { !(mounted && isDesktopCollapsed) && <span className="ml-0 flex-1 truncate">{item.label}</span>}
+                  { !isDesktopCollapsed && <span className="ml-0 flex-1 truncate">{item.label}</span>}
                 </AccordionTrigger>
-                <AccordionContent className={cn("pt-0 pb-0", (mounted && isDesktopCollapsed) && "hidden")}>
+                <AccordionContent className={cn("pt-0 pb-0", isDesktopCollapsed && "hidden")}>
                   <SidebarMenu className={cn("pl-4", level > 0 && "pl-8")}>
                      {renderNavItems(subItems, level + 1)}
                   </SidebarMenu>
@@ -211,12 +200,12 @@ export default function AppSidebar() {
             <SidebarMenuButton
               asChild
               isActive={isActive}
-              className={cn(level > 0 && "pl-6", mounted && isDesktopCollapsed && "justify-center")}
-              tooltip={item.label}
+              className={cn(level > 0 && "pl-6", isDesktopCollapsed && "justify-center")}
+              tooltip={isDesktopCollapsed ? item.label : undefined} // Tooltip only when collapsed
             >
               <a>
                 {Icon && <Icon className="shrink-0" />}
-                { !(mounted && isDesktopCollapsed) && <span>{item.label}</span>}
+                { !isDesktopCollapsed && <span className="truncate">{item.label}</span>}
               </a>
             </SidebarMenuButton>
           </Link>
@@ -228,11 +217,11 @@ export default function AppSidebar() {
 
   return (
     <Sidebar side="left" collapsible="icon" className="border-r group/app-sidebar">
-      <SidebarHeader className={cn("p-2 flex items-center justify-between", mounted && isDesktopCollapsed && "justify-center")}>
-        <div className={cn(mounted && isDesktopCollapsed && "[&_text]:hidden")}>
+      <SidebarHeader className={cn("p-2 flex items-center justify-between", isDesktopCollapsed && "justify-center")}>
+        <div className={cn(isDesktopCollapsed && "[&_text]:hidden")}>
             <Logo />
         </div>
-        <SidebarTrigger className={cn("ml-auto md:flex", mounted && isDesktopCollapsed && "hidden")} />
+        <SidebarTrigger className={cn("ml-auto md:flex", isDesktopCollapsed && "hidden")} />
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
@@ -242,4 +231,3 @@ export default function AppSidebar() {
     </Sidebar>
   );
 }
-
