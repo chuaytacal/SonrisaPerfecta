@@ -115,18 +115,18 @@ export default function AppSidebar() {
     setMounted(true);
   }, []);
 
-  // Determine if the sidebar is collapsed on desktop
-  // On server and initial client render (mounted=false), isDesktopCollapsed is false
-  // After mount, it reflects the actual state.
-  const isDesktopCollapsed = mounted ? (!sidebarCtx.isMobile && !sidebarCtx.open) : false;
+  // For pre-mount (SSR, initial client render), isDesktopCollapsed should be based on default context values
+  // sidebarCtx.isMobile is initially false, sidebarCtx.open is initially defaultOpen
+  const initialIsMobile = mounted ? sidebarCtx.isMobile : false; // Default to false before client context is certain
+  const initialSidebarOpen = mounted ? sidebarCtx.open : true; // Default to true (expanded) if context.open not certain
+
+  const isDesktopCollapsed = mounted ? 
+    (!sidebarCtx.isMobile && !sidebarCtx.open) : 
+    (!initialIsMobile && !initialSidebarOpen);
 
 
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(() => {
-    // This initializer runs on server and client. Pathname should be consistent.
     const activeItems: string[] = [];
-    // Initial population of openAccordionItems should not depend on isDesktopCollapsed
-    // as it relies on 'mounted' state which differs server/client initially.
-    // The useEffect below will handle adjustments after mount.
     function findActive(items: any[], currentPath: string) {
       for (const item of items) {
         if (item.basePathForActive && currentPath.startsWith(item.basePathForActive)) {
@@ -137,12 +137,15 @@ export default function AppSidebar() {
         }
       }
     }
-    findActive(sidebarNavItems, pathname);
+    // Use initialIsDesktopCollapsed for initial accordion state if relevant
+    if (!((!initialIsMobile && !initialSidebarOpen))) { // if not initially collapsed
+        findActive(sidebarNavItems, pathname);
+    }
     return activeItems;
   });
 
   useEffect(() => {
-    if (mounted) { // Only run this logic on the client after mount
+    if (mounted) { 
       if (isDesktopCollapsed) {
         setOpenAccordionItems([]); 
       } else {
@@ -162,13 +165,12 @@ export default function AppSidebar() {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, isDesktopCollapsed, pathname]); // Removed sidebarCtx.open and sidebarCtx.isMobile directly, covered by isDesktopCollapsed
+  }, [mounted, isDesktopCollapsed, pathname]);
 
 
   const renderNavItems = (items: any[], level = 0) => {
     return items.map((item) => {
       const Icon = item.icon;
-      // isActive for direct links, isParentActive for sections containing the current path
       const isActive = item.href && pathname === item.href;
       const isParentActive = item.basePathForActive && pathname.startsWith(item.basePathForActive);
 
@@ -184,8 +186,8 @@ export default function AppSidebar() {
                     "flex w-full items-center rounded-md p-2 text-left text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring outline-none",
                     level > 0 && "pl-6", 
                     isParentActive && !isActive && "text-sidebar-primary font-medium",
-                    mounted && isDesktopCollapsed && "!size-8 !p-2 justify-center", // Icon-only styling when collapsed
-                    !(mounted && isDesktopCollapsed) && "gap-2" 
+                    mounted && isDesktopCollapsed && "!size-8 !p-2 justify-center",
+                    !(mounted && isDesktopCollapsed) && "gap-2"
                   )}
                   title={ (mounted && isDesktopCollapsed) ? item.label : undefined} 
                 >
@@ -210,7 +212,7 @@ export default function AppSidebar() {
               asChild
               isActive={isActive}
               className={cn(level > 0 && "pl-6", mounted && isDesktopCollapsed && "justify-center")}
-              tooltip={item.label} // Tooltip for collapsed state
+              tooltip={item.label}
             >
               <a>
                 {Icon && <Icon className="shrink-0" />}
@@ -240,3 +242,4 @@ export default function AppSidebar() {
     </Sidebar>
   );
 }
+

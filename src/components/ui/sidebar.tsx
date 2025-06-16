@@ -68,8 +68,15 @@ const SidebarProvider = React.forwardRef<
     },
     ref
   ) => {
-    const isMobile = useIsMobile()
-    const [openMobile, setOpenMobile] = React.useState(false)
+    const isMobileHookValue = useIsMobile() // This is 'false' on server & initial client
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+      setMounted(true);
+    }, []);
+
+    const isMobile = mounted ? isMobileHookValue : false; // Use definitive isMobile only after mount
+
 
     const [_open, _setOpen] = React.useState(defaultOpen)
     const open = openProp ?? _open
@@ -88,9 +95,11 @@ const SidebarProvider = React.forwardRef<
       },
       [setOpenProp, open]
     )
+    const [openMobile, setOpenMobile] = React.useState(false)
+
 
     const toggleSidebar = React.useCallback(() => {
-      return isMobile
+      return isMobile // use the mounted-aware isMobile
         ? setOpenMobile((openMobileState) => !openMobileState)
         : setOpen((openState) => !openState)
     }, [isMobile, setOpen, setOpenMobile])
@@ -110,19 +119,21 @@ const SidebarProvider = React.forwardRef<
       return () => window.removeEventListener("keydown", handleKeyDown)
     }, [toggleSidebar])
 
-    const state = open ? "expanded" : "collapsed"
+    // For pre-mount, state is based on defaultOpen. Post-mount, it's based on current `open`.
+    const currentOpenState = mounted ? open : defaultOpen;
+    const state = currentOpenState ? "expanded" : "collapsed"
 
     const contextValue = React.useMemo<SidebarContext>(
       () => ({
         state,
-        open,
+        open: currentOpenState, // Use currentOpenState for context consistency
         setOpen,
-        isMobile,
+        isMobile, // use the mounted-aware isMobile
         openMobile,
         setOpenMobile,
         toggleSidebar,
       }),
-      [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+      [state, currentOpenState, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
     )
 
     return (
@@ -171,12 +182,22 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile, state, openMobile, setOpenMobile, open } = useSidebar()
+    const sidebarContext = useSidebar()
     const [mounted, setMounted] = React.useState(false)
 
     React.useEffect(() => {
       setMounted(true)
     }, [])
+
+    // Determine initial state based on defaultOpen for server/pre-mount consistency
+    // sidebarContext.open reflects defaultOpen before SidebarProvider's own `mounted` state is true.
+    const initialOpen = sidebarContext.open; // Relies on SidebarProvider's context correctly reflecting default state initially
+    const initialIsMobile = sidebarContext.isMobile; // Relies on SidebarProvider's context correctly reflecting initial mobile state
+
+    const currentIsMobile = mounted ? sidebarContext.isMobile : initialIsMobile;
+    const currentOpen = mounted ? sidebarContext.open : initialOpen;
+    const currentState = currentOpen ? "expanded" : "collapsed";
+
 
     if (collapsible === "none") {
       return (
@@ -193,9 +214,9 @@ const Sidebar = React.forwardRef<
       )
     }
 
-    if (mounted && isMobile) {
+    if (mounted && currentIsMobile) { // Only render Sheet if mounted and confirmed mobile
       return (
-        <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
+        <Sheet open={sidebarContext.openMobile} onOpenChange={sidebarContext.setOpenMobile} {...props}>
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
@@ -207,7 +228,7 @@ const Sidebar = React.forwardRef<
             }
             side={side}
           >
-            <SheetHeader className="hidden"> {/* Hidden header, but provides accessible title */}
+            <SheetHeader className="hidden">
               <SheetTitle><span className="sr-only">Menú Principal</span></SheetTitle>
             </SheetHeader>
             <div className="flex h-full w-full flex-col">{children}</div>
@@ -216,49 +237,63 @@ const Sidebar = React.forwardRef<
       )
     }
     
-    // Render desktop version (or fallback for SSR/initial client render)
+    // Desktop version or initial render before mobile is confirmed
+    const isInitiallyCollapsed = !initialOpen;
+    const currentEffectiveState = mounted ? currentState : (initialOpen ? "expanded" : "collapsed");
+    const isEffectivelyCollapsed = currentEffectiveState === "collapsed";
+
     return (
       <div
         ref={ref}
         className={cn(
           "group peer text-sidebar-foreground",
-          (mounted && isMobile) ? "hidden" : "hidden md:block", // Initially hidden on client if mobile, then Sheet takes over
-           className
+          // Visibility: hidden on mobile after mount, otherwise desktop display logic
+          (mounted && currentIsMobile) ? "hidden" : "hidden md:block",
+          className
         )}
-        data-state={mounted ? state : (open ? "expanded" : "collapsed")} // Use initial open state for SSR
-        data-collapsible={(mounted ? state : (open ? "expanded" : "collapsed")) === "collapsed" ? collapsible : ""}
+        data-state={currentEffectiveState}
+        data-collapsible={isEffectivelyCollapsed ? collapsible : ""}
         data-variant={variant}
         data-side={side}
+        // Pass through other props from AppSidebar
+        {...props}
+
       >
+        {/* Spacer div */}
         <div
           className={cn(
             "duration-200 relative h-svh bg-transparent transition-[width] ease-linear",
-            "w-[var(--sidebar-width)]", // Default expanded width
-            collapsible === "icon" && ((mounted ? state : (open ? "expanded" : "collapsed")) === "collapsed") && (variant === "floating" || variant === "inset" ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]" : "w-[var(--sidebar-width-icon)]"),
-            collapsible === "offcanvas" && ((mounted ? state : (open ? "expanded" : "collapsed")) === "collapsed") && "w-0",
+            collapsible === "icon" && isEffectivelyCollapsed
+              ? (variant === "floating" || variant === "inset" ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]" : "w-[var(--sidebar-width-icon)]")
+              : collapsible === "offcanvas" && isEffectivelyCollapsed
+                ? "w-0"
+                : "w-[var(--sidebar-width)]",
             "group-data-[side=right]:rotate-180"
           )}
         />
+        {/* Actual sidebar content div */}
         <div
           className={cn(
             "duration-200 fixed inset-y-0 z-10 h-svh transition-[left,right,width] ease-linear flex",
-            "w-[var(--sidebar-width)]", // Default expanded width
+            collapsible === "icon" && isEffectivelyCollapsed
+              ? (variant === "floating" || variant === "inset"
+                  ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)] p-2"
+                  : "w-[var(--sidebar-width-icon)] group-data-[side=left]:border-r group-data-[side=right]:border-l")
+              : "w-[var(--sidebar-width)]",
+            
             side === "left"
-              ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
-              : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
+              ? "left-0" // For offcanvas, `group-data-[state=collapsed]` will shift it
+              : "right-0",
+            collapsible === "offcanvas" && isEffectivelyCollapsed &&
+              (side === "left" ? "left-[calc(var(--sidebar-width)*-1)]" : "right-[calc(var(--sidebar-width)*-1)]"),
             
-            collapsible === "icon" && ((mounted ? state : (open ? "expanded" : "collapsed")) === "collapsed") && 
-              (variant === "floating" || variant === "inset"
-                ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)] p-2"
-                : "w-[var(--sidebar-width-icon)] group-data-[side=left]:border-r group-data-[side=right]:border-l"),
-            
-            !(collapsible === "icon" && ((mounted ? state : (open ? "expanded" : "collapsed")) === "collapsed") && (variant === "floating" || variant === "inset")) && 
+            !(collapsible === "icon" && isEffectivelyCollapsed && (variant === "floating" || variant === "inset")) &&
               (variant === "floating" || variant === "inset" ? "p-2" : "group-data-[side=left]:border-r group-data-[side=right]:border-l"),
 
-            (mounted && isMobile) ? "hidden" : "", // Hide if mobile and mounted (Sheet handles it)
-            className
+            (mounted && currentIsMobile) ? "hidden" : ""
+            // className prop is already on the parent div
           )}
-          {...props}
+          // {...props} was here, but props (including className) are on the parent now
         >
           <div
             data-sidebar="sidebar"
@@ -568,7 +603,7 @@ const SidebarMenuButton = React.forwardRef<
     ref
   ) => {
     const Comp = asChild ? Slot : "button"
-    const { isMobile, state } = useSidebar()
+    const { isMobile, state } = useSidebar() // state here reflects current open/collapsed state
 
     const button = (
       <Comp
@@ -590,6 +625,9 @@ const SidebarMenuButton = React.forwardRef<
         children: tooltip,
       }
     }
+    // Tooltip should be hidden if sidebar is expanded or if on mobile
+    const isTooltipHidden = (state !== "collapsed" && !isMobile) || isMobile;
+
 
     return (
       <Tooltip>
@@ -597,7 +635,7 @@ const SidebarMenuButton = React.forwardRef<
         <TooltipContent
           side="right"
           align="center"
-          hidden={state !== "collapsed" || isMobile}
+          hidden={isTooltipHidden} // Use calculated hidden state
           {...tooltip}
         />
       </Tooltip>
@@ -775,3 +813,4 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+
