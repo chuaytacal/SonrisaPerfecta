@@ -18,9 +18,6 @@ import {
   LayoutDashboard,
   CalendarDays,
   Users,
-  UserPlus,
-  List,
-  Tag,
   Briefcase,
   Archive,
   PlusSquare,
@@ -31,6 +28,7 @@ import {
   ClipboardType,
   FilePlus,
   BarChart3,
+  List, // Added for consistency, though not directly used for new items
   // ChevronDown is part of AccordionTrigger from ui/accordion.tsx
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -46,25 +44,8 @@ const sidebarNavItems = [
     icon: Users,
     basePathForActive: '/gestion-usuario',
     subItems: [
-      {
-        label: 'Pacientes',
-        icon: Users, 
-        basePathForActive: '/gestion-usuario/pacientes',
-        subSubItems: [
-          { href: '/gestion-usuario/pacientes/registrar', label: 'Registrar Paciente', icon: UserPlus },
-          { href: '/gestion-usuario/pacientes/lista', label: 'Lista de Pacientes', icon: List },
-          { href: '/gestion-usuario/pacientes/etiquetas', label: 'Etiquetas', icon: Tag },
-        ],
-      },
-      {
-        label: 'Personal',
-        icon: Briefcase,
-        basePathForActive: '/gestion-usuario/personal',
-        subSubItems: [
-          { href: '/gestion-usuario/personal/registrar', label: 'Registrar Personal', icon: UserPlus },
-          { href: '/gestion-usuario/personal/lista', label: 'Lista de Personal', icon: List },
-        ],
-      },
+      { href: '/gestion-usuario/pacientes', label: 'Pacientes', icon: Users },
+      { href: '/gestion-usuario/personal', label: 'Personal', icon: Briefcase },
     ],
   },
   {
@@ -100,7 +81,7 @@ const sidebarNavItems = [
     basePathForActive: '/recetas',
     subItems: [
       { href: '/recetas/registrar', label: 'Registrar Recetas', icon: FilePlus },
-      { href: '/recetas/etiquetas', label: 'Etiquetas', icon: Tag },
+      { href: '/recetas/etiquetas', label: 'Etiquetas', icon: Tag }, // Assuming Tag icon was intended, or replace if not
     ],
   },
   { href: '/reportes', label: 'Reportes', icon: BarChart3 },
@@ -110,21 +91,17 @@ export default function AppSidebar() {
   const pathname = usePathname();
   const sidebarCtx = useSidebar();
 
-  // isDesktopCollapsed determines if the desktop sidebar should show only icons.
-  // It relies on context values which are stable for server render (isMobile=false, open=defaultOpen).
   const isDesktopCollapsed = !sidebarCtx.isMobile && !sidebarCtx.open;
 
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(() => {
     const activeItems: string[] = [];
-    // Pre-calculate active items based on initial state (server/first client render)
-    // If sidebar is initially collapsed on desktop, no accordions should be open.
-    if (!(!sidebarCtx.isMobile && !sidebarCtx.open)) { // Check if NOT initially desktop collapsed
+    if (!(!sidebarCtx.isMobile && !sidebarCtx.open)) {
         function findActive(items: any[], currentPath: string) {
           for (const item of items) {
             if (item.basePathForActive && currentPath.startsWith(item.basePathForActive)) {
               activeItems.push(item.label);
-              if (item.subItems || item.subSubItems) {
-                findActive(item.subItems || item.subSubItems, currentPath);
+              if (item.subItems) { // Only check subItems, not subSubItems
+                findActive(item.subItems, currentPath);
               }
             }
           }
@@ -135,7 +112,6 @@ export default function AppSidebar() {
   });
 
   useEffect(() => {
-    // This effect runs on the client after hydration and when context values change.
     if (isDesktopCollapsed) {
       setOpenAccordionItems([]); 
     } else {
@@ -144,8 +120,8 @@ export default function AppSidebar() {
           for (const item of items) {
             if (item.basePathForActive && currentPath.startsWith(item.basePathForActive)) {
               activeItems.push(item.label);
-              if (item.subItems || item.subSubItems) {
-                findActive(item.subItems || item.subSubItems, currentPath);
+              if (item.subItems) { // Only check subItems
+                findActive(item.subItems, currentPath);
               }
             }
           }
@@ -153,7 +129,6 @@ export default function AppSidebar() {
         findActive(sidebarNavItems, pathname);
         setOpenAccordionItems(activeItems);
     }
-  // Recalculate open accordions if desktop collapsed state changes or pathname changes.
   }, [isDesktopCollapsed, pathname]);
 
 
@@ -163,8 +138,8 @@ export default function AppSidebar() {
       const isActive = item.href && pathname === item.href;
       const isParentActive = item.basePathForActive && pathname.startsWith(item.basePathForActive);
 
-      if (item.subItems || item.subSubItems) {
-        const subItems = item.subItems || item.subSubItems;
+      if (item.subItems) { // Items like "Gestión Usuario" will enter here
+        const subItems = item.subItems;
         
         return (
           <SidebarMenuItem key={item.label}>
@@ -173,10 +148,10 @@ export default function AppSidebar() {
                 <AccordionTrigger
                   className={cn(
                     "flex w-full items-center rounded-md p-2 text-left text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring outline-none",
-                    level > 0 && "pl-6", 
+                    // level > 0 && "pl-6", // Not needed for top-level accordion items, sub-items control their own padding
                     isParentActive && !isActive && "text-sidebar-primary font-medium",
-                    isDesktopCollapsed && "!size-8 !p-2 justify-center", // Styles for collapsed desktop
-                    !isDesktopCollapsed && "gap-2" // Gap only when expanded
+                    isDesktopCollapsed && "!size-8 !p-2 justify-center",
+                    !isDesktopCollapsed && "gap-2"
                   )}
                   title={isDesktopCollapsed ? item.label : undefined} 
                 >
@@ -184,8 +159,8 @@ export default function AppSidebar() {
                   { !isDesktopCollapsed && <span className="ml-0 flex-1 truncate">{item.label}</span>}
                 </AccordionTrigger>
                 <AccordionContent className={cn("pt-0 pb-0", isDesktopCollapsed && "hidden")}>
-                  <SidebarMenu className={cn("pl-4", level > 0 && "pl-8")}>
-                     {renderNavItems(subItems, level + 1)}
+                  <SidebarMenu className={cn("pl-4")}> {/* Indent content of accordion */}
+                     {renderNavItems(subItems, level + 1)} {/* Render sub-items (Pacientes, Personal) */}
                   </SidebarMenu>
                 </AccordionContent>
               </AccordionItem>
@@ -194,14 +169,15 @@ export default function AppSidebar() {
         );
       }
 
+      // Direct links or items within an accordion (like new Pacientes/Personal links)
       return (
         <SidebarMenuItem key={item.href || item.label}>
-          <Link href={item.href} legacyBehavior passHref>
+          <Link href={item.href || '#'} legacyBehavior passHref>
             <SidebarMenuButton
               asChild
               isActive={isActive}
-              className={cn(level > 0 && "pl-6", isDesktopCollapsed && "justify-center")}
-              tooltip={isDesktopCollapsed ? item.label : undefined} // Tooltip only when collapsed
+              className={cn(level > 0 && "pl-6", isDesktopCollapsed && "justify-center")} // Apply padding if it's a sub-item
+              tooltip={isDesktopCollapsed ? item.label : undefined}
             >
               <a>
                 {Icon && <Icon className="shrink-0" />}
