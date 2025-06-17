@@ -17,7 +17,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ArrowUpDown, MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight, Eye } from "lucide-react";
-import { AddPersonalForm } from "@/components/personal/AddPersonalForm"; // We'll create this next
+import { AddPersonalForm } from "@/components/personal/AddPersonalForm";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"; // Import ConfirmationDialog
+import { useToast } from "@/hooks/use-toast"; // Import useToast
 import {
   Select,
   SelectContent,
@@ -36,7 +38,7 @@ export type Personal = {
   email: string;
   especialidad: string;
   fechaIngreso: string; // "DD/MM/YYYY"
-  estado: "Activo" | "Inactivo"; // Changed Desactivo to Inactivo for consistency
+  estado: "Activo" | "Inactivo";
 };
 
 const mockPersonalData: Personal[] = [
@@ -129,6 +131,85 @@ const mockPersonalData: Personal[] = [
     estado: "Inactivo",
   },
 ];
+
+
+export default function ListaPersonalPage() {
+  const [personalList, setPersonalList] = React.useState<Personal[]>(mockPersonalData);
+  const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+  const [editingPersonal, setEditingPersonal] = React.useState<Personal | null>(null);
+  const { toast } = useToast();
+
+  const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = React.useState(false);
+  const [personalToAction, setPersonalToAction] = React.useState<Personal | null>(null);
+  const [confirmAction, setConfirmAction] = React.useState<(() => void) | null>(null);
+  const [confirmDialogProps, setConfirmDialogProps] = React.useState<{title: string, description: string, confirmButtonVariant?: "default" | "destructive", confirmButtonText?: string}>({
+    title: "",
+    description: ""
+  });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [sortBy, setSortBy] = React.useState<string>("nombre_asc");
+
+
+  const handleStaffUpdate = (updatedStaff: Personal) => {
+    setPersonalList(prevList =>
+      prevList.map(p => p.id === updatedStaff.id ? updatedStaff : p)
+    );
+    toast({
+      title: "Personal Actualizado",
+      description: `${updatedStaff.nombre} ha sido actualizado.`,
+    });
+    setEditingPersonal(null); // Close edit modal which is AddPersonalForm
+  };
+  
+  const handleStaffAdded = (newStaff: Personal) => {
+    setPersonalList(prevList => [newStaff, ...prevList]);
+    // Toast for adding is handled within AddPersonalForm
+    setIsAddModalOpen(false);
+  };
+
+  const openEditModal = (personal: Personal) => {
+    setEditingPersonal(personal);
+    setIsAddModalOpen(true); // AddPersonalForm is used for both add and edit
+  };
+
+  const handleDelete = (personal: Personal) => {
+    setPersonalToAction(personal);
+    setConfirmDialogProps({
+        title: "Confirmar Eliminación",
+        description: `¿Estás seguro de que deseas eliminar a ${personal.nombre}? Esta acción no se puede deshacer.`,
+        confirmButtonText: "Eliminar",
+        confirmButtonVariant: "destructive"
+    });
+    setConfirmAction(() => () => {
+        setPersonalList(prev => prev.filter(p => p.id !== personal.id));
+        toast({
+            title: "Personal Eliminado",
+            description: `${personal.nombre} ha sido eliminado.`,
+            variant: "destructive"
+        });
+        setIsConfirmDeleteDialogOpen(false);
+    });
+    setIsConfirmDeleteDialogOpen(true);
+  };
+
+  const handleToggleStatus = (personal: Personal) => {
+    setPersonalToAction(personal);
+    const newStatus = personal.estado === "Activo" ? "Inactivo" : "Activo";
+    setConfirmDialogProps({
+        title: `Confirmar Cambio de Estado`,
+        description: `¿Estás seguro de que deseas cambiar el estado de ${personal.nombre} a ${newStatus}?`,
+        confirmButtonText: newStatus === "Activo" ? "Activar" : "Desactivar",
+    });
+    setConfirmAction(() => () => {
+        setPersonalList(prev => prev.map(p => p.id === personal.id ? {...p, estado: newStatus} : p));
+        toast({
+            title: "Estado Actualizado",
+            description: `El estado de ${personal.nombre} ha sido cambiado a ${newStatus}.`
+        });
+        setIsConfirmDeleteDialogOpen(false);
+    });
+    setIsConfirmDeleteDialogOpen(true);
+  };
 
 
 const columns: ColumnDef<Personal>[] = [
@@ -248,29 +329,7 @@ const columns: ColumnDef<Personal>[] = [
     header: "Acciones",
     cell: ({ row }) => {
       const personal = row.original;
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      const [isEditing, setIsEditing] = React.useState(false);
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      const [currentPersonal, setCurrentPersonal] = React.useState<Personal | null>(null);
-
-
-      const handleEdit = () => {
-        setCurrentPersonal(personal);
-        setIsEditing(true);
-      };
-
-      const handleDelete = () => {
-        // Lógica para eliminar
-        alert(`Eliminar: ${personal.nombre}`);
-      };
-
-      const handleToggleStatus = () => {
-        // Lógica para cambiar estado
-         alert(`Cambiar estado de: ${personal.nombre}`);
-      };
-
       return (
-        <>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -284,11 +343,11 @@ const columns: ColumnDef<Personal>[] = [
               Copiar ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleEdit}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-            <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+            <DropdownMenuItem onClick={() => openEditModal(personal)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleDelete(personal)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
               <Trash2 className="mr-2 h-4 w-4" /> Eliminar
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleToggleStatus}>
+            <DropdownMenuItem onClick={() => handleToggleStatus(personal)}>
               {personal.estado === "Activo" ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
               {personal.estado === "Activo" ? "Desactivar" : "Activar"}
             </DropdownMenuItem>
@@ -297,45 +356,10 @@ const columns: ColumnDef<Personal>[] = [
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        {isEditing && currentPersonal && (
-            <AddPersonalForm
-                key={currentPersonal.id} // Add key to re-initialize form on edit
-                open={isEditing}
-                onOpenChange={setIsEditing}
-                initialData={currentPersonal}
-                onStaffAdded={() => {
-                    // Here you would refetch data or update state
-                    console.log("Personal editado/añadido, actualiza la lista!");
-                    setIsEditing(false);
-                }}
-            />
-        )}
-        </>
       );
     },
   },
 ];
-
-export default function ListaPersonalPage() {
-  const [personalList, setPersonalList] = React.useState<Personal[]>(mockPersonalData);
-  const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [sortBy, setSortBy] = React.useState<string>("nombre_asc"); // Example: 'nombre_asc', 'fechaIngreso_desc'
-
-  const handleStaffAdded = (newOrUpdatedStaff: Personal) => {
-    if (personalList.find(p => p.id === newOrUpdatedStaff.id)) {
-        // Update existing staff
-        setPersonalList(prevList => 
-            prevList.map(p => p.id === newOrUpdatedStaff.id ? newOrUpdatedStaff : p)
-        );
-    } else {
-        // Add new staff
-        setPersonalList(prevList => [...prevList, newOrUpdatedStaff]);
-    }
-    setIsAddModalOpen(false); // Close modal for add
-    // For edit, the modal might be closed from within AddPersonalForm if onOpenChange is called with false
-};
-
 
   const statusOptions = [
     { label: "Activo", value: "Activo" },
@@ -362,10 +386,11 @@ export default function ListaPersonalPage() {
         columns={columns}
         data={personalList}
         searchPlaceholder="Buscar por nombre o DNI..."
-        searchColumnId="nombre" // You might want a combined search or specific DNI search
+        searchColumnId="nombre" 
         statusColumnId="estado"
         statusOptions={statusOptions}
         onAdd={() => {
+            setEditingPersonal(null); // Ensure we are in "add" mode
             setIsAddModalOpen(true);
         }}
         addButtonLabel="Añadir Personal"
@@ -385,11 +410,22 @@ export default function ListaPersonalPage() {
         open={isAddModalOpen}
         onOpenChange={(isOpen) => {
             setIsAddModalOpen(isOpen);
+            if (!isOpen) setEditingPersonal(null); // Clear editing state when modal closes
         }}
-        onStaffAdded={handleStaffAdded}
-        // initialData will be undefined when adding new staff
+        initialData={editingPersonal}
+        onStaffAdded={editingPersonal ? handleStaffUpdate : handleStaffAdded}
       />
+      {personalToAction && confirmAction && (
+        <ConfirmationDialog
+            isOpen={isConfirmDeleteDialogOpen}
+            onOpenChange={setIsConfirmDeleteDialogOpen}
+            onConfirm={confirmAction}
+            title={confirmDialogProps.title}
+            description={confirmDialogProps.description}
+            confirmButtonText={confirmDialogProps.confirmButtonText}
+            confirmButtonVariant={confirmDialogProps.confirmButtonVariant}
+        />
+      )}
     </div>
   );
 }
-
