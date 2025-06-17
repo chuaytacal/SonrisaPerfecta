@@ -105,7 +105,7 @@ export function DataTable<TData, TValue>({
         {/* Filters Group (Search, Status, SortBy) */}
         <div className="flex flex-col sm:flex-row sm:flex-wrap items-center gap-2 w-full lg:w-auto">
           {searchColumnId && (
-            <div className="relative w-full sm:w-3/4 md:w-1/2 lg:w-1/3">
+            <div className="relative w-full sm:w-auto">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={searchPlaceholder}
@@ -113,18 +113,18 @@ export function DataTable<TData, TValue>({
                 onChange={(event) =>
                   table.getColumn(searchColumnId)?.setFilterValue(event.target.value)
                 }
-                className="pl-8 w-full"
+                className="pl-8 w-full sm:min-w-[180px] md:min-w-[220px]"
               />
             </div>
           )}
-           {!searchColumnId && (
-            <div className="relative w-full sm:w-3/4 md:w-1/2 lg:w-1/3">
+           {!searchColumnId && ( // Global filter if searchColumnId is not provided
+            <div className="relative w-full sm:w-auto">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={searchPlaceholder}
                 value={globalFilter ?? ""}
                 onChange={(event) => setGlobalFilter(event.target.value)}
-                className="pl-8 w-full"
+                className="pl-8 w-full sm:min-w-[180px] md:min-w-[220px]"
               />
             </div>
           )}
@@ -191,7 +191,7 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Table Container */}
-      <div className="rounded-md border bg-card w-[300px] md:w-[500px] lg:w-full mx-auto">
+      <div className="rounded-md border bg-card w-full sm:w-[600px] md:w-[720px] lg:w-full mx-auto">
         <div className="relative w-full overflow-x-auto"> {/* Ensure horizontal scroll for table */}
             <Table>
             <TableHeader>
@@ -258,6 +258,7 @@ export function DataTable<TData, TValue>({
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
                 className="h-8 w-8"
+                aria-label="Ir a la primera página"
                 >
                 <span className="sr-only">Ir a la primera página</span>
                 <ChevronsLeft className="h-4 w-4" />
@@ -268,6 +269,7 @@ export function DataTable<TData, TValue>({
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
                 className="h-8 w-8"
+                aria-label="Ir a la página anterior"
                 >
                 <span className="sr-only">Ir a la página anterior</span>
                 <ChevronLeft className="h-4 w-4" />
@@ -281,6 +283,7 @@ export function DataTable<TData, TValue>({
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
                 className="h-8 w-8"
+                aria-label="Ir a la página siguiente"
                 >
                 <span className="sr-only">Ir a la página siguiente</span>
                 <ChevronRight className="h-4 w-4" />
@@ -291,6 +294,7 @@ export function DataTable<TData, TValue>({
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
                 className="h-8 w-8"
+                aria-label="Ir a la última página"
                 >
                 <span className="sr-only">Ir a la última página</span>
                 <ChevronsRight className="h-4 w-4" />
@@ -321,4 +325,3 @@ export function DataTable<TData, TValue>({
     </div>
   );
 }
-
