@@ -31,7 +31,8 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import type { Personal } from "@/app/gestion-usuario/personal/lista/page";
+import type { Personal } from "@/app/gestion-usuario/personal/lista/page"; // Main Personal Type
+import type { Persona, TipoDocumento, Sexo } from "@/types"; // Persona related types
 import { Calendar } from "@/components/ui/calendar"
 import {
   Popover,
@@ -46,13 +47,23 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 
+// Zod schema for combined Persona and Personal data
 const personalFormSchema = z.object({
+  // Persona fields
+  tipoDocumento: z.enum(["DNI", "EXTRANJERIA", "PASAPORTE"], { required_error: "Seleccione un tipo de documento." }),
+  numeroDocumento: z.string().min(1, { message: "El número de documento es requerido." }),
   nombre: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
-  dni: z.string().length(8, { message: "El DNI debe tener 8 caracteres." }).regex(/^\d+$/, { message: "El DNI solo debe contener números."}),
-  contacto: z.string().min(9, { message: "El teléfono debe tener al menos 9 caracteres." }).regex(/^(?:\+51\s?)?(9\d{8})$/, { message: "Formato de teléfono peruano inválido (ej: +51 987654321 o 987654321)."}),
+  apellidoPaterno: z.string().min(2, { message: "El apellido paterno debe tener al menos 2 caracteres." }),
+  apellidoMaterno: z.string().min(2, { message: "El apellido materno debe tener al menos 2 caracteres." }),
+  fechaNacimiento: z.date({ required_error: "La fecha de nacimiento es requerida."}),
+  sexo: z.enum(["M", "F"], { required_error: "Seleccione un sexo." }),
+  direccion: z.string().min(1, {message: "La dirección es requerida."}),
+  telefono: z.string().min(9, { message: "El teléfono debe tener al menos 9 caracteres." }).regex(/^(?:\+51\s?)?(9\d{8})$/, { message: "Formato de teléfono peruano inválido."}),
   email: z.string().email({ message: "Email inválido." }),
+
+  // Personal specific fields
   especialidad: z.string().min(1, { message: "Seleccione una especialidad." }),
-  fechaIngreso: z.date({ required_error: "La fecha de ingreso es requerida."}),
+  fechaIngreso: z.date({ required_error: "La fecha de ingreso es requerida."}), // Staff joining date
   estado: z.enum(["Activo", "Inactivo"], { required_error: "Seleccione un estado." }),
   avatarUrl: z.string().url({message: "URL de avatar inválida"}).optional().or(z.literal('')),
 });
@@ -62,21 +73,39 @@ type PersonalFormValues = z.infer<typeof personalFormSchema>;
 interface AddPersonalFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onStaffAdded?: (staff: Personal) => void; 
-  initialData?: Personal | null;
+  onStaffSaved: (staff: Personal) => void;
+  initialPersonalData?: Personal | null; // For editing existing Personal
+  selectedPersonaToPreload?: Persona | null; // For creating new Personal from existing Persona
+  isCreatingNewPersonaFlow?: boolean; // True if creating Persona + Personal from scratch
 }
 
-export function AddPersonalForm({ open, onOpenChange, onStaffAdded, initialData }: AddPersonalFormProps) {
+export function AddPersonalForm({
+    open,
+    onOpenChange,
+    onStaffSaved,
+    initialPersonalData,
+    selectedPersonaToPreload,
+    isCreatingNewPersonaFlow
+}: AddPersonalFormProps) {
   const { toast } = useToast();
-  const isEditMode = !!initialData;
+  const isEditMode = !!initialPersonalData; // Editing existing Personal record
+  const isPersonaFieldsDisabled = isEditMode || (!!selectedPersonaToPreload && !isCreatingNewPersonaFlow);
 
   const form = useForm<PersonalFormValues>({
     resolver: zodResolver(personalFormSchema),
     defaultValues: {
+      // Persona fields
+      tipoDocumento: "DNI",
+      numeroDocumento: "",
       nombre: "",
-      dni: "",
-      contacto: "",
+      apellidoPaterno: "",
+      apellidoMaterno: "",
+      fechaNacimiento: new Date(),
+      sexo: "M",
+      direccion: "",
+      telefono: "",
       email: "",
+      // Personal fields
       especialidad: "",
       fechaIngreso: new Date(),
       estado: "Activo",
@@ -85,122 +114,242 @@ export function AddPersonalForm({ open, onOpenChange, onStaffAdded, initialData 
   });
 
   useEffect(() => {
-    if (open) { // Only reset form when dialog opens
-      if (initialData) {
-        form.reset({
-          ...initialData,
-          fechaIngreso: initialData.fechaIngreso ? new Date(initialData.fechaIngreso.split('/').reverse().join('-')) : new Date(),
-          avatarUrl: initialData.avatarUrl || "",
-        });
-      } else {
-        form.reset({
-          nombre: "",
-          dni: "",
-          contacto: "",
-          email: "",
-          especialidad: "",
-          fechaIngreso: new Date(),
-          estado: "Activo",
-          avatarUrl: "",
-        });
+    if (open) {
+      let defaultVals: Partial<PersonalFormValues> = {
+        tipoDocumento: "DNI", numeroDocumento: "", nombre: "", apellidoPaterno: "", apellidoMaterno: "",
+        fechaNacimiento: new Date(), sexo: "M", direccion: "", telefono: "", email: "",
+        especialidad: "", fechaIngreso: new Date(), estado: "Activo", avatarUrl: "",
+      };
+
+      if (isEditMode && initialPersonalData) { // Editing existing Personal
+        const persona = initialPersonalData.persona;
+        defaultVals = {
+            ...persona,
+            fechaNacimiento: new Date(persona.fechaNacimiento), // Ensure Date object
+            especialidad: initialPersonalData.especialidad,
+            fechaIngreso: initialPersonalData.fechaIngreso ? new Date(initialPersonalData.fechaIngreso.split('/').reverse().join('-')) : new Date(),
+            estado: initialPersonalData.estado,
+            avatarUrl: initialPersonalData.avatarUrl || "",
+        };
+      } else if (selectedPersonaToPreload && !isCreatingNewPersonaFlow) { // Creating new Personal from existing Persona
+        defaultVals = {
+            ...selectedPersonaToPreload,
+            fechaNacimiento: new Date(selectedPersonaToPreload.fechaNacimiento),
+            // Personal fields need defaults or to be set
+            especialidad: "",
+            fechaIngreso: new Date(),
+            estado: "Activo",
+            avatarUrl: "",
+        };
+      } else if (isCreatingNewPersonaFlow) { // Creating new Persona + Personal
+        // Default values are already fine
       }
+      form.reset(defaultVals);
     }
-  }, [initialData, form, open]);
+  }, [initialPersonalData, selectedPersonaToPreload, isCreatingNewPersonaFlow, isEditMode, open, form]);
 
 
   async function onSubmit(values: PersonalFormValues) {
-    const formattedValues: Personal = {
-        id: initialData?.id || crypto.randomUUID(),
-        ...values,
-        fechaIngreso: format(values.fechaIngreso, "dd/MM/yyyy"),
-        avatarUrl: values.avatarUrl || undefined, // Ensure empty string becomes undefined if desired for API
+    const personaData: Persona = {
+        id: (isEditMode && initialPersonalData?.idPersona) || (selectedPersonaToPreload?.id) || `persona-${crypto.randomUUID()}`, // Generate new ID if creating new Persona
+        tipoDocumento: values.tipoDocumento,
+        numeroDocumento: values.numeroDocumento,
+        nombre: values.nombre,
+        apellidoPaterno: values.apellidoPaterno,
+        apellidoMaterno: values.apellidoMaterno,
+        fechaNacimiento: values.fechaNacimiento,
+        sexo: values.sexo,
+        direccion: values.direccion,
+        telefono: values.telefono,
+        email: values.email,
     };
-    
+
+    const personalOutput: Personal = {
+        id: initialPersonalData?.id || `personal-${crypto.randomUUID()}`,
+        idPersona: personaData.id,
+        persona: personaData,
+        especialidad: values.especialidad,
+        fechaIngreso: format(values.fechaIngreso, "dd/MM/yyyy"),
+        estado: values.estado,
+        avatarUrl: values.avatarUrl || undefined,
+    };
+
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    toast({
-      title: isEditMode ? "Personal Actualizado" : "Personal Registrado",
-      description: `${values.nombre} ha sido ${isEditMode ? 'actualizado' : 'añadido'} exitosamente.`,
-    });
-    
-    if (onStaffAdded) {
-      onStaffAdded(formattedValues);
-    }
-    onOpenChange(false); 
+    onStaffSaved(personalOutput); // Pass the complete Personal object
+    // Toast is handled by the parent page
   }
 
+  const tipoDocumentoOptions: TipoDocumento[] = ["DNI", "EXTRANJERIA", "PASAPORTE"];
+  const sexoOptions: {label: string, value: Sexo}[] = [{label: "Masculino", value: "M"}, {label: "Femenino", value: "F"}];
   const especialidades = [
     "Ortodoncia", "Endodoncia", "Periodoncia", "Implantología",
-    "Odontopediatría", "Cirugía", "Estética Dental", "General", "Administrativo", "Asistente Dental", "Recepción"
+    "Prostodoncia", "Odontopediatría", "Cirugía", "Estética Dental", "General", "Administrativo", "Asistente Dental", "Recepción"
   ];
+
+  const title = isEditMode ? "Editar Personal" : (isCreatingNewPersonaFlow ? "Registrar Nueva Persona y Personal" : "Asignar Rol de Personal");
+  const description = isEditMode ? "Modifique los datos del miembro del personal." : (isCreatingNewPersonaFlow ? "Complete los campos para la nueva persona y su rol." : "Complete los detalles del rol para la persona seleccionada.");
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-lg p-4 sm:p-6">
-        <DialogHeader className="pb-0">
-          <DialogTitle>{isEditMode ? "Editar Personal" : "Añadir Nuevo Personal"}</DialogTitle>
-          <DialogDescription>
-            {isEditMode ? "Modifique los datos del miembro del personal." : "Complete los campos para registrar un nuevo miembro del personal."}
-          </DialogDescription>
+      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-lg p-0">
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[70vh] md:max-h-[calc(80vh-120px)]"> {/* Adjusted max height for scroll area with smaller padding */}
+        <ScrollArea className="max-h-[70vh] md:max-h-[calc(80vh-150px)]">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2 pr-3 pl-1"> {/* Added small horizontal padding for scrollbar */}
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-6 pb-6 pt-2">
+              <h3 className="text-md font-semibold text-muted-foreground border-b pb-1">Datos Personales</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="tipoDocumento"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Tipo de Documento</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isPersonaFieldsDisabled}>
+                        <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Seleccione..." /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {tipoDocumentoOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="numeroDocumento"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Número de Documento</FormLabel>
+                        <FormControl><Input placeholder="12345678" {...field} disabled={isPersonaFieldsDisabled} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="nombre"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nombre Completo</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ej: Dra. Ana Torres" {...field} />
-                    </FormControl>
+                    <FormLabel>Nombres</FormLabel>
+                    <FormControl><Input placeholder="Ej: Ana" {...field} disabled={isPersonaFieldsDisabled} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                  control={form.control}
-                  name="dni"
-                  render={({ field }) => (
-                      <FormItem>
-                      <FormLabel>DNI</FormLabel>
-                      <FormControl>
-                          <Input placeholder="12345678" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                      </FormItem>
-                  )}
-                  />
-                  <FormField
-                  control={form.control}
-                  name="contacto"
-                  render={({ field }) => (
-                      <FormItem>
-                      <FormLabel>Teléfono</FormLabel>
-                      <FormControl>
-                          <Input placeholder="+51 987654321" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                      </FormItem>
-                  )}
-                  />
+                <FormField
+                    control={form.control}
+                    name="apellidoPaterno"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Apellido Paterno</FormLabel>
+                        <FormControl><Input placeholder="Ej: Torres" {...field} disabled={isPersonaFieldsDisabled} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="apellidoMaterno"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Apellido Materno</FormLabel>
+                        <FormControl><Input placeholder="Ej: Quispe" {...field} disabled={isPersonaFieldsDisabled} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="fechaNacimiento"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel className="mb-1.5">Fecha de Nacimiento</FormLabel>
+                        <Popover><PopoverTrigger asChild>
+                        <FormControl>
+                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")} disabled={isPersonaFieldsDisabled}>
+                            {field.value ? format(field.value, "PPP", {locale: es}) : <span>Seleccione fecha</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                        </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus locale={es} captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()}/>
+                        </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="sexo"
+                    render={({ field }) => (
+                    <FormItem className="space-y-2 pt-2">
+                        <FormLabel>Sexo</FormLabel>
+                        <FormControl>
+                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={isPersonaFieldsDisabled}>
+                            {sexoOptions.map(opt => (
+                                <FormItem key={opt.value} className="flex items-center space-x-2 space-y-0">
+                                <FormControl><RadioGroupItem value={opt.value} id={`sexo-${opt.value}`} /></FormControl>
+                                <FormLabel htmlFor={`sexo-${opt.value}`} className="font-normal">{opt.label}</FormLabel>
+                                </FormItem>
+                            ))}
+                        </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
               </div>
               <FormField
                 control={form.control}
-                name="email"
+                name="direccion"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Correo Electrónico</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="ejemplo@correo.com" {...field} />
-                    </FormControl>
+                    <FormLabel>Dirección</FormLabel>
+                    <FormControl><Input placeholder="Av. Principal 123" {...field} disabled={isPersonaFieldsDisabled} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="telefono"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Teléfono</FormLabel>
+                        <FormControl><Input placeholder="+51 987654321" {...field} disabled={isPersonaFieldsDisabled} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Correo Electrónico</FormLabel>
+                        <FormControl><Input type="email" placeholder="ejemplo@correo.com" {...field} disabled={isPersonaFieldsDisabled} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </div>
+
+              <h3 className="text-md font-semibold text-muted-foreground border-b pb-1 pt-4">Datos del Personal</h3>
               <FormField
                   control={form.control}
                   name="avatarUrl"
@@ -239,40 +388,23 @@ export function AddPersonalForm({ open, onOpenChange, onStaffAdded, initialData 
                   />
                   <FormField
                   control={form.control}
-                  name="fechaIngreso"
+                  name="fechaIngreso" // Staff specific joining date
                   render={({ field }) => (
                       <FormItem className="flex flex-col">
-                          <FormLabel className="mb-1.5">Fecha de Ingreso</FormLabel>
+                          <FormLabel className="mb-1.5">Fecha de Ingreso (Personal)</FormLabel>
                           <Popover>
                               <PopoverTrigger asChild>
                               <FormControl>
-                                  <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                      "w-full pl-3 text-left font-normal",
-                                      !field.value && "text-muted-foreground"
-                                  )}
-                                  >
-                                  {field.value ? (
-                                      format(field.value, "PPP", {locale: es})
-                                  ) : (
-                                      <span>Seleccione una fecha</span>
-                                  )}
+                                  <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? format(field.value, "PPP", {locale: es}) : <span>Seleccione fecha</span>}
                                   <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                   </Button>
                               </FormControl>
                               </PopoverTrigger>
                               <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                  mode="single"
-                                  selected={field.value}
-                                  onSelect={field.onChange}
-                                  disabled={(date) =>
-                                  date > new Date() || date < new Date("1900-01-01")
-                                  }
-                                  initialFocus
-                                  locale={es}
-                              />
+                              <Calendar mode="single" selected={field.value} onSelect={field.onChange}
+                                  disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                                  initialFocus locale={es} captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()}/>
                               </PopoverContent>
                           </Popover>
                           <FormMessage />
@@ -285,24 +417,15 @@ export function AddPersonalForm({ open, onOpenChange, onStaffAdded, initialData 
                 name="estado"
                 render={({ field }) => (
                   <FormItem className="space-y-2">
-                    <FormLabel>Estado</FormLabel>
+                    <FormLabel>Estado (Personal)</FormLabel>
                     <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        value={field.value}
-                        className="flex flex-col space-y-1 sm:flex-row sm:space-x-4 sm:space-y-0"
-                      >
+                      <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4">
                         <FormItem className="flex items-center space-x-2 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="Activo" id="estado-activo" />
-                          </FormControl>
+                          <FormControl><RadioGroupItem value="Activo" id="estado-activo" /></FormControl>
                           <FormLabel htmlFor="estado-activo" className="font-normal">Activo</FormLabel>
                         </FormItem>
                         <FormItem className="flex items-center space-x-2 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="Inactivo" id="estado-inactivo" />
-                          </FormControl>
+                          <FormControl><RadioGroupItem value="Inactivo" id="estado-inactivo" /></FormControl>
                           <FormLabel htmlFor="estado-inactivo" className="font-normal">Inactivo</FormLabel>
                         </FormItem>
                       </RadioGroup>
@@ -311,10 +434,20 @@ export function AddPersonalForm({ open, onOpenChange, onStaffAdded, initialData 
                   </FormItem>
                 )}
               />
-              <DialogFooter className="pt-4 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2">
+              <DialogFooter className="pt-6 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto" disabled={form.formState.isSubmitting}>Cancelar</Button>
                 <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
-                  {form.formState.isSubmitting ? (isEditMode ? "Actualizando..." : "Registrando...") : (isEditMode ? "Guardar Cambios" : "Registrar Personal")}
+                  {form.formState.isSubmitting
+                    ? isEditMode
+                      ? 'Guardando...'
+                      : isCreatingNewPersonaFlow
+                        ? 'Registrando...'
+                        : 'Asignando...'
+                    : isEditMode
+                      ? "Guardar Cambios"
+                      : isCreatingNewPersonaFlow
+                        ? "Registrar Persona y Personal"
+                        : "Asignar Rol"}
                 </Button>
               </DialogFooter>
             </form>

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ArrowUpDown, MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight, Eye } from "lucide-react";
 import { AddPersonalForm } from "@/components/personal/AddPersonalForm";
+import { SelectPersonaModal } from "@/components/personal/SelectPersonaModal";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -27,116 +28,70 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { Persona, TipoDocumento, Sexo } from "@/types";
 
 
+// Representa la tabla 'especialista' que es el Personal
 export type Personal = {
-  id: string;
-  avatarUrl?: string;
-  nombre: string;
-  dni: string;
-  contacto: string; // Phone number
-  email: string;
-  especialidad: string;
-  fechaIngreso: string; // "DD/MM/YYYY"
+  id: string; // ID del registro de Personal/Especialista
+  idPersona: string; // FK a la tabla Persona
+  persona: Persona; // Datos de la persona anidados
+  especialidad: string; // "Ortodoncia", "Endodoncia", etc.
+  fechaIngreso: string; // "DD/MM/YYYY" - Fecha de ingreso como personal
   estado: "Activo" | "Inactivo";
+  avatarUrl?: string; // Específico del rol de personal
 };
+
+const mockPersonasData: Persona[] = [
+  { id: "persona-1", tipoDocumento: "DNI", numeroDocumento: "73124568", nombre: "Joe", apellidoPaterno: "Schilder", apellidoMaterno: "Mann", fechaNacimiento: new Date("1985-05-15"), sexo: "M", direccion: "Av. Siempre Viva 123", telefono: "+51 943 567 821", email: "joe.schilder@example.com" },
+  { id: "persona-2", tipoDocumento: "DNI", numeroDocumento: "18273645", nombre: "Phoebe", apellidoPaterno: "Venturi", apellidoMaterno: "Ross", fechaNacimiento: new Date("1990-08-22"), sexo: "F", direccion: "Calle Falsa 456", telefono: "+51 981 234 670", email: "phoebe.venturi@example.com" },
+  { id: "persona-3", tipoDocumento: "DNI", numeroDocumento: "49205873", nombre: "Caroline", apellidoPaterno: "Pandolfi", apellidoMaterno: "Geller", fechaNacimiento: new Date("1988-11-30"), sexo: "F", direccion: "Jr. Desconocido 789", telefono: "+51 967 891 234", email: "caroline.pandolfi@example.com" },
+  { id: "persona-4", tipoDocumento: "DNI", numeroDocumento: "50938472", nombre: "Ricardo", apellidoPaterno: "Marchetti", apellidoMaterno: "Tribbiani", fechaNacimiento: new Date("1992-03-10"), sexo: "M", direccion: "Pje. Oculto 101", telefono: "+51 935 648 290", email: "ricardo.marchetti@example.com" },
+  { id: "persona-5", tipoDocumento: "EXTRANJERIA", numeroDocumento: "X6349275", nombre: "Dorothy", apellidoPaterno: "Hussain", apellidoMaterno: "Bing", fechaNacimiento: new Date("1980-07-01"), sexo: "F", direccion: "Av. Central 202", telefono: "+51 927 401 356", email: "dorothy.hussain@example.com" },
+  { id: "persona-6", tipoDocumento: "PASAPORTE", numeroDocumento: "P2107384", nombre: "Eleanor", apellidoPaterno: "Mann", apellidoMaterno: "Buffay", fechaNacimiento: new Date("1995-01-20"), sexo: "F", direccion: "Calle Sol 303", telefono: "+51 984 123 758", email: "eleanor.mann@example.com" },
+  { id: "persona-7", tipoDocumento: "DNI", numeroDocumento: "85017429", nombre: "Nina", apellidoPaterno: "Francini", apellidoMaterno: "Green", fechaNacimiento: new Date("1989-09-05"), sexo: "F", direccion: "Av. Luna 404", telefono: "+51 975 320 461", email: "nina.francini@example.com" },
+  { id: "persona-8", tipoDocumento: "DNI", numeroDocumento: "76309152", nombre: "Caroline", apellidoPaterno: "Mallet", apellidoMaterno: "Peralta", fechaNacimiento: new Date("1993-12-12"), sexo: "F", direccion: "Jr. Estrella 505", telefono: "+51 928 547 103", email: "caroline.mallet@example.com" },
+];
 
 const mockPersonalData: Personal[] = [
   {
-    id: "1",
-    avatarUrl: "https://placehold.co/40x40.png?text=JS",
-    nombre: "Joe Schilder",
-    dni: "73124568",
-    contacto: "+51 943 567 821",
-    email: "joe.schilder@example.com",
+    id: "personal-1",
+    idPersona: "persona-1",
+    persona: mockPersonasData[0],
     especialidad: "Ortodoncia",
     fechaIngreso: "17/02/2023",
     estado: "Inactivo",
+    avatarUrl: "https://placehold.co/40x40.png?text=JS",
   },
   {
-    id: "2",
-    avatarUrl: "https://placehold.co/40x40.png?text=PV",
-    nombre: "Phoebe Venturi",
-    dni: "18273645",
-    contacto: "+51 981 234 670",
-    email: "phoebe.venturi@example.com",
+    id: "personal-2",
+    idPersona: "persona-2",
+    persona: mockPersonasData[1],
     especialidad: "Endodoncia",
     fechaIngreso: "05/07/2023",
     estado: "Activo",
+    avatarUrl: "https://placehold.co/40x40.png?text=PV",
   },
   {
-    id: "3",
-    avatarUrl: "https://placehold.co/40x40.png?text=CP",
-    nombre: "Caroline Pandolfi",
-    dni: "49205873",
-    contacto: "+51 967 891 234",
-    email: "caroline.pandolfi@example.com",
+    id: "personal-3",
+    idPersona: "persona-3",
+    persona: mockPersonasData[2],
     especialidad: "Periodoncia",
     fechaIngreso: "11/10/2023",
     estado: "Activo",
-  },
-  {
-    id: "4",
-    avatarUrl: "https://placehold.co/40x40.png?text=RM",
-    nombre: "Ricardo Marchetti",
-    dni: "50938472",
-    contacto: "+51 935 648 290",
-    email: "ricardo.marchetti@example.com",
-    especialidad: "Implantología",
-    fechaIngreso: "27/04/2024",
-    estado: "Activo",
-  },
-  {
-    id: "5",
-    avatarUrl: "https://placehold.co/40x40.png?text=DH",
-    nombre: "Dorothy Hussain",
-    dni: "63492751",
-    contacto: "+51 927 401 356",
-    email: "dorothy.hussain@example.com",
-    especialidad: "Prostodoncia",
-    fechaIngreso: "03/08/2024",
-    estado: "Activo",
-  },
-  {
-    id: "6",
-    avatarUrl: "https://placehold.co/40x40.png?text=EM",
-    nombre: "Eleanor Mann",
-    dni: "21073846",
-    contacto: "+51 984 123 758",
-    email: "eleanor.mann@example.com",
-    especialidad: "Odontopediatría",
-    fechaIngreso: "18/11/2024",
-    estado: "Inactivo",
-  },
-  {
-    id: "7",
-    avatarUrl: "https://placehold.co/40x40.png?text=NF",
-    nombre: "Nina Francini",
-    dni: "85017429",
-    contacto: "+51 975 320 461",
-    email: "nina.francini@example.com",
-    especialidad: "Cirugía",
-    fechaIngreso: "22/01/2025",
-    estado: "Activo",
-  },
-  {
-    id: "8",
-    avatarUrl: "https://placehold.co/40x40.png?text=CM",
-    nombre: "Caroline Mallet",
-    dni: "76309152",
-    contacto: "+51 928 547 103",
-    email: "caroline.mallet@example.com",
-    especialidad: "Estética Dental",
-    fechaIngreso: "09/06/2025",
-    estado: "Inactivo",
+    avatarUrl: "https://placehold.co/40x40.png?text=CP",
   },
 ];
 
 
 export default function ListaPersonalPage() {
   const [personalList, setPersonalList] = React.useState<Personal[]>(mockPersonalData);
-  const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+  const [isAddPersonalFormOpen, setIsAddPersonalFormOpen] = React.useState(false);
   const [editingPersonal, setEditingPersonal] = React.useState<Personal | null>(null);
+  const [selectedPersonaToPreload, setSelectedPersonaToPreload] = React.useState<Persona | null>(null);
+  const [isCreatingNewPersonaFlow, setIsCreatingNewPersonaFlow] = React.useState(false);
+  const [isSelectPersonaModalOpen, setIsSelectPersonaModalOpen] = React.useState(false);
+  
   const { toast } = useToast();
 
   const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = React.useState(false);
@@ -148,35 +103,65 @@ export default function ListaPersonalPage() {
   });
   const [sortBy, setSortBy] = React.useState<string>("nombre_asc");
 
-
-  const handleStaffUpdate = (updatedStaff: Personal) => {
-    setPersonalList(prevList =>
-      prevList.map(p => p.id === updatedStaff.id ? updatedStaff : p)
-    );
-    toast({
-      title: "Personal Actualizado",
-      description: `${updatedStaff.nombre} ha sido actualizado.`,
+  const handleSavePersonal = (savedPersonal: Personal) => {
+    setPersonalList(prevList => {
+      const existingIndex = prevList.findIndex(p => p.id === savedPersonal.id);
+      if (existingIndex > -1) {
+        const updatedList = [...prevList];
+        updatedList[existingIndex] = savedPersonal;
+        return updatedList;
+      }
+      // If new, ensure mockPersonasData is updated if a new Persona was created
+      // This is a simplification; in a real app, data would refetch or be managed globally
+      const personaExists = mockPersonasData.find(p => p.id === savedPersonal.idPersona);
+      if (!personaExists) {
+        mockPersonasData.push(savedPersonal.persona);
+      }
+      return [savedPersonal, ...prevList];
     });
+    toast({
+      title: editingPersonal ? "Personal Actualizado" : "Personal Registrado",
+      description: `${savedPersonal.persona.nombre} ${savedPersonal.persona.apellidoPaterno} ha sido ${editingPersonal ? 'actualizado' : 'registrado'}.`,
+    });
+    setIsAddPersonalFormOpen(false);
     setEditingPersonal(null);
-    setIsAddModalOpen(false); // Close form after successful update
+    setSelectedPersonaToPreload(null);
+    setIsCreatingNewPersonaFlow(false);
   };
   
-  const handleStaffAdded = (newStaff: Personal) => {
-    setPersonalList(prevList => [newStaff, ...prevList]);
-    // Toast for adding is handled within AddPersonalForm
-    setIsAddModalOpen(false);
+  const handleOpenAddPersonalFlow = () => {
+    setEditingPersonal(null); // Clear any existing edit state
+    setSelectedPersonaToPreload(null);
+    setIsCreatingNewPersonaFlow(false);
+    setIsSelectPersonaModalOpen(true);
   };
 
+  const handleSelectPersona = (persona: Persona) => {
+    setSelectedPersonaToPreload(persona);
+    setIsCreatingNewPersonaFlow(false);
+    setIsSelectPersonaModalOpen(false);
+    setIsAddPersonalFormOpen(true);
+  };
+
+  const handleCreateNewPersona = () => {
+    setSelectedPersonaToPreload(null);
+    setIsCreatingNewPersonaFlow(true);
+    setIsSelectPersonaModalOpen(false);
+    setIsAddPersonalFormOpen(true);
+  };
+  
   const openEditModal = (personal: Personal) => {
     setEditingPersonal(personal);
-    setIsAddModalOpen(true);
+    setSelectedPersonaToPreload(personal.persona); // Preload with existing persona data
+    setIsCreatingNewPersonaFlow(false); // Not creating a new persona, but editing
+    setIsAddPersonalFormOpen(true);
   };
 
   const handleDelete = (personal: Personal) => {
     setPersonalToAction(personal);
     setConfirmDialogProps({
         title: "Confirmar Eliminación",
-        description: `¿Estás seguro de que deseas eliminar a ${personal.nombre}? Esta acción no se puede deshacer.`,
+        description: `¿Estás seguro de que deseas eliminar a ${personal.persona.nombre} ${personal.persona.apellidoPaterno}? Esta acción no se puede deshacer.`,
         confirmButtonText: "Eliminar",
         confirmButtonVariant: "destructive"
     });
@@ -184,7 +169,7 @@ export default function ListaPersonalPage() {
         setPersonalList(prev => prev.filter(p => p.id !== personal.id));
         toast({
             title: "Personal Eliminado",
-            description: `${personal.nombre} ha sido eliminado.`,
+            description: `${personal.persona.nombre} ${personal.persona.apellidoPaterno} ha sido eliminado.`,
             variant: "destructive"
         });
         setIsConfirmDeleteDialogOpen(false);
@@ -198,14 +183,14 @@ export default function ListaPersonalPage() {
     const newStatus = personal.estado === "Activo" ? "Inactivo" : "Activo";
     setConfirmDialogProps({
         title: `Confirmar Cambio de Estado`,
-        description: `¿Estás seguro de que deseas cambiar el estado de ${personal.nombre} a ${newStatus}?`,
+        description: `¿Estás seguro de que deseas cambiar el estado de ${personal.persona.nombre} ${personal.persona.apellidoPaterno} a ${newStatus}?`,
         confirmButtonText: newStatus === "Activo" ? "Activar" : "Desactivar",
     });
     setConfirmAction(() => () => {
         setPersonalList(prev => prev.map(p => p.id === personal.id ? {...p, estado: newStatus} : p));
         toast({
             title: "Estado Actualizado",
-            description: `El estado de ${personal.nombre} ha sido cambiado a ${newStatus}.`
+            description: `El estado de ${personal.persona.nombre} ${personal.persona.apellidoPaterno} ha sido cambiado a ${newStatus}.`
         });
         setIsConfirmDeleteDialogOpen(false);
         setPersonalToAction(null);
@@ -244,14 +229,12 @@ const columns: ColumnDef<Personal>[] = [
     header: "#",
     cell: ({ row, table }) => {
       const rowIndex = row.index;
-      // const pageSize = table.getState().pagination.pageSize; // pageSize is not used in this calculation
-      // const pageIndex = table.getState().pagination.pageIndex; // pageIndex is not used
       return <span>{rowIndex + 1 + (table.getState().pagination.pageIndex * table.getState().pagination.pageSize)}</span>;
     },
      enableSorting: false,
   },
   {
-    accessorKey: "nombre",
+    accessorKey: "persona.nombre", // Access nested property
     header: ({ column }) => {
       return (
         <Button
@@ -265,29 +248,37 @@ const columns: ColumnDef<Personal>[] = [
     },
     cell: ({ row }) => {
       const personal = row.original;
+      const nombreCompleto = `${personal.persona.nombre} ${personal.persona.apellidoPaterno} ${personal.persona.apellidoMaterno}`;
       return (
         <div className="flex items-center space-x-3">
           <Avatar>
-            <AvatarImage src={personal.avatarUrl} alt={personal.nombre} data-ai-hint="person portrait" />
-            <AvatarFallback>{personal.nombre.substring(0, 2).toUpperCase()}</AvatarFallback>
+            <AvatarImage src={personal.avatarUrl} alt={nombreCompleto} data-ai-hint="person portrait" />
+            <AvatarFallback>{personal.persona.nombre.substring(0, 1)}{personal.persona.apellidoPaterno.substring(0,1)}</AvatarFallback>
           </Avatar>
           <div>
-            <div className="font-medium">{personal.nombre}</div>
-            <div className="text-xs text-muted-foreground">DNI: {personal.dni}</div>
+            <div className="font-medium">{nombreCompleto}</div>
+            <div className="text-xs text-muted-foreground">{personal.persona.tipoDocumento}: {personal.persona.numeroDocumento}</div>
           </div>
         </div>
       );
     },
+    filterFn: (row, id, value) => { // Custom filter for full name
+        const personal = row.original;
+        const nombreCompleto = `${personal.persona.nombre} ${personal.persona.apellidoPaterno} ${personal.persona.apellidoMaterno}`.toLowerCase();
+        const numeroDocumento = personal.persona.numeroDocumento.toLowerCase();
+        const searchTerm = String(value).toLowerCase();
+        return nombreCompleto.includes(searchTerm) || numeroDocumento.includes(searchTerm);
+    }
   },
   {
-    accessorKey: "contacto",
+    accessorKey: "persona.telefono",
     header: "Contacto",
     cell: ({ row }) => {
         const personal = row.original;
         return (
             <div>
-                <div>{personal.contacto}</div>
-                <div className="text-xs text-muted-foreground">{personal.email}</div>
+                <div>{personal.persona.telefono}</div>
+                <div className="text-xs text-muted-foreground">{personal.persona.email}</div>
             </div>
         )
     }
@@ -341,8 +332,8 @@ const columns: ColumnDef<Personal>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(personal.id)}>
-              Copiar ID
+            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(personal.idPersona)}>
+              Copiar ID Persona
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => openEditModal(personal)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
@@ -353,7 +344,7 @@ const columns: ColumnDef<Personal>[] = [
               {personal.estado === "Activo" ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
               {personal.estado === "Activo" ? "Desactivar" : "Activar"}
             </DropdownMenuItem>
-             <DropdownMenuItem onClick={() => alert(`Ver detalles de ${personal.nombre}`)}>
+             <DropdownMenuItem onClick={() => alert(`Ver detalles de ${personal.persona.nombre}`)}>
                 <Eye className="mr-2 h-4 w-4" /> Ver Detalles
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -369,15 +360,15 @@ const columns: ColumnDef<Personal>[] = [
   ];
 
   const sortOptions = [
-    { label: "Nombre (A-Z)", value: "nombre_asc" },
-    { label: "Nombre (Z-A)", value: "nombre_desc" },
+    { label: "Nombre (A-Z)", value: "persona.nombre_asc" }, // Updated for nested property
+    { label: "Nombre (Z-A)", value: "persona.nombre_desc" },
     { label: "Fecha de Ingreso (Más Reciente)", value: "fechaIngreso_desc" },
     { label: "Fecha de Ingreso (Más Antiguo)", value: "fechaIngreso_asc" },
   ];
 
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6">
+    <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 py-4 space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Lista de Personal</h1>
         <p className="text-muted-foreground">
@@ -388,13 +379,10 @@ const columns: ColumnDef<Personal>[] = [
         columns={columns}
         data={personalList}
         searchPlaceholder="Buscar por nombre o DNI..."
-        searchColumnId="nombre" 
+        searchColumnId="persona.nombre" 
         statusColumnId="estado"
         statusOptions={statusOptions}
-        onAdd={() => {
-            setEditingPersonal(null);
-            setIsAddModalOpen(true);
-        }}
+        onAdd={handleOpenAddPersonalFlow}
         addButtonLabel="Añadir Personal"
       >
         <Select value={sortBy} onValueChange={setSortBy}>
@@ -408,14 +396,29 @@ const columns: ColumnDef<Personal>[] = [
             </SelectContent>
         </Select>
       </DataTable>
+      
+      <SelectPersonaModal
+        isOpen={isSelectPersonaModalOpen}
+        onClose={() => setIsSelectPersonaModalOpen(false)}
+        onSelectPersona={handleSelectPersona}
+        onCreateNewPersona={handleCreateNewPersona}
+        existingPersonas={mockPersonasData} // Pass mock data here
+      />
+
       <AddPersonalForm
-        open={isAddModalOpen}
+        open={isAddPersonalFormOpen}
         onOpenChange={(isOpen) => {
-            setIsAddModalOpen(isOpen);
-            if (!isOpen) setEditingPersonal(null);
+            setIsAddPersonalFormOpen(isOpen);
+            if (!isOpen) {
+                setEditingPersonal(null);
+                setSelectedPersonaToPreload(null);
+                setIsCreatingNewPersonaFlow(false);
+            }
         }}
-        initialData={editingPersonal}
-        onStaffAdded={editingPersonal ? handleStaffUpdate : handleStaffAdded}
+        initialPersonalData={editingPersonal}
+        selectedPersonaToPreload={selectedPersonaToPreload}
+        isCreatingNewPersonaFlow={isCreatingNewPersonaFlow}
+        onStaffSaved={handleSavePersonal}
       />
       {personalToAction && confirmAction && (
         <ConfirmationDialog
@@ -426,8 +429,10 @@ const columns: ColumnDef<Personal>[] = [
             description={confirmDialogProps.description}
             confirmButtonText={confirmDialogProps.confirmButtonText}
             confirmButtonVariant={confirmDialogProps.confirmButtonVariant}
+            isLoading={false} // Assuming no async operation for now
         />
       )}
     </div>
   );
 }
+
