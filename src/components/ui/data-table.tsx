@@ -113,18 +113,18 @@ export function DataTable<TData, TValue>({
                 onChange={(event) =>
                   table.getColumn(searchColumnId)?.setFilterValue(event.target.value)
                 }
-                className="pl-8 w-full sm:min-w-[180px] md:min-w-[220px]"
+                className="pl-8 w-full sm:w-auto sm:min-w-[180px] md:min-w-[220px]"
               />
             </div>
           )}
-           {!searchColumnId && ( // Global filter if searchColumnId is not provided
+           {!searchColumnId && ( 
             <div className="relative w-full sm:w-auto">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={searchPlaceholder}
                 value={globalFilter ?? ""}
                 onChange={(event) => setGlobalFilter(event.target.value)}
-                className="pl-8 w-full sm:min-w-[180px] md:min-w-[220px]"
+                className="pl-8 w-full sm:w-auto sm:min-w-[180px] md:min-w-[220px]"
               />
             </div>
           )}
@@ -148,50 +148,48 @@ export function DataTable<TData, TValue>({
               </SelectContent>
             </Select>
           )}
-          {/* Slot for additional filters like SortBy */}
           <div className="w-full sm:w-auto">
             {children}
           </div>
         </div>
 
-        {/* Action Buttons Group (Columnas, Add) */}
         <div className="flex flex-col sm:flex-row sm:flex-wrap items-center gap-2 w-full lg:w-auto lg:justify-end">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-auto">
-                <Settings2 className="mr-2 h-4 w-4" /> Columnas
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {typeof column.columnDef.header === 'string' ? column.columnDef.header : column.id}
-                    </DropdownMenuCheckboxItem>
-                  )
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {onAdd && (
-            <Button onClick={onAdd} className="w-full sm:w-auto">
-              <PlusCircle className="mr-2 h-4 w-4" /> {addButtonLabel}
-            </Button>
-          )}
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full sm:w-auto">
+                    <Settings2 className="mr-2 h-4 w-4" /> Columnas
+                </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                {table
+                    .getAllColumns()
+                    .filter((column) => column.getCanHide())
+                    .map((column) => {
+                    return (
+                        <DropdownMenuCheckboxItem
+                        key={column.id}
+                        className="capitalize"
+                        checked={column.getIsVisible()}
+                        onCheckedChange={(value) =>
+                            column.toggleVisibility(!!value)
+                        }
+                        >
+                        {typeof column.columnDef.header === 'string' ? column.columnDef.header : column.id}
+                        </DropdownMenuCheckboxItem>
+                    )
+                    })}
+                </DropdownMenuContent>
+            </DropdownMenu>
+            {onAdd && (
+                <Button onClick={onAdd} className="w-full sm:w-auto">
+                <PlusCircle className="mr-2 h-4 w-4" /> {addButtonLabel}
+                </Button>
+            )}
         </div>
       </div>
 
       {/* Table Container */}
-      <div className="rounded-md border bg-card w-full sm:w-[600px] md:w-[720px] lg:w-full mx-auto">
+      <div className="rounded-md border bg-card w-[300px] sm:w-full md:max-w-[680px] lg:max-w-[920px] xl:max-w-[1100px] 2xl:max-w-6xl mx-auto">
         <div className="relative w-full overflow-x-auto"> {/* Ensure horizontal scroll for table */}
             <Table>
             <TableHeader>
@@ -325,3 +323,4 @@ export function DataTable<TData, TValue>({
     </div>
   );
 }
+
