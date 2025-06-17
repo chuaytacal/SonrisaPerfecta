@@ -100,10 +100,11 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto flex-wrap">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        {/* Filters and Search Section */}
+        <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:flex-grow md:flex-wrap">
           {searchColumnId && (
-            <div className="relative w-full sm:w-auto">
+            <div className="relative w-full sm:w-auto md:flex-grow lg:flex-grow-0">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={searchPlaceholder}
@@ -111,18 +112,18 @@ export function DataTable<TData, TValue>({
                 onChange={(event) =>
                   table.getColumn(searchColumnId)?.setFilterValue(event.target.value)
                 }
-                className="pl-8 w-full sm:min-w-[200px] lg:min-w-[250px]"
+                className="pl-8 w-full sm:min-w-[200px]"
               />
             </div>
           )}
-           {!searchColumnId && (
-            <div className="relative w-full sm:w-auto">
+           {!searchColumnId && ( // Global filter if searchColumnId is not provided
+            <div className="relative w-full sm:w-auto md:flex-grow lg:flex-grow-0">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={searchPlaceholder}
                 value={globalFilter ?? ""}
                 onChange={(event) => setGlobalFilter(event.target.value)}
-                className="pl-8 w-full sm:min-w-[200px] lg:min-w-[250px]"
+                className="pl-8 w-full sm:min-w-[200px]"
               />
             </div>
           )}
@@ -133,7 +134,7 @@ export function DataTable<TData, TValue>({
                 table.getColumn(statusColumnId)?.setFilterValue(value === "all" ? "" : value)
               }
             >
-              <SelectTrigger className="w-full sm:w-auto min-w-[150px]">
+              <SelectTrigger className="w-full sm:w-auto sm:min-w-[150px] md:flex-grow lg:flex-grow-0">
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent>
@@ -146,12 +147,17 @@ export function DataTable<TData, TValue>({
               </SelectContent>
             </Select>
           )}
-          {children}
+          {/* Slot for additional filters like SortBy */}
+          <div className="w-full sm:w-auto md:flex-grow lg:flex-grow-0">
+            {children}
+          </div>
         </div>
-        <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end">
+
+        {/* Action Buttons Section */}
+        <div className="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:items-center sm:gap-2 w-full md:w-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="ml-auto"> {/* Removed hidden sm:flex to always show */}
+              <Button variant="outline" className="w-full sm:w-auto">
                 <Settings2 className="mr-2 h-4 w-4" /> Columnas
               </Button>
             </DropdownMenuTrigger>
@@ -182,55 +188,58 @@ export function DataTable<TData, TValue>({
           )}
         </div>
       </div>
+
       <div className="rounded-md border bg-card">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+        <div className="relative w-full overflow-auto">
+            <Table>
+            <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                    return (
+                        <TableHead key={header.id}>
+                        {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                            )}
+                        </TableHead>
+                    );
+                    })}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No hay resultados.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                ))}
+            </TableHeader>
+            <TableBody>
+                {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                    <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    >
+                    {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                        {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                        )}
+                        </TableCell>
+                    ))}
+                    </TableRow>
+                ))
+                ) : (
+                <TableRow>
+                    <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                    >
+                    No hay resultados.
+                    </TableCell>
+                </TableRow>
+                )}
+            </TableBody>
+            </Table>
+        </div>
       </div>
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
         <div className="text-sm text-muted-foreground mb-2 sm:mb-0">
@@ -259,8 +268,8 @@ export function DataTable<TData, TValue>({
                 <span className="sr-only">Ir a la página anterior</span>
                 <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="text-sm text-muted-foreground px-2">
-                    Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount() > 0 ? table.getPageCount() : 1}
+                <span className="text-sm text-muted-foreground px-1 xs:px-2">
+                    Pág {table.getState().pagination.pageIndex + 1} de {table.getPageCount() > 0 ? table.getPageCount() : 1}
                 </span>
                 <Button
                 variant="outline"
@@ -284,7 +293,7 @@ export function DataTable<TData, TValue>({
                 </Button>
             </div>
             <div className="flex items-center space-x-2 w-full xs:w-auto justify-center xs:justify-end">
-            <span className="text-sm text-muted-foreground hidden sm:inline-block">Filas por página</span>
+            <span className="text-sm text-muted-foreground hidden xs:inline-block">Filas/pág</span>
             <Select
                 value={`${table.getState().pagination.pageSize}`}
                 onValueChange={(value) => {
@@ -308,4 +317,3 @@ export function DataTable<TData, TValue>({
     </div>
   );
 }
-

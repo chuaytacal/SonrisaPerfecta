@@ -137,16 +137,16 @@ export function AddPersonalForm({ open, onOpenChange, onStaffAdded, initialData 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90vw] max-w-lg p-0">
-        <DialogHeader className="p-6 pb-0">
+      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-lg p-4 sm:p-6">
+        <DialogHeader className="pb-0">
           <DialogTitle>{isEditMode ? "Editar Personal" : "Añadir Nuevo Personal"}</DialogTitle>
           <DialogDescription>
             {isEditMode ? "Modifique los datos del miembro del personal." : "Complete los campos para registrar un nuevo miembro del personal."}
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[70vh] md:max-h-[calc(80vh-100px)]"> {/* Adjusted max height for scroll area */}
+        <ScrollArea className="max-h-[70vh] md:max-h-[calc(80vh-120px)]"> {/* Adjusted max height for scroll area with smaller padding */}
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-6 pt-2">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2 pr-3 pl-1"> {/* Added small horizontal padding for scrollbar */}
               <FormField
                 control={form.control}
                 name="nombre"
@@ -311,7 +311,7 @@ export function AddPersonalForm({ open, onOpenChange, onStaffAdded, initialData 
                   </FormItem>
                 )}
               />
-              <DialogFooter className="p-6 pt-2 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2">
+              <DialogFooter className="pt-4 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto" disabled={form.formState.isSubmitting}>Cancelar</Button>
                 <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
                   {form.formState.isSubmitting ? (isEditMode ? "Actualizando..." : "Registrando...") : (isEditMode ? "Guardar Cambios" : "Registrar Personal")}
