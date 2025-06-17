@@ -105,7 +105,7 @@ export function DataTable<TData, TValue>({
         {/* Filters Group (Search, Status, SortBy) */}
         <div className="flex flex-col sm:flex-row sm:flex-wrap items-center gap-2 w-full lg:w-auto">
           {searchColumnId && (
-            <div className="relative w-full sm:w-auto">
+            <div className="relative w-full sm:w-3/4 md:w-1/2 lg:w-1/3">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={searchPlaceholder}
@@ -113,18 +113,18 @@ export function DataTable<TData, TValue>({
                 onChange={(event) =>
                   table.getColumn(searchColumnId)?.setFilterValue(event.target.value)
                 }
-                className="pl-8 w-full sm:w-auto sm:min-w-[180px] md:min-w-[220px]"
+                className="pl-8 w-full"
               />
             </div>
           )}
            {!searchColumnId && (
-            <div className="relative w-full sm:w-auto">
+            <div className="relative w-full sm:w-3/4 md:w-1/2 lg:w-1/3">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={searchPlaceholder}
                 value={globalFilter ?? ""}
                 onChange={(event) => setGlobalFilter(event.target.value)}
-                className="pl-8 w-full sm:w-auto sm:min-w-[180px] md:min-w-[220px]"
+                className="pl-8 w-full"
               />
             </div>
           )}
@@ -155,7 +155,7 @@ export function DataTable<TData, TValue>({
         </div>
 
         {/* Action Buttons Group (Columnas, Add) */}
-        <div className="flex flex-col items-stretch sm:flex-row sm:flex-wrap sm:items-center gap-2 w-full lg:w-auto lg:justify-end">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-center gap-2 w-full lg:w-auto lg:justify-end">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="w-full sm:w-auto">
@@ -191,7 +191,7 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Table Container */}
-      <div className="rounded-md border bg-card w-full sm:w-[500px] md:w-[600px] lg:w-full mx-auto">
+      <div className="rounded-md border bg-card w-[300px] md:w-[500px] lg:w-full mx-auto">
         <div className="relative w-full overflow-x-auto"> {/* Ensure horizontal scroll for table */}
             <Table>
             <TableHeader>
