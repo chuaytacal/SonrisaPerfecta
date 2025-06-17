@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ArrowUpDown, MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight, Eye } from "lucide-react";
 import { AddPersonalForm } from "@/components/personal/AddPersonalForm";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"; // Import ConfirmationDialog
-import { useToast } from "@/hooks/use-toast"; // Import useToast
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { useToast } from "@/hooks/use-toast";
 import {
   Select,
   SelectContent,
@@ -146,7 +146,6 @@ export default function ListaPersonalPage() {
     title: "",
     description: ""
   });
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [sortBy, setSortBy] = React.useState<string>("nombre_asc");
 
 
@@ -158,7 +157,8 @@ export default function ListaPersonalPage() {
       title: "Personal Actualizado",
       description: `${updatedStaff.nombre} ha sido actualizado.`,
     });
-    setEditingPersonal(null); // Close edit modal which is AddPersonalForm
+    setEditingPersonal(null);
+    setIsAddModalOpen(false); // Close form after successful update
   };
   
   const handleStaffAdded = (newStaff: Personal) => {
@@ -169,7 +169,7 @@ export default function ListaPersonalPage() {
 
   const openEditModal = (personal: Personal) => {
     setEditingPersonal(personal);
-    setIsAddModalOpen(true); // AddPersonalForm is used for both add and edit
+    setIsAddModalOpen(true);
   };
 
   const handleDelete = (personal: Personal) => {
@@ -188,6 +188,7 @@ export default function ListaPersonalPage() {
             variant: "destructive"
         });
         setIsConfirmDeleteDialogOpen(false);
+        setPersonalToAction(null);
     });
     setIsConfirmDeleteDialogOpen(true);
   };
@@ -207,6 +208,7 @@ export default function ListaPersonalPage() {
             description: `El estado de ${personal.nombre} ha sido cambiado a ${newStatus}.`
         });
         setIsConfirmDeleteDialogOpen(false);
+        setPersonalToAction(null);
     });
     setIsConfirmDeleteDialogOpen(true);
   };
@@ -242,9 +244,9 @@ const columns: ColumnDef<Personal>[] = [
     header: "#",
     cell: ({ row, table }) => {
       const rowIndex = row.index;
-      const pageSize = table.getState().pagination.pageSize;
-      const pageIndex = table.getState().pagination.pageIndex;
-      return <span>{pageIndex * pageSize + rowIndex + 1}</span>;
+      // const pageSize = table.getState().pagination.pageSize; // pageSize is not used in this calculation
+      // const pageIndex = table.getState().pagination.pageIndex; // pageIndex is not used
+      return <span>{rowIndex + 1 + (table.getState().pagination.pageIndex * table.getState().pagination.pageSize)}</span>;
     },
      enableSorting: false,
   },
@@ -375,7 +377,7 @@ const columns: ColumnDef<Personal>[] = [
 
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Lista de Personal</h1>
         <p className="text-muted-foreground">
@@ -390,7 +392,7 @@ const columns: ColumnDef<Personal>[] = [
         statusColumnId="estado"
         statusOptions={statusOptions}
         onAdd={() => {
-            setEditingPersonal(null); // Ensure we are in "add" mode
+            setEditingPersonal(null);
             setIsAddModalOpen(true);
         }}
         addButtonLabel="Añadir Personal"
@@ -410,7 +412,7 @@ const columns: ColumnDef<Personal>[] = [
         open={isAddModalOpen}
         onOpenChange={(isOpen) => {
             setIsAddModalOpen(isOpen);
-            if (!isOpen) setEditingPersonal(null); // Clear editing state when modal closes
+            if (!isOpen) setEditingPersonal(null);
         }}
         initialData={editingPersonal}
         onStaffAdded={editingPersonal ? handleStaffUpdate : handleStaffAdded}

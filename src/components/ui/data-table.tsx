@@ -99,12 +99,13 @@ export function DataTable<TData, TValue>({
   });
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        {/* Filters and Search Section */}
-        <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:flex-grow md:flex-wrap">
+    <div className="w-full space-y-4">
+      {/* Toolbar: Filters and Actions */}
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        {/* Filters Group (Search, Status, SortBy) */}
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-center gap-2 w-full lg:w-auto">
           {searchColumnId && (
-            <div className="relative w-full sm:w-auto md:flex-grow lg:flex-grow-0">
+            <div className="relative w-full sm:w-auto">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={searchPlaceholder}
@@ -112,18 +113,18 @@ export function DataTable<TData, TValue>({
                 onChange={(event) =>
                   table.getColumn(searchColumnId)?.setFilterValue(event.target.value)
                 }
-                className="pl-8 w-full sm:min-w-[200px]"
+                className="pl-8 w-full sm:w-auto sm:min-w-[180px] md:min-w-[220px]"
               />
             </div>
           )}
-           {!searchColumnId && ( // Global filter if searchColumnId is not provided
-            <div className="relative w-full sm:w-auto md:flex-grow lg:flex-grow-0">
+           {!searchColumnId && (
+            <div className="relative w-full sm:w-auto">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={searchPlaceholder}
                 value={globalFilter ?? ""}
                 onChange={(event) => setGlobalFilter(event.target.value)}
-                className="pl-8 w-full sm:min-w-[200px]"
+                className="pl-8 w-full sm:w-auto sm:min-w-[180px] md:min-w-[220px]"
               />
             </div>
           )}
@@ -134,7 +135,7 @@ export function DataTable<TData, TValue>({
                 table.getColumn(statusColumnId)?.setFilterValue(value === "all" ? "" : value)
               }
             >
-              <SelectTrigger className="w-full sm:w-auto sm:min-w-[150px] md:flex-grow lg:flex-grow-0">
+              <SelectTrigger className="w-full sm:w-auto sm:min-w-[150px]">
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent>
@@ -148,16 +149,16 @@ export function DataTable<TData, TValue>({
             </Select>
           )}
           {/* Slot for additional filters like SortBy */}
-          <div className="w-full sm:w-auto md:flex-grow lg:flex-grow-0">
+          <div className="w-full sm:w-auto">
             {children}
           </div>
         </div>
 
-        {/* Action Buttons Section */}
-        <div className="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:items-center sm:gap-2 w-full md:w-auto">
+        {/* Action Buttons Group (Columnas, Add) */}
+        <div className="flex flex-col xxs:flex-row xxs:flex-wrap items-center gap-2 w-full lg:w-auto lg:justify-end">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-auto">
+              <Button variant="outline" className="w-full xxs:w-auto">
                 <Settings2 className="mr-2 h-4 w-4" /> Columnas
               </Button>
             </DropdownMenuTrigger>
@@ -182,22 +183,23 @@ export function DataTable<TData, TValue>({
             </DropdownMenuContent>
           </DropdownMenu>
           {onAdd && (
-            <Button onClick={onAdd} className="w-full sm:w-auto">
+            <Button onClick={onAdd} className="w-full xxs:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" /> {addButtonLabel}
             </Button>
           )}
         </div>
       </div>
 
+      {/* Table Container */}
       <div className="rounded-md border bg-card">
-        <div className="relative w-full overflow-auto">
+        <div className="relative w-full overflow-x-auto"> {/* Ensure horizontal scroll for table */}
             <Table>
             <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
                     return (
-                        <TableHead key={header.id}>
+                        <TableHead key={header.id} className="whitespace-nowrap"> {/* Prevent header text wrapping */}
                         {header.isPlaceholder
                             ? null
                             : flexRender(
@@ -218,7 +220,7 @@ export function DataTable<TData, TValue>({
                     data-state={row.getIsSelected() && "selected"}
                     >
                     {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
+                        <TableCell key={cell.id} className="whitespace-nowrap"> {/* Prevent cell text wrapping */}
                         {flexRender(
                             cell.column.columnDef.cell,
                             cell.getContext()
@@ -241,13 +243,15 @@ export function DataTable<TData, TValue>({
             </Table>
         </div>
       </div>
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
-        <div className="text-sm text-muted-foreground mb-2 sm:mb-0">
+
+      {/* Pagination Controls */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-y-4 gap-x-2 py-4">
+        <div className="text-sm text-muted-foreground w-full md:w-auto text-center md:text-left">
           {table.getFilteredSelectedRowModel().rows.length} de{" "}
           {table.getFilteredRowModel().rows.length} fila(s) seleccionadas.
         </div>
-        <div className="flex flex-col xs:flex-row items-center gap-2 w-full sm:w-auto">
-            <div className="flex items-center space-x-2 mb-2 xs:mb-0 w-full xs:w-auto justify-center">
+        <div className="flex flex-col sm:flex-row items-center gap-y-4 gap-x-2 w-full md:w-auto">
+            <div className="flex items-center space-x-1 xs:space-x-2">
                 <Button
                 variant="outline"
                 size="icon"
@@ -292,7 +296,7 @@ export function DataTable<TData, TValue>({
                 <ChevronsRight className="h-4 w-4" />
                 </Button>
             </div>
-            <div className="flex items-center space-x-2 w-full xs:w-auto justify-center xs:justify-end">
+            <div className="flex items-center space-x-2">
             <span className="text-sm text-muted-foreground hidden xs:inline-block">Filas/pág</span>
             <Select
                 value={`${table.getState().pagination.pageSize}`}

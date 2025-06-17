@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -40,8 +41,8 @@ export default function RootLayout({
                 </div>
                 {/* Future: User menu / notifications can go here */}
               </header>
-              {/* Changed inner main to div, SidebarInset is the main semantic wrapper */}
-              <div className="flex-1 p-4 md:p-6 overflow-auto">
+              {/* Main content area: removed overflow-auto here */}
+              <div className="flex-1 p-2 sm:p-3 md:p-4 lg:p-6">
                 {children}
               </div>
             </SidebarInset>
