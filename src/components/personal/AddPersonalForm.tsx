@@ -11,14 +11,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-// Select component might not be needed if especialidad is removed, but keeping for now in case other selects are added later
-// import {
-//   Select,
-//   SelectContent,
-//   SelectItem,
-//   SelectTrigger,
-//   SelectValue,
-// } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"; // Re-added import
 // import { useToast } from "@/hooks/use-toast"; // Toast is handled by parent
 import React, { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -60,13 +59,13 @@ const personalFormSchema = z.object({
   sexo: z.enum(["M", "F"], { required_error: "Seleccione un sexo." }),
   direccion: z.string().min(1, {message: "La dirección es requerida."}),
   telefono: z.string().min(9, { message: "El teléfono debe tener al least 9 caracteres." }).regex(/^(?:\+51\s?)?(9\d{8})$/, { message: "Formato de teléfono peruano inválido."}),
-  // email: z.string().email({ message: "Email inválido." }), // Removed
+  // email field is intentionally removed from the form schema as per user request
 
   // Personal specific fields
-  // especialidad: z.string().min(1, { message: "Seleccione una especialidad." }), // Removed
+  // especialidad field is intentionally removed from the form schema
   fechaIngreso: z.date({ required_error: "La fecha de ingreso es requerida."}), 
   estado: z.enum(["Activo", "Inactivo"], { required_error: "Seleccione un estado." }),
-  // avatarUrl: z.string().url({message: "URL de avatar inválida"}).optional().or(z.literal('')), // Removed
+  // avatarUrl field is intentionally removed from the form schema
 });
 
 type PersonalFormValues = z.infer<typeof personalFormSchema>;
@@ -105,12 +104,9 @@ export function AddPersonalForm({
       sexo: "M",
       direccion: "",
       telefono: "",
-      // email: "", // Removed
       // Personal fields
-      // especialidad: "", // Removed
       fechaIngreso: new Date(),
       estado: "Activo",
-      // avatarUrl: "", // Removed
     },
   });
 
@@ -118,29 +114,24 @@ export function AddPersonalForm({
     if (open) {
       let defaultVals: Partial<PersonalFormValues> = {
         tipoDocumento: "DNI", numeroDocumento: "", nombre: "", apellidoPaterno: "", apellidoMaterno: "",
-        fechaNacimiento: new Date(), sexo: "M", direccion: "", telefono: "", // email: "", // Removed
-        // especialidad: "", // Removed
-        fechaIngreso: new Date(), estado: "Activo", // avatarUrl: "", // Removed
+        fechaNacimiento: new Date(), sexo: "M", direccion: "", telefono: "",
+        fechaIngreso: new Date(), estado: "Activo",
       };
 
       if (isEditMode && initialPersonalData) { 
         const persona = initialPersonalData.persona;
         defaultVals = {
-            ...persona, // This will include email if it's on persona, but form won't use it
+            ...persona, 
             fechaNacimiento: new Date(persona.fechaNacimiento), 
-            // especialidad: initialPersonalData.especialidad, // Removed
             fechaIngreso: initialPersonalData.fechaIngreso ? new Date(initialPersonalData.fechaIngreso.split('/').reverse().join('-')) : new Date(),
             estado: initialPersonalData.estado,
-            // avatarUrl: initialPersonalData.avatarUrl || "", // Removed
         };
       } else if (selectedPersonaToPreload && !isCreatingNewPersonaFlow) { 
         defaultVals = {
-            ...selectedPersonaToPreload, // This will include email if it's on persona
+            ...selectedPersonaToPreload,
             fechaNacimiento: new Date(selectedPersonaToPreload.fechaNacimiento),
-            // especialidad: "", // Removed
             fechaIngreso: new Date(),
             estado: "Activo",
-            // avatarUrl: "", // Removed
         };
       } else if (isCreatingNewPersonaFlow) { 
         // Default values are already fine
@@ -151,7 +142,13 @@ export function AddPersonalForm({
 
 
   async function onSubmit(values: PersonalFormValues) {
-    const personaData: Persona = { // Persona type still expects email, but we don't set it from form
+    // Preserve existing email if editing/preloading, otherwise empty or handle as needed.
+    // The Persona type still expects email, but the form does not collect it.
+    const emailToSave = (isEditMode && initialPersonalData?.persona.email) || 
+                        (selectedPersonaToPreload?.email) || 
+                        ""; 
+
+    const personaData: Persona = { 
         id: (isEditMode && initialPersonalData?.idPersona) || (selectedPersonaToPreload?.id) || `persona-${crypto.randomUUID()}`, 
         tipoDocumento: values.tipoDocumento,
         numeroDocumento: values.numeroDocumento,
@@ -162,17 +159,15 @@ export function AddPersonalForm({
         sexo: values.sexo,
         direccion: values.direccion,
         telefono: values.telefono,
-        email: (isEditMode && initialPersonalData?.persona.email) || (selectedPersonaToPreload?.email) || "", // Preserve existing email if editing/preloading, otherwise empty or handle as needed
+        email: emailToSave, 
     };
 
     const personalOutput: Personal = {
         id: initialPersonalData?.id || `personal-${crypto.randomUUID()}`,
         idPersona: personaData.id,
         persona: personaData,
-        // especialidad: values.especialidad, // Removed
         fechaIngreso: format(values.fechaIngreso, "dd/MM/yyyy"),
         estado: values.estado,
-        // avatarUrl: values.avatarUrl || undefined, // Removed
     };
 
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -182,10 +177,6 @@ export function AddPersonalForm({
 
   const tipoDocumentoOptions: TipoDocumento[] = ["DNI", "EXTRANJERIA", "PASAPORTE"];
   const sexoOptions: {label: string, value: Sexo}[] = [{label: "Masculino", value: "M"}, {label: "Femenino", value: "F"}];
-  // const especialidades = [ // Removed
-  //   "Ortodoncia", "Endodoncia", "Periodoncia", "Implantología",
-  //   "Prostodoncia", "Odontopediatría", "Cirugía", "Estética Dental", "General", "Administrativo", "Asistente Dental", "Recepción"
-  // ];
 
   const title = isEditMode ? "Editar Personal" : (isCreatingNewPersonaFlow ? "Registrar Nueva Persona y Personal" : "Asignar Rol de Personal");
   const description = isEditMode ? "Modifique los datos del miembro del personal." : (isCreatingNewPersonaFlow ? "Complete los campos para la nueva persona y su rol." : "Complete los detalles del rol para la persona seleccionada.");
@@ -323,7 +314,7 @@ export function AddPersonalForm({
                   </FormItem>
                 )}
               />
-              <FormField // Telefono field - email was here
+              <FormField 
                 control={form.control}
                 name="telefono"
                 render={({ field }) => (
@@ -334,36 +325,8 @@ export function AddPersonalForm({
                 </FormItem>
                 )}
               />
-              {/* Email field removed */}
-              {/* <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>Correo Electrónico</FormLabel>
-                      <FormControl><Input type="email" placeholder="ejemplo@correo.com" {...field} disabled={isPersonaFieldsDisabled} /></FormControl>
-                      <FormMessage />
-                  </FormItem>
-                  )}
-              /> */}
-
-
+              
               <h3 className="text-md font-semibold text-muted-foreground border-b pb-1 pt-4">Datos del Personal</h3>
-              {/* Avatar URL field removed */}
-              {/* <FormField
-                  control={form.control}
-                  name="avatarUrl"
-                  render={({ field }) => (
-                      <FormItem>
-                      <FormLabel>URL de Avatar (Opcional)</FormLabel>
-                      <FormControl>
-                          <Input placeholder="https://ejemplo.com/avatar.png" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                      </FormItem>
-                  )}
-              /> */}
-              {/* Especialidad and Fecha Ingreso were in a grid, now only Fecha Ingreso */}
               <FormField
                 control={form.control}
                 name="fechaIngreso" 
@@ -389,29 +352,6 @@ export function AddPersonalForm({
                     </FormItem>
                 )}
                 />
-              {/* Especialidad field removed */}
-              {/* <FormField
-                control={form.control}
-                name="especialidad"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Especialidad</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Seleccione una especialidad" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {especialidades.map((esp) => (
-                            <SelectItem key={esp} value={esp}>{esp}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                /> */}
               <FormField
                 control={form.control}
                 name="estado"
