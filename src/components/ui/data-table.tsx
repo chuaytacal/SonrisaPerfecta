@@ -155,10 +155,10 @@ export function DataTable<TData, TValue>({
         </div>
 
         {/* Action Buttons Group (Columnas, Add) */}
-        <div className="flex flex-col xxs:flex-row xxs:flex-wrap items-center gap-2 w-full lg:w-auto lg:justify-end">
+        <div className="flex flex-col items-stretch sm:flex-row sm:flex-wrap sm:items-center gap-2 w-full lg:w-auto lg:justify-end">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full xxs:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto">
                 <Settings2 className="mr-2 h-4 w-4" /> Columnas
               </Button>
             </DropdownMenuTrigger>
@@ -183,7 +183,7 @@ export function DataTable<TData, TValue>({
             </DropdownMenuContent>
           </DropdownMenu>
           {onAdd && (
-            <Button onClick={onAdd} className="w-full xxs:w-auto">
+            <Button onClick={onAdd} className="w-full sm:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" /> {addButtonLabel}
             </Button>
           )}
@@ -191,7 +191,7 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Table Container */}
-      <div className="rounded-md border bg-card">
+      <div className="rounded-md border bg-card w-full sm:w-[500px] md:w-[600px] lg:w-full mx-auto">
         <div className="relative w-full overflow-x-auto"> {/* Ensure horizontal scroll for table */}
             <Table>
             <TableHeader>
@@ -321,3 +321,4 @@ export function DataTable<TData, TValue>({
     </div>
   );
 }
+
