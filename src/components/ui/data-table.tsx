@@ -189,7 +189,7 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Table Container */}
-      <div className="rounded-md border bg-card w-[300px] sm:w-full md:max-w-[680px] lg:max-w-[920px] xl:max-w-[1100px] 2xl:max-w-6xl mx-auto">
+      <div className="rounded-md border bg-card w-[327px] md:max-w-[680px] lg:w-full mx-auto">
         <div className="relative w-full overflow-x-auto"> {/* Ensure horizontal scroll for table */}
             <Table>
             <TableHeader>
