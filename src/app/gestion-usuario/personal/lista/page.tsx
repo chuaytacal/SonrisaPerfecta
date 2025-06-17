@@ -234,6 +234,7 @@ const columns: ColumnDef<Personal>[] = [
      enableSorting: false,
   },
   {
+    id: "persona.nombre", // Explicitly set the ID
     accessorKey: "persona.nombre", // Access nested property
     header: ({ column }) => {
       return (
