@@ -4,7 +4,7 @@
 import * as React from "react";
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+// Removed Avatar related imports as it's no longer used here
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,10 +36,10 @@ export type Personal = {
   id: string; // ID del registro de Personal/Especialista
   idPersona: string; // FK a la tabla Persona
   persona: Persona; // Datos de la persona anidados
-  especialidad: string; // "Ortodoncia", "Endodoncia", etc.
   fechaIngreso: string; // "DD/MM/YYYY" - Fecha de ingreso como personal
   estado: "Activo" | "Inactivo";
-  avatarUrl?: string; // Específico del rol de personal
+  // avatarUrl?: string; // Removed as per request
+  // especialidad: string; // Removed as per request
 };
 
 const mockPersonasData: Persona[] = [
@@ -58,33 +58,33 @@ const mockPersonalData: Personal[] = [
     id: "personal-1",
     idPersona: "persona-1",
     persona: mockPersonasData[0],
-    especialidad: "Ortodoncia",
+    // especialidad: "Ortodoncia", // Removed
     fechaIngreso: "17/02/2023",
     estado: "Inactivo",
-    avatarUrl: "https://placehold.co/40x40.png?text=JS",
+    // avatarUrl: "https://placehold.co/40x40.png?text=JS", // Removed
   },
   {
     id: "personal-2",
     idPersona: "persona-2",
     persona: mockPersonasData[1],
-    especialidad: "Endodoncia",
+    // especialidad: "Endodoncia", // Removed
     fechaIngreso: "05/07/2023",
     estado: "Activo",
-    avatarUrl: "https://placehold.co/40x40.png?text=PV",
+    // avatarUrl: "https://placehold.co/40x40.png?text=PV", // Removed
   },
   {
     id: "personal-3",
     idPersona: "persona-3",
     persona: mockPersonasData[2],
-    especialidad: "Periodoncia",
+    // especialidad: "Periodoncia", // Removed
     fechaIngreso: "11/10/2023",
     estado: "Activo",
-    avatarUrl: "https://placehold.co/40x40.png?text=CP",
+    // avatarUrl: "https://placehold.co/40x40.png?text=CP", // Removed
   },
 ];
 
 
-export default function PersonalPage() { // Renamed from ListaPersonalPage
+export default function PersonalPage() {
   const [personalList, setPersonalList] = React.useState<Personal[]>(mockPersonalData);
   const [isAddPersonalFormOpen, setIsAddPersonalFormOpen] = React.useState(false);
   const [editingPersonal, setEditingPersonal] = React.useState<Personal | null>(null);
@@ -101,7 +101,7 @@ export default function PersonalPage() { // Renamed from ListaPersonalPage
     title: "",
     description: ""
   });
-  const [sortBy, setSortBy] = React.useState<string>("nombre_asc");
+  const [sortBy, setSortBy] = React.useState<string>("persona.nombre_asc");
 
   const handleSavePersonal = (savedPersonal: Personal) => {
     setPersonalList(prevList => {
@@ -111,8 +111,6 @@ export default function PersonalPage() { // Renamed from ListaPersonalPage
         updatedList[existingIndex] = savedPersonal;
         return updatedList;
       }
-      // If new, ensure mockPersonasData is updated if a new Persona was created
-      // This is a simplification; in a real app, data would refetch or be managed globally
       const personaExists = mockPersonasData.find(p => p.id === savedPersonal.idPersona);
       if (!personaExists) {
         mockPersonasData.push(savedPersonal.persona);
@@ -130,7 +128,7 @@ export default function PersonalPage() { // Renamed from ListaPersonalPage
   };
   
   const handleOpenAddPersonalFlow = () => {
-    setEditingPersonal(null); // Clear any existing edit state
+    setEditingPersonal(null); 
     setSelectedPersonaToPreload(null);
     setIsCreatingNewPersonaFlow(false);
     setIsSelectPersonaModalOpen(true);
@@ -152,8 +150,8 @@ export default function PersonalPage() { // Renamed from ListaPersonalPage
   
   const openEditModal = (personal: Personal) => {
     setEditingPersonal(personal);
-    setSelectedPersonaToPreload(personal.persona); // Preload with existing persona data
-    setIsCreatingNewPersonaFlow(false); // Not creating a new persona, but editing
+    setSelectedPersonaToPreload(personal.persona); 
+    setIsCreatingNewPersonaFlow(false); 
     setIsAddPersonalFormOpen(true);
   };
 
@@ -252,10 +250,7 @@ const columns: ColumnDef<Personal>[] = [
       const nombreCompleto = `${personal.persona.nombre} ${personal.persona.apellidoPaterno} ${personal.persona.apellidoMaterno}`;
       return (
         <div className="flex items-center space-x-3">
-          <Avatar>
-            <AvatarImage src={personal.avatarUrl} alt={nombreCompleto} data-ai-hint="person portrait" />
-            <AvatarFallback>{personal.persona.nombre.substring(0, 1)}{personal.persona.apellidoPaterno.substring(0,1)}</AvatarFallback>
-          </Avatar>
+          {/* Avatar removed */}
           <div>
             <div className="font-medium">{nombreCompleto}</div>
             <div className="text-xs text-muted-foreground">{personal.persona.tipoDocumento}: {personal.persona.numeroDocumento}</div>
@@ -273,21 +268,21 @@ const columns: ColumnDef<Personal>[] = [
   },
   {
     accessorKey: "persona.telefono",
-    header: "Contacto",
+    header: "Teléfono", // Changed header from "Contacto"
     cell: ({ row }) => {
         const personal = row.original;
         return (
             <div>
                 <div>{personal.persona.telefono}</div>
-                <div className="text-xs text-muted-foreground">{personal.persona.email}</div>
+                {/* Email removed from display */}
             </div>
         )
     }
   },
-  {
-    accessorKey: "especialidad",
-    header: "Especialidad",
-  },
+  // { // Especialidad column removed
+  //   accessorKey: "especialidad",
+  //   header: "Especialidad",
+  // },
   {
     accessorKey: "fechaIngreso",
     header: ({ column }) => {
@@ -436,3 +431,5 @@ const columns: ColumnDef<Personal>[] = [
     </div>
   );
 }
+
+    
