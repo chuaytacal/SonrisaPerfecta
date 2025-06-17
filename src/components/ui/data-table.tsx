@@ -153,7 +153,7 @@ export function DataTable<TData, TValue>({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 w-full sm:flex-row sm:flex-wrap sm:items-center lg:w-auto lg:justify-end">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-center gap-2 w-full lg:w-auto lg:justify-end">
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full sm:w-auto">
@@ -189,7 +189,7 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Table Container */}
-      <div className="rounded-md border bg-card w-[327px] md:w-full md:max-w-[680px] lg:w-full mx-auto">
+      <div className="rounded-md border bg-card w-[327px] md:w-full md:max-w-[680px] lg:w-full lg:max-w-none mx-auto">
         <div className="relative w-full overflow-x-auto"> {/* Ensure horizontal scroll for table */}
             <Table>
             <TableHeader>
