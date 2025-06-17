@@ -70,7 +70,7 @@ export function SelectPersonaModal({
             />
           </div>
         </div>
-        <ScrollArea className="h-[40vh] md:h-[50vh] border-t border-b">
+        <ScrollArea className="px-6 h-[40vh] md:h-[50vh] border-t border-b">
           <Table>
             <TableHeader className="sticky top-0 bg-muted/50 z-10">
               <TableRow>
@@ -105,10 +105,10 @@ export function SelectPersonaModal({
           </Table>
         </ScrollArea>
         <DialogFooter className="p-6 flex flex-col sm:flex-row justify-between items-center gap-2">
-          <Button variant="outline" onClick={onCreateNewPersona} className="w-full sm:w-auto">
+          <Button variant="default" onClick={onCreateNewPersona} className="w-full sm:w-auto">
             Crear Persona y Asignar como Personal
           </Button>
-          <Button variant="ghost" onClick={onClose} className="w-full sm:w-auto">
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
             Cerrar
           </Button>
         </DialogFooter>
