@@ -28,7 +28,8 @@ import {
   ClipboardType,
   FilePlus,
   BarChart3,
-  List, // Added for consistency, though not directly used for new items
+  List,
+  Tag, // Added Tag icon import
   // ChevronDown is part of AccordionTrigger from ui/accordion.tsx
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -81,7 +82,7 @@ const sidebarNavItems = [
     basePathForActive: '/recetas',
     subItems: [
       { href: '/recetas/registrar', label: 'Registrar Recetas', icon: FilePlus },
-      { href: '/recetas/etiquetas', label: 'Etiquetas', icon: Tag }, // Assuming Tag icon was intended, or replace if not
+      { href: '/recetas/etiquetas', label: 'Etiquetas', icon: Tag },
     ],
   },
   { href: '/reportes', label: 'Reportes', icon: BarChart3 },
@@ -100,7 +101,7 @@ export default function AppSidebar() {
           for (const item of items) {
             if (item.basePathForActive && currentPath.startsWith(item.basePathForActive)) {
               activeItems.push(item.label);
-              if (item.subItems) { // Only check subItems, not subSubItems
+              if (item.subItems) { // Only check subItems
                 findActive(item.subItems, currentPath);
               }
             }
@@ -113,7 +114,7 @@ export default function AppSidebar() {
 
   useEffect(() => {
     if (isDesktopCollapsed) {
-      setOpenAccordionItems([]); 
+      setOpenAccordionItems([]);
     } else {
         const activeItems: string[] = [];
         function findActive(items: any[], currentPath: string) {
@@ -140,7 +141,7 @@ export default function AppSidebar() {
 
       if (item.subItems) { // Items like "Gestión Usuario" will enter here
         const subItems = item.subItems;
-        
+
         return (
           <SidebarMenuItem key={item.label}>
             <Accordion type="multiple" value={openAccordionItems} onValueChange={setOpenAccordionItems} className="w-full">
@@ -148,19 +149,18 @@ export default function AppSidebar() {
                 <AccordionTrigger
                   className={cn(
                     "flex w-full items-center rounded-md p-2 text-left text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring outline-none",
-                    // level > 0 && "pl-6", // Not needed for top-level accordion items, sub-items control their own padding
                     isParentActive && !isActive && "text-sidebar-primary font-medium",
                     isDesktopCollapsed && "!size-8 !p-2 justify-center",
                     !isDesktopCollapsed && "gap-2"
                   )}
-                  title={isDesktopCollapsed ? item.label : undefined} 
+                  title={isDesktopCollapsed ? item.label : undefined}
                 >
                   {Icon && <Icon className={cn("h-4 w-4 shrink-0", isParentActive && "text-sidebar-primary")} />}
                   { !isDesktopCollapsed && <span className="ml-0 flex-1 truncate">{item.label}</span>}
                 </AccordionTrigger>
                 <AccordionContent className={cn("pt-0 pb-0", isDesktopCollapsed && "hidden")}>
                   <SidebarMenu className={cn("pl-4")}> {/* Indent content of accordion */}
-                     {renderNavItems(subItems, level + 1)} {/* Render sub-items (Pacientes, Personal) */}
+                     {renderNavItems(subItems, level + 1)} {/* Render sub-items */}
                   </SidebarMenu>
                 </AccordionContent>
               </AccordionItem>
@@ -169,7 +169,7 @@ export default function AppSidebar() {
         );
       }
 
-      // Direct links or items within an accordion (like new Pacientes/Personal links)
+      // Direct links or items within an accordion
       return (
         <SidebarMenuItem key={item.href || item.label}>
           <Link href={item.href || '#'} legacyBehavior passHref>
