@@ -7,9 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Mail, MessageSquare, Phone, ArrowLeft, Edit, PlusCircle, Users, CalendarDays as CalendarIconLucide } from 'lucide-react';
+import { Mail, MessageSquare, Phone, ArrowLeft, Edit, PlusCircle, Users, CalendarDays as CalendarIconLucide, AlertTriangle, FileText, Tags } from 'lucide-react';
 import { mockPacientesData } from '@/app/gestion-usuario/pacientes/page';
-// mockPersonasData is already included within mockPacientesData.paciente.persona
 import type { Paciente as PacienteType, Persona } from '@/types';
 import { format, differenceInYears } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -20,10 +19,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-
-// Using Appointment type from calendar
 import type { Appointment } from '@/types/calendar';
-import { generateInitialAppointments } from '@/app/calendario/page'; // Import mock appointments
+import { generateInitialAppointments } from '@/app/calendario/page';
 
 
 const enfermedadesOptions = [
@@ -33,7 +30,6 @@ const enfermedadesOptions = [
   "Apoplejía", "Accidentes vasculares", "Pérdida de peso"
 ];
 
-// Inline SVG for Tooth icon
 const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -52,13 +48,10 @@ const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-
-// Helper function to get a few appointments for the current patient (mock)
 const getPatientAppointments = (pacienteNombre: string | undefined): Appointment[] => {
     if (!pacienteNombre) return [];
-    const allAppointments = generateInitialAppointments(); // Get all mock appointments
-    // Filter some for this patient (simple mock logic)
-    return allAppointments.filter(appt => appt.paciente && appt.paciente.toLowerCase().includes(pacienteNombre.split(' ')[0].toLowerCase())).slice(0, 3);
+    const allAppointments = generateInitialAppointments();
+    return allAppointments.filter(appt => appt.paciente && appt.paciente.toLowerCase().includes(pacienteNombre.split(' ')[0].toLowerCase())).slice(0, 5); // Show up to 5
 };
 
 
@@ -66,6 +59,9 @@ export default function DetallePacientePage() {
   const params = useParams();
   const router = useRouter();
   const patientId = params.id as string;
+
+  // For now, Antecedentes will be visually editable but won't persist changes.
+  // In a real app, you'd use useState for these fields and a save handler.
 
   const paciente = mockPacientesData.find(p => p.id === patientId);
 
@@ -87,37 +83,40 @@ export default function DetallePacientePage() {
   const createdDate = paciente.fechaIngreso ? format(new Date(paciente.fechaIngreso.split('/').reverse().join('-')), 'dd MMM yyyy', { locale: es }) : 'N/A';
   const patientAppointments = getPatientAppointments(persona.nombre);
 
+  // Simulated data for the top bar based on mock Antecedentes
+  const alergiasRegistradas = ["Penicilina"]; // From Q3 mock
+  const enfermedadesRegistradas = ["Hipertensión arterial"]; // From Q5 mock
 
   const renderAntecedentesMedicos = () => (
     <div className="space-y-6 text-sm">
       <div className="space-y-2">
         <Label htmlFor="hosp-ultimos-anos">1. ¿Ha estado hospitalizado en estos últimos años?</Label>
-        <Input id="hosp-ultimos-anos" defaultValue="No" disabled />
+        <Input id="hosp-ultimos-anos" defaultValue="No" />
         <Label htmlFor="hosp-porque">¿Por qué?</Label>
-        <Textarea id="hosp-porque" defaultValue="N/A" disabled />
+        <Textarea id="hosp-porque" defaultValue="N/A" />
         <Label htmlFor="hosp-donde">¿Dónde?</Label>
-        <Textarea id="hosp-donde" defaultValue="N/A" disabled />
+        <Textarea id="hosp-donde" defaultValue="N/A" />
       </div>
       <Separator />
       <div className="space-y-2">
         <Label htmlFor="atencion-medica-ultimos-anos">2. ¿Ha estado bajo atención médica en estos últimos años?</Label>
-        <Input id="atencion-medica-ultimos-anos" defaultValue="Sí" disabled />
+        <Input id="atencion-medica-ultimos-anos" defaultValue="Sí" />
         <Label htmlFor="atencion-medica-porque">¿Por qué?</Label>
-        <Textarea id="atencion-medica-porque" defaultValue="Control de rutina" disabled />
+        <Textarea id="atencion-medica-porque" defaultValue="Control de rutina" />
         <Label htmlFor="atencion-medica-donde">¿Dónde?</Label>
-        <Textarea id="atencion-medica-donde" defaultValue="Clínica Local" disabled />
+        <Textarea id="atencion-medica-donde" defaultValue="Clínica Local" />
       </div>
       <Separator />
       <div className="space-y-2">
         <Label htmlFor="alergico-drogas">3. ¿Es alérgico a alguna droga, anestesia y/o antibióticos?</Label>
-        <Input id="alergico-drogas" defaultValue="Sí" disabled />
+        <Input id="alergico-drogas" defaultValue="Sí" />
         <Label htmlFor="alergico-cuales">¿Cuáles?</Label>
-        <Textarea id="alergico-cuales" defaultValue="Penicilina" disabled />
+        <Textarea id="alergico-cuales" defaultValue="Penicilina" />
       </div>
       <Separator />
        <div className="space-y-2">
         <Label htmlFor="hemorragia-tratada">4. ¿Ha tenido hemorragia que haya tenido que ser tratada?</Label>
-        <Input id="hemorragia-tratada" defaultValue="No" disabled />
+        <Input id="hemorragia-tratada" defaultValue="No" />
       </div>
       <Separator />
       <div className="space-y-2">
@@ -125,7 +124,7 @@ export default function DetallePacientePage() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 mt-2">
           {enfermedadesOptions.map(enf => (
             <div key={enf} className="flex items-center space-x-2">
-              <Checkbox id={`enf-${enf.replace(/\s+/g, '-')}`} disabled checked={enf === "Hipertensión arterial"} />
+              <Checkbox id={`enf-${enf.replace(/\s+/g, '-')}`} defaultChecked={enf === "Hipertensión arterial"} />
               <Label htmlFor={`enf-${enf.replace(/\s+/g, '-')}`} className="font-normal">{enf}</Label>
             </div>
           ))}
@@ -134,33 +133,38 @@ export default function DetallePacientePage() {
       <Separator />
       <div className="space-y-2">
         <Label htmlFor="otra-enfermedad">6. ¿Ha tenido alguna otra otra enfermedad?</Label>
-        <Input id="otra-enfermedad" defaultValue="No" disabled />
+        <Input id="otra-enfermedad" defaultValue="No" />
         <Label htmlFor="otra-enfermedad-cual">¿Cuál?</Label>
-        <Textarea id="otra-enfermedad-cual" defaultValue="N/A" disabled />
+        <Textarea id="otra-enfermedad-cual" defaultValue="N/A" />
       </div>
       <Separator />
        <div className="space-y-2">
         <Label htmlFor="medicacion-actual">7. ¿Estás tomando alguna medicación actualmente?</Label>
-        <Input id="medicacion-actual" defaultValue="Sí" disabled />
+        <Input id="medicacion-actual" defaultValue="Sí" />
         <Label htmlFor="medicacion-cual">¿Cuál?</Label>
-        <Textarea id="medicacion-cual" defaultValue="Losartán para la presión" disabled />
+        <Textarea id="medicacion-cual" defaultValue="Losartán para la presión" />
       </div>
       <Separator />
       <div className="space-y-2">
         <Label htmlFor="embarazada">8. ¿Está embarazada?</Label>
-        <Input id="embarazada" defaultValue={persona.sexo === 'F' ? "No" : "N/A"} disabled />
+        <Input id="embarazada" defaultValue={persona.sexo === 'F' ? "No" : "N/A"} />
         <Label htmlFor="embarazada-semanas">¿Cuántas semanas?</Label>
-        <Textarea id="embarazada-semanas" defaultValue="N/A" disabled />
+        <Textarea id="embarazada-semanas" defaultValue="N/A" />
       </div>
       <Separator />
       <div className="space-y-2">
         <Label htmlFor="hipertenso-presion-alta">9. ¿Es hipertenso o tiene presión alta?</Label>
-        <Input id="hipertenso-presion-alta" defaultValue="Sí" disabled />
+        <Input id="hipertenso-presion-alta" defaultValue="Sí" />
       </div>
       <Separator />
       <div className="space-y-1">
          <Label htmlFor="ultima-consulta-dental">10. Última consulta dental:</Label>
-         <Input id="ultima-consulta-dental" type="text" disabled defaultValue="Hace 6 meses" />
+         <Input id="ultima-consulta-dental" type="text" defaultValue="Hace 6 meses" />
+      </div>
+      <div className="flex justify-end mt-6">
+        <Button onClick={() => alert("Funcionalidad 'Guardar Cambios' no implementada")}>
+            Guardar Cambios
+        </Button>
       </div>
     </div>
   );
@@ -171,11 +175,11 @@ export default function DetallePacientePage() {
       {/* Left Panel: Patient Info */}
       <Card className="w-full lg:w-[320px] lg:max-w-xs shrink-0 self-start sticky top-6">
         <CardContent className="pt-6 flex flex-col items-center text-center">
-          <Button variant="ghost" onClick={() => router.back()} className="self-start mb-2">
+          <Button variant="ghost" onClick={() => router.back()} className="self-start mb-2 -ml-2">
             <ArrowLeft className="mr-2 h-4 w-4" /> Volver
           </Button>
           <Avatar className="h-24 w-24 mb-4">
-            <AvatarImage src={`https://placehold.co/100x100.png?text=${persona.nombre[0]}${persona.apellidoPaterno[0]}`} alt={`${persona.nombre} ${persona.apellidoPaterno}`} data-ai-hint="person portrait" />
+            <AvatarImage src={`https://placehold.co/100x100.png?text=${persona.nombre[0]}${persona.apellidoPaterno[0]}`} alt={`${persona.nombre} ${persona.apellidoPaterno}`} data-ai-hint="person portrait"/>
             <AvatarFallback>{persona.nombre[0]}{persona.apellidoPaterno[0]}</AvatarFallback>
           </Avatar>
           <h2 className="text-xl font-semibold">{`${persona.nombre} ${persona.apellidoPaterno} ${persona.apellidoMaterno}`}</h2>
@@ -196,11 +200,9 @@ export default function DetallePacientePage() {
             <Button variant="ghost" className="w-full justify-start">
                 <CalendarIconLucide className="mr-2 h-4 w-4" /> Historia clínica
             </Button>
-            {/* Add other menu items from the image as needed, with appropriate icons */}
-             <Button variant="ghost" className="w-full justify-start">
+            <Button variant="ghost" className="w-full justify-start">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="M12.546 2.303a1 1 0 0 0-1.092 0L2.803 8.349a1 1 0 0 0-.355.705V19a1 1 0 0 0 1 1h17.104a1 1 0 0 0 1-1V9.054a1 1 0 0 0-.355-.705Z"/><path d="M12 21V11l-5 2.5V16Z"/><path d="M12 11l5 2.5V16Z"/><path d="M18.5 14.5V10l-6-3-6 3v4.5L12 18Z"/><path d="M2 8h20"/></svg> Odontograma
             </Button>
-            {/* ... other items */}
           </div>
 
            <Button className="mt-6 w-full" onClick={() => alert("Funcionalidad 'Comienza aquí' no implementada")}>
@@ -211,17 +213,45 @@ export default function DetallePacientePage() {
 
       {/* Right Panel: Tabs */}
       <div className="flex-1">
-        <div className="flex justify-between items-center mb-4">
-            <div className="space-x-2">
-                <Badge variant="secondary">Etiqueta 1</Badge>
-                <Badge variant="outline">Etiqueta 2</Badge>
-                <Button variant="ghost" size="sm"><PlusCircle className="mr-1 h-3 w-3"/> Agregar Etiqueta</Button>
-            </div>
-            <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm"><Edit className="mr-1 h-3 w-3"/> Editar Campos</Button>
-                 {/* Placeholder for Alergias and Notas */}
-            </div>
-        </div>
+        {/* Top Info Bar */}
+        <Card className="mb-6">
+            <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                {/* Etiquetas Section */}
+                <div className="space-y-2">
+                    <Label className="flex items-center text-sm font-medium text-muted-foreground"><Tags className="mr-2 h-4 w-4" />Etiquetas</Label>
+                    <div className="flex flex-wrap gap-1">
+                        {paciente.etiquetas && paciente.etiquetas.length > 0 ? (
+                            paciente.etiquetas.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)
+                        ) : (
+                            <Badge variant="outline">Sin etiquetas</Badge>
+                        )}
+                    </div>
+                    <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 p-0 h-auto" onClick={() => alert("Agregar etiqueta no implementado")}>
+                        <PlusCircle className="mr-1 h-3 w-3"/> Agregar Etiqueta
+                    </Button>
+                </div>
+
+                {/* Notas Section */}
+                <div className="space-y-2">
+                    <Label htmlFor="notas-paciente" className="flex items-center text-sm font-medium text-muted-foreground"><FileText className="mr-2 h-4 w-4" />Notas</Label>
+                    <Textarea id="notas-paciente" placeholder="Escribe aquí..." rows={3} className="text-sm"/>
+                     {/* No save button for notes here, assumed to be part of a larger save if needed */}
+                </div>
+                
+                {/* Enfermedades y Alergias Section */}
+                <div className="space-y-2">
+                     <Label className="flex items-center text-sm font-medium text-muted-foreground"><AlertTriangle className="mr-2 h-4 w-4 text-destructive" />Enfermedades y Alergias</Label>
+                    <div className="flex flex-wrap gap-1">
+                         {enfermedadesRegistradas.length > 0 && enfermedadesRegistradas.map(enf => <Badge key={enf} variant="outline" className="border-orange-500 text-orange-700">{enf}</Badge>)}
+                         {alergiasRegistradas.length > 0 && alergiasRegistradas.map(alergia => <Badge key={alergia} variant="outline" className="border-red-500 text-red-700">{alergia}</Badge>)}
+                         {(enfermedadesRegistradas.length === 0 && alergiasRegistradas.length === 0) && <Badge variant="outline">Sin registros</Badge>}
+                    </div>
+                </div>
+            </CardContent>
+            <CardFooter className="p-4 border-t flex justify-end">
+                 <Button variant="outline" size="sm" onClick={() => alert("Editar campos no implementado")}><Edit className="mr-1 h-3 w-3"/> Editar Campos</Button>
+            </CardFooter>
+        </Card>
 
         <Tabs defaultValue="datosPersonales" className="w-full">
           <TabsList className="mb-4 grid w-full grid-cols-3">
@@ -293,11 +323,12 @@ export default function DetallePacientePage() {
                             <TableCell>{cita.title}</TableCell>
                             <TableCell className="text-right">
                                 <Badge variant={
-                                    (cita.tipoCita === 'consulta' || cita.tipoCita === 'control') ? 'default' :
+                                    new Date(cita.end) < new Date() ? 'outline' : // Completed
+                                    (cita.tipoCita === 'consulta' || cita.tipoCita === 'control') ? 'default' : // Pending/Active
                                     (cita.tipoCita === 'tratamiento') ? 'secondary' :
-                                    'outline' // Default for others or if status is different
+                                    'outline' 
                                 }>
-                                {cita.tipoCita ? cita.tipoCita.charAt(0).toUpperCase() + cita.tipoCita.slice(1) : 'Pendiente'}
+                                {new Date(cita.end) < new Date() ? 'Completada' : (cita.tipoCita ? cita.tipoCita.charAt(0).toUpperCase() + cita.tipoCita.slice(1) : 'Pendiente') }
                                 </Badge>
                             </TableCell>
                             </TableRow>
