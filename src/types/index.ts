@@ -12,9 +12,29 @@ export interface Persona {
   sexo: Sexo;
   direccion: string;
   telefono: string;
-  email: string;
-  // avatarUrl podría estar aquí si es general para la persona
+  email: string; // Email remains in Persona, but might not be shown in all forms
 }
+
+export type EtiquetaPaciente =
+  | "Alergia a Penicilina"
+  | "Diabético"
+  | "Menor de Edad"
+  | "Fumador"
+  | "Hipertenso"
+  | "Covid+"
+  | "Postquirúrgico"
+  | "Anciano";
+
+export interface Paciente {
+  id: string; // ID del registro de Paciente
+  idPersona: string; // FK a la tabla Persona
+  persona: Persona; // Datos de la persona anidados
+  fechaIngreso: string; // "DD/MM/YYYY" - Fecha de ingreso como paciente
+  estado: "Activo" | "Inactivo";
+  etiquetas: EtiquetaPaciente[];
+  // avatarUrl?: string; // Pacientes typically don't have a separate avatar from Persona
+}
+
 
 export interface Service {
   id: string;

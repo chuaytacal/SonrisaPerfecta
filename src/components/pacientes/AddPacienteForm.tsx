@@ -18,20 +18,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox"; // Added for etiquetas
 import React, { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import * as z from "zod";
 import {
     Form,
     FormControl,
+    FormDescription,
     FormField,
     FormItem,
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import type { Personal } from "@/app/gestion-usuario/personal/page"; 
-import type { Persona, TipoDocumento, Sexo } from "@/types"; 
+import type { Paciente, Persona, TipoDocumento, Sexo, EtiquetaPaciente } from "@/types"; 
 import { Calendar } from "@/components/ui/calendar"
 import {
   Popover,
@@ -40,49 +41,63 @@ import {
 } from "@/components/ui/popover"
 import { format } from "date-fns"
 import { es } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+const predefinedEtiquetas: EtiquetaPaciente[] = [
+  "Alergia a Penicilina",
+  "Diabético",
+  "Menor de Edad",
+  "Fumador",
+  "Hipertenso",
+  "Covid+",
+  "Postquirúrgico",
+  "Anciano",
+];
 
-const personalFormSchema = z.object({
+const pacienteFormSchema = z.object({
+  // Persona fields
   tipoDocumento: z.enum(["DNI", "EXTRANJERIA", "PASAPORTE"], { required_error: "Seleccione un tipo de documento." }),
   numeroDocumento: z.string().min(1, { message: "El número de documento es requerido." }),
-  nombre: z.string().min(2, { message: "El nombre debe tener al least 2 caracteres." }),
-  apellidoPaterno: z.string().min(2, { message: "El apellido paterno debe tener al least 2 caracteres." }),
-  apellidoMaterno: z.string().min(2, { message: "El apellido materno debe tener al least 2 caracteres." }),
+  nombre: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
+  apellidoPaterno: z.string().min(2, { message: "El apellido paterno debe tener al menos 2 caracteres." }),
+  apellidoMaterno: z.string().min(2, { message: "El apellido materno debe tener al menos 2 caracteres." }),
   fechaNacimiento: z.date({ required_error: "La fecha de nacimiento es requerida."}),
   sexo: z.enum(["M", "F"], { required_error: "Seleccione un sexo." }),
   direccion: z.string().min(1, {message: "La dirección es requerida."}),
-  telefono: z.string().min(9, { message: "El teléfono debe tener al least 9 caracteres." }).regex(/^(?:\+51\s?)?(9\d{8})$/, { message: "Formato de teléfono peruano inválido."}),
+  telefono: z.string().min(9, { message: "El teléfono debe tener al menos 9 caracteres." }).regex(/^(?:\+51\s?)?(9\d{8})$/, { message: "Formato de teléfono peruano inválido."}),
+  
+  // Paciente specific fields
   fechaIngreso: z.date({ required_error: "La fecha de ingreso es requerida."}), 
   estado: z.enum(["Activo", "Inactivo"], { required_error: "Seleccione un estado." }),
+  etiquetas: z.array(z.string()).optional(), // Array of selected tag strings
 });
 
-type PersonalFormValues = z.infer<typeof personalFormSchema>;
+type PacienteFormValues = z.infer<typeof pacienteFormSchema>;
 
-interface AddPersonalFormProps {
+interface AddPacienteFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onStaffSaved: (staff: Personal) => void;
-  initialPersonalData?: Personal | null; 
+  onPacienteSaved: (paciente: Paciente) => void; // Changed prop name
+  initialPacienteData?: Paciente | null; // Changed prop name
   selectedPersonaToPreload?: Persona | null; 
   isCreatingNewPersonaFlow?: boolean; 
 }
 
-export function AddPersonalForm({
+export function AddPacienteForm({
     open,
     onOpenChange,
-    onStaffSaved,
-    initialPersonalData,
+    onPacienteSaved,
+    initialPacienteData,
     selectedPersonaToPreload,
     isCreatingNewPersonaFlow
-}: AddPersonalFormProps) {
-  const isEditMode = !!initialPersonalData; 
+}: AddPacienteFormProps) {
+  const isEditMode = !!initialPacienteData; 
 
-  const form = useForm<PersonalFormValues>({
-    resolver: zodResolver(personalFormSchema),
+  const form = useForm<PacienteFormValues>({
+    resolver: zodResolver(pacienteFormSchema),
     defaultValues: {
       tipoDocumento: "DNI",
       numeroDocumento: "",
@@ -95,24 +110,26 @@ export function AddPersonalForm({
       telefono: "",
       fechaIngreso: new Date(),
       estado: "Activo",
+      etiquetas: [],
     },
   });
 
   useEffect(() => {
     if (open) {
-      let defaultVals: Partial<PersonalFormValues> = {
+      let defaultVals: Partial<PacienteFormValues> = {
         tipoDocumento: "DNI", numeroDocumento: "", nombre: "", apellidoPaterno: "", apellidoMaterno: "",
         fechaNacimiento: new Date(), sexo: "M", direccion: "", telefono: "",
-        fechaIngreso: new Date(), estado: "Activo",
+        fechaIngreso: new Date(), estado: "Activo", etiquetas: [],
       };
 
-      if (isEditMode && initialPersonalData) { 
-        const persona = initialPersonalData.persona;
+      if (isEditMode && initialPacienteData) { 
+        const persona = initialPacienteData.persona;
         defaultVals = {
             ...persona, 
             fechaNacimiento: new Date(persona.fechaNacimiento), 
-            fechaIngreso: initialPersonalData.fechaIngreso ? new Date(initialPersonalData.fechaIngreso.split('/').reverse().join('-')) : new Date(),
-            estado: initialPersonalData.estado,
+            fechaIngreso: initialPacienteData.fechaIngreso ? new Date(initialPacienteData.fechaIngreso.split('/').reverse().join('-')) : new Date(),
+            estado: initialPacienteData.estado,
+            etiquetas: initialPacienteData.etiquetas || [],
         };
       } else if (selectedPersonaToPreload && !isCreatingNewPersonaFlow) { 
         defaultVals = {
@@ -120,23 +137,24 @@ export function AddPersonalForm({
             fechaNacimiento: new Date(selectedPersonaToPreload.fechaNacimiento),
             fechaIngreso: new Date(),
             estado: "Activo",
+            etiquetas: [],
         };
       } else if (isCreatingNewPersonaFlow) { 
-        // Default values are already fine for creating a new persona
+         // Default values are already fine for creating a new persona
       }
       form.reset(defaultVals);
     }
-  }, [initialPersonalData, selectedPersonaToPreload, isCreatingNewPersonaFlow, isEditMode, open, form]);
+  }, [initialPacienteData, selectedPersonaToPreload, isCreatingNewPersonaFlow, isEditMode, open, form]);
 
 
-  async function onSubmit(values: PersonalFormValues) {
-    const emailToSave = (isEditMode && initialPersonalData?.persona.email) || 
-                        (selectedPersonaToPreload?.email) || 
-                        (initialPersonalData?.persona.email) || // Ensure email is preserved if creating new persona from existing
+  async function onSubmit(values: PacienteFormValues) {
+    const emailToSave = (isEditMode && initialPacienteData?.persona.email) || 
+                        (selectedPersonaToPreload?.email) ||
+                        (initialPacienteData?.persona.email) || 
                         ""; 
 
     const personaData: Persona = { 
-        id: (isEditMode && initialPersonalData?.idPersona) || (selectedPersonaToPreload?.id) || `persona-${crypto.randomUUID()}`, 
+        id: (isEditMode && initialPacienteData?.idPersona) || (selectedPersonaToPreload?.id) || `persona-${crypto.randomUUID()}`, 
         tipoDocumento: values.tipoDocumento,
         numeroDocumento: values.numeroDocumento,
         nombre: values.nombre,
@@ -149,25 +167,25 @@ export function AddPersonalForm({
         email: emailToSave, 
     };
 
-    const personalOutput: Personal = {
-        id: initialPersonalData?.id || `personal-${crypto.randomUUID()}`,
+    const pacienteOutput: Paciente = {
+        id: initialPacienteData?.id || `paciente-${crypto.randomUUID()}`, // Changed prefix
         idPersona: personaData.id,
         persona: personaData,
         fechaIngreso: format(values.fechaIngreso, "dd/MM/yyyy"),
         estado: values.estado,
+        etiquetas: (values.etiquetas as EtiquetaPaciente[]) || [],
     };
 
     await new Promise(resolve => setTimeout(resolve, 500));
-    onStaffSaved(personalOutput); 
+    onPacienteSaved(pacienteOutput); 
   }
 
   const tipoDocumentoOptions: TipoDocumento[] = ["DNI", "EXTRANJERIA", "PASAPORTE"];
   const sexoOptions: {label: string, value: Sexo}[] = [{label: "Masculino", value: "M"}, {label: "Femenino", value: "F"}];
 
-  const title = isEditMode ? "Editar Personal" : (isCreatingNewPersonaFlow ? "Registrar Nueva Persona y Personal" : "Asignar Rol de Personal");
-  const description = isEditMode ? "Modifique los datos del miembro del personal." : (isCreatingNewPersonaFlow ? "Complete los campos para la nueva persona y su rol." : "Complete los detalles del rol para la persona seleccionada.");
+  const title = isEditMode ? "Editar Paciente" : (isCreatingNewPersonaFlow ? "Registrar Nueva Persona y Paciente" : "Asignar Rol de Paciente");
+  const description = isEditMode ? "Modifique los datos del paciente." : (isCreatingNewPersonaFlow ? "Complete los campos para la nueva persona y su rol." : "Complete los detalles del rol para la persona seleccionada.");
 
-  // Determine if Persona fields should be disabled
   const disableDocTypeAndNumber = isEditMode || (!!selectedPersonaToPreload && !isCreatingNewPersonaFlow);
   const disableOtherPersonaFields = !!selectedPersonaToPreload && !isCreatingNewPersonaFlow && !isEditMode;
 
@@ -281,8 +299,8 @@ export function AddPersonalForm({
                         <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={disableOtherPersonaFields}>
                             {sexoOptions.map(opt => (
                                 <FormItem key={opt.value} className="flex items-center space-x-2 space-y-0">
-                                <FormControl><RadioGroupItem value={opt.value} id={`sexo-${opt.value}`} /></FormControl>
-                                <FormLabel htmlFor={`sexo-${opt.value}`} className="font-normal">{opt.label}</FormLabel>
+                                <FormControl><RadioGroupItem value={opt.value} id={`sexo-paciente-${opt.value}`} /></FormControl>
+                                <FormLabel htmlFor={`sexo-paciente-${opt.value}`} className="font-normal">{opt.label}</FormLabel>
                                 </FormItem>
                             ))}
                         </RadioGroup>
@@ -315,13 +333,13 @@ export function AddPersonalForm({
                 )}
               />
               
-              <h3 className="text-md font-semibold text-muted-foreground border-b pb-1 pt-4">Datos del Personal</h3>
+              <h3 className="text-md font-semibold text-muted-foreground border-b pb-1 pt-4">Datos del Paciente</h3>
               <FormField
                 control={form.control}
                 name="fechaIngreso" 
                 render={({ field }) => (
                     <FormItem className="flex flex-col">
-                        <FormLabel className="mb-1.5">Fecha de Ingreso (Personal)</FormLabel>
+                        <FormLabel className="mb-1.5">Fecha de Ingreso (Paciente)</FormLabel>
                         <Popover>
                             <PopoverTrigger asChild>
                             <FormControl>
@@ -341,21 +359,73 @@ export function AddPersonalForm({
                     </FormItem>
                 )}
                 />
+                <FormField
+                  control={form.control}
+                  name="etiquetas"
+                  render={() => (
+                    <FormItem>
+                      <div className="mb-2">
+                        <FormLabel className="text-base flex items-center">
+                          <Tag className="mr-2 h-5 w-5 text-muted-foreground" /> Etiquetas
+                        </FormLabel>
+                        <FormDescription>
+                          Seleccione las etiquetas relevantes para el paciente.
+                        </FormDescription>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        {predefinedEtiquetas.map((item) => (
+                          <FormField
+                            key={item}
+                            control={form.control}
+                            name="etiquetas"
+                            render={({ field }) => {
+                              return (
+                                <FormItem
+                                  key={item}
+                                  className="flex flex-row items-start space-x-3 space-y-0"
+                                >
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(item)}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([...(field.value || []), item])
+                                          : field.onChange(
+                                              (field.value || []).filter(
+                                                (value) => value !== item
+                                              )
+                                            );
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-sm font-normal">
+                                    {item}
+                                  </FormLabel>
+                                </FormItem>
+                              );
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               <FormField
                 control={form.control}
                 name="estado"
                 render={({ field }) => (
                   <FormItem className="space-y-2">
-                    <FormLabel>Estado (Personal)</FormLabel>
+                    <FormLabel>Estado (Paciente)</FormLabel>
                     <FormControl>
                       <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4">
                         <FormItem className="flex items-center space-x-2 space-y-0">
-                          <FormControl><RadioGroupItem value="Activo" id="estado-activo-personal" /></FormControl>
-                          <FormLabel htmlFor="estado-activo-personal" className="font-normal">Activo</FormLabel>
+                          <FormControl><RadioGroupItem value="Activo" id="estado-activo-paciente" /></FormControl>
+                          <FormLabel htmlFor="estado-activo-paciente" className="font-normal">Activo</FormLabel>
                         </FormItem>
                         <FormItem className="flex items-center space-x-2 space-y-0">
-                          <FormControl><RadioGroupItem value="Inactivo" id="estado-inactivo-personal" /></FormControl>
-                          <FormLabel htmlFor="estado-inactivo-personal" className="font-normal">Inactivo</FormLabel>
+                          <FormControl><RadioGroupItem value="Inactivo" id="estado-inactivo-paciente" /></FormControl>
+                          <FormLabel htmlFor="estado-inactivo-paciente" className="font-normal">Inactivo</FormLabel>
                         </FormItem>
                       </RadioGroup>
                     </FormControl>
@@ -375,7 +445,7 @@ export function AddPersonalForm({
                     : isEditMode
                       ? "Guardar Cambios"
                       : isCreatingNewPersonaFlow
-                        ? "Registrar Persona y Personal"
+                        ? "Registrar Persona y Paciente"
                         : "Asignar Rol"}
                 </Button>
               </DialogFooter>
