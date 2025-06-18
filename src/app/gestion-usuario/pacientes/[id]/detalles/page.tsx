@@ -3,6 +3,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import React, { useEffect, useState } from 'react'; // Added useEffect and useState
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -60,12 +61,54 @@ export default function DetallePacientePage() {
   const router = useRouter();
   const patientId = params.id as string;
 
-  // For now, Antecedentes will be visually editable but won't persist changes.
-  // In a real app, you'd use useState for these fields and a save handler.
+  const [paciente, setPaciente] = useState<PacienteType | undefined>(undefined);
+  const [persona, setPersona] = useState<Persona | undefined>(undefined);
+  const [age, setAge] = useState<string | number>('Calculando...');
+  const [createdDate, setCreatedDate] = useState<string>('Calculando...');
+  const [patientAppointments, setPatientAppointments] = useState<Appointment[]>([]);
 
-  const paciente = mockPacientesData.find(p => p.id === patientId);
+  // Simulated data for the top bar - these would ideally come from form state or patient data
+  const [alergiasRegistradas, setAlergiasRegistradas] = useState<string[]>([]);
+  const [enfermedadesRegistradas, setEnfermedadesRegistradas] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  if (!paciente || !paciente.persona) {
+  useEffect(() => {
+    const foundPaciente = mockPacientesData.find(p => p.id === patientId);
+    setPaciente(foundPaciente);
+    if (foundPaciente?.persona) {
+      setPersona(foundPaciente.persona);
+    }
+    setLoading(false); // Done loading mock data
+  }, [patientId]);
+
+  useEffect(() => {
+    if (persona) {
+      const calculatedAge = persona.fechaNacimiento ? differenceInYears(new Date(), new Date(persona.fechaNacimiento)) : 'N/A';
+      setAge(calculatedAge);
+      setPatientAppointments(getPatientAppointments(persona.nombre));
+
+      // Simulate fetching/deriving these from medical history
+      // For now, these are static examples. In a real app, they'd be reactive.
+      setAlergiasRegistradas(["Penicilina"]); // Mock data from Q3
+      setEnfermedadesRegistradas(["Hipertensión arterial"]); // Mock data from Q5
+    }
+    if (paciente) {
+        const calculatedCreatedDate = paciente.fechaIngreso ? format(new Date(paciente.fechaIngreso.split('/').reverse().join('-')), 'dd MMM yyyy', { locale: es }) : 'N/A';
+        setCreatedDate(calculatedCreatedDate);
+    }
+
+  }, [persona, paciente]);
+
+
+  if (loading) {
+    return (
+        <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
+            <p>Cargando datos del paciente...</p>
+        </div>
+    );
+  }
+
+  if (!paciente || !persona) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
             <ToothIconCustom className="w-16 h-16 text-destructive mb-4" />
@@ -77,15 +120,6 @@ export default function DetallePacientePage() {
         </div>
     );
   }
-  const persona = paciente.persona;
-
-  const age = persona.fechaNacimiento ? differenceInYears(new Date(), new Date(persona.fechaNacimiento)) : 'N/A';
-  const createdDate = paciente.fechaIngreso ? format(new Date(paciente.fechaIngreso.split('/').reverse().join('-')), 'dd MMM yyyy', { locale: es }) : 'N/A';
-  const patientAppointments = getPatientAppointments(persona.nombre);
-
-  // Simulated data for the top bar based on mock Antecedentes
-  const alergiasRegistradas = ["Penicilina"]; // From Q3 mock
-  const enfermedadesRegistradas = ["Hipertensión arterial"]; // From Q5 mock
 
   const renderAntecedentesMedicos = () => (
     <div className="space-y-6 text-sm">
