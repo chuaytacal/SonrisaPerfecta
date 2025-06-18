@@ -31,8 +31,8 @@ interface SelectPersonaModalProps {
   onCreateNewPersona: () => void;
   existingPersonas: Persona[];
   modalTitle?: string;
-  modalDescription: string; // Make this required
-  createButtonLabel: string; // Make this required
+  modalDescription: string;
+  createButtonLabel: string;
 }
 
 export function SelectPersonaModal({
@@ -78,17 +78,15 @@ export function SelectPersonaModal({
           </div>
         </div>
         <ScrollArea className="h-[40vh] md:h-[50vh] border-t border-b">
-          <div className="overflow-x-auto px-6"> {/* Added px-6 here */}
-            <Table className="min-w-[500px] sm:min-w-full"> {/* Ensure table has min-width for scroll */}
-              <TableHeader className="sticky top-0 bg-muted/50 z-10">
+          <div className="overflow-x-auto px-6">
+            <Table className="min-w-[500px] sm:min-w-full"><TableHeader className="sticky top-0 bg-muted/50 z-10">
                 <TableRow>
                   <TableHead className="whitespace-nowrap">Documento</TableHead>
                   <TableHead className="whitespace-nowrap">Nombre Completo</TableHead>
                   <TableHead className="whitespace-nowrap">Teléfono</TableHead>
                   <TableHead className="text-right whitespace-nowrap">Acción</TableHead>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
+              </TableHeader><TableBody>
                 {filteredPersonas.length > 0 ? (
                   filteredPersonas.map((persona) => (
                     <TableRow key={persona.id}>
@@ -109,8 +107,7 @@ export function SelectPersonaModal({
                     </TableCell>
                   </TableRow>
                 )}
-              </TableBody>
-            </Table>
+              </TableBody></Table>
           </div>
         </ScrollArea>
         <DialogFooter className="p-6 flex flex-col sm:flex-row justify-between items-center gap-2">
