@@ -45,7 +45,7 @@ const messages = {
   showMore: (total: number) => `+ Ver más (${total})`,
 };
 
-const generateInitialAppointments = (): Appointment[] => {
+export const generateInitialAppointments = (): Appointment[] => {
   const today = new Date();
   const tomorrow = addDays(today, 1);
   const dayAfterTomorrow = addDays(today, 2);

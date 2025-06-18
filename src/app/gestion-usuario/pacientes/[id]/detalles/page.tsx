@@ -7,22 +7,22 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Mail, MessageSquare, Phone, ArrowLeft, Edit, PlusCircle, Users, CalendarDays as CalendarIconLucide, Tooth as ToothIconCustom } from 'lucide-react'; // Renamed CalendarDays to avoid conflict
-import { mockPacientesData } from '@/app/gestion-usuario/pacientes/page'; 
+import { Mail, MessageSquare, Phone, ArrowLeft, Edit, PlusCircle, Users, CalendarDays as CalendarIconLucide } from 'lucide-react';
+import { mockPacientesData } from '@/app/gestion-usuario/pacientes/page';
 // mockPersonasData is already included within mockPacientesData.paciente.persona
-import type { Paciente as PacienteType, Persona } from '@/types'; // Renamed Paciente to PacienteType
+import type { Paciente as PacienteType, Persona } from '@/types';
 import { format, differenceInYears } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Input } from '@/components/ui/input'; 
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 
 // Using Appointment type from calendar
-import type { Appointment } from '@/types/calendar'; 
+import type { Appointment } from '@/types/calendar';
 import { generateInitialAppointments } from '@/app/calendario/page'; // Import mock appointments
 
 
@@ -32,6 +32,25 @@ const enfermedadesOptions = [
   "Marcapasos", "Tratamiento oncológico", "Hipertensión arterial", "Diabetes",
   "Apoplejía", "Accidentes vasculares", "Pérdida de peso"
 ];
+
+// Inline SVG for Tooth icon
+const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M9.36 3.55A2 2 0 0 1 10.77 3h2.46a2 2 0 0 1 1.41.55L17 6h-2.53a2 2 0 0 0-1.64.88L12 8.34l-.83-1.46A2 2 0 0 0 9.53 6H7l2.36-2.45Z"/>
+    <path d="M19 10c0 2-2 4-2 4H7s-2-2-2-4a5 5 0 0 1 8-4h2a5 5 0 0 1 4 4Z"/>
+    <path d="M17.61 14a5.22 5.22 0 0 1-1.11 1.39 3.82 3.82 0 0 1-2.29.98c-.43.04-.81.18-1.21.22a4 4 0 0 1-2.5-.26 3.8 3.8 0 0 1-2.28-1 5.2 5.2 0 0 1-1.15-1.38"/>
+    <path d="M7.25 16.5c.64.92 1.57 1.5 2.58 1.5h4.34c1.01 0 1.94-.58 2.58-1.5"/>
+  </svg>
+);
 
 
 // Helper function to get a few appointments for the current patient (mock)
@@ -49,7 +68,7 @@ export default function DetallePacientePage() {
   const patientId = params.id as string;
 
   const paciente = mockPacientesData.find(p => p.id === patientId);
-  
+
   if (!paciente || !paciente.persona) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
@@ -106,7 +125,7 @@ export default function DetallePacientePage() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 mt-2">
           {enfermedadesOptions.map(enf => (
             <div key={enf} className="flex items-center space-x-2">
-              <Checkbox id={`enf-${enf.replace(/\s+/g, '-')}`} disabled checked={enf === "Hipertensión arterial"} /> 
+              <Checkbox id={`enf-${enf.replace(/\s+/g, '-')}`} disabled checked={enf === "Hipertensión arterial"} />
               <Label htmlFor={`enf-${enf.replace(/\s+/g, '-')}`} className="font-normal">{enf}</Label>
             </div>
           ))}
@@ -167,7 +186,7 @@ export default function DetallePacientePage() {
             <Button variant="outline" size="icon" asChild><a href={`mailto:${persona.email}`} aria-label="Email"><Mail className="h-4 w-4" /></a></Button>
             <Button variant="outline" size="icon" aria-label="Llamar"><Phone className="h-4 w-4" /></Button>
           </div>
-          
+
           <Separator className="my-6" />
 
           <div className="w-full space-y-1 text-left">
@@ -221,14 +240,14 @@ export default function DetallePacientePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                     <div><Label className="text-xs text-muted-foreground">Nombres</Label><p className="font-medium">{persona.nombre}</p></div>
                     <div><Label className="text-xs text-muted-foreground">Apellidos</Label><p className="font-medium">{`${persona.apellidoPaterno} ${persona.apellidoMaterno}`}</p></div>
-                    <div><Label className="text-xs text-muted-foreground">Nacionalidad</Label><p className="font-medium">Peruana</p></div> 
+                    <div><Label className="text-xs text-muted-foreground">Nacionalidad</Label><p className="font-medium">Peruana</p></div>
                     <div><Label className="text-xs text-muted-foreground">Teléfono Celular</Label><p className="font-medium">{persona.telefono}</p></div>
                     <div><Label className="text-xs text-muted-foreground">Fecha de Nacimiento</Label><p className="font-medium">{persona.fechaNacimiento ? format(new Date(persona.fechaNacimiento), 'dd/MM/yyyy', { locale: es }) : 'N/A'}</p></div>
                     <div><Label className="text-xs text-muted-foreground">Tipo Documento</Label><p className="font-medium">{persona.tipoDocumento}</p></div>
                     <div><Label className="text-xs text-muted-foreground">N° Documento</Label><p className="font-medium">{persona.numeroDocumento}</p></div>
                     <div><Label className="text-xs text-muted-foreground">Email</Label><p className="font-medium">{persona.email || 'No registrado'}</p></div>
-                    <div><Label className="text-xs text-muted-foreground">Teléfono Fijo</Label><p className="font-medium">No registrado</p></div> 
-                    <div><Label className="text-xs text-muted-foreground">N° Historia Clínica</Label><p className="font-medium">{paciente.id.substring(paciente.id.length-6).toUpperCase()}</p></div> 
+                    <div><Label className="text-xs text-muted-foreground">Teléfono Fijo</Label><p className="font-medium">No registrado</p></div>
+                    <div><Label className="text-xs text-muted-foreground">N° Historia Clínica</Label><p className="font-medium">{paciente.id.substring(paciente.id.length-6).toUpperCase()}</p></div>
                 </div>
               </CardContent>
             </Card>
@@ -297,3 +316,4 @@ export default function DetallePacientePage() {
     </div>
   );
 }
+
