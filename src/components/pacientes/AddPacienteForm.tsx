@@ -67,7 +67,7 @@ const pacienteFormSchema = z.object({
   fechaNacimiento: z.date({ required_error: "La fecha de nacimiento es requerida."}),
   sexo: z.enum(["M", "F"], { required_error: "Seleccione un sexo." }),
   direccion: z.string().min(1, {message: "La dirección es requerida."}),
-  telefono: z.string().min(9, { message: "El teléfono debe tener al menos 9 caracteres." }).regex(/^(?:\+51\s?)?(9\d{8})$/, { message: "Formato de teléfono peruano inválido."}),
+  telefono: z.string().min(9, { message: "El teléfono debe tener 9 dígitos y empezar con 9." }).regex(/^9\d{8}$/, { message: "Formato de teléfono inválido. Debe ser 9XXXXXXXX."}),
   
   // Paciente specific fields
   fechaIngreso: z.date({ required_error: "La fecha de ingreso es requerida."}), 
@@ -80,8 +80,8 @@ type PacienteFormValues = z.infer<typeof pacienteFormSchema>;
 interface AddPacienteFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onPacienteSaved: (paciente: Paciente) => void; // Changed prop name
-  initialPacienteData?: Paciente | null; // Changed prop name
+  onPacienteSaved: (paciente: Paciente) => void; 
+  initialPacienteData?: Paciente | null; 
   selectedPersonaToPreload?: Persona | null; 
   isCreatingNewPersonaFlow?: boolean; 
 }
@@ -168,7 +168,7 @@ export function AddPacienteForm({
     };
 
     const pacienteOutput: Paciente = {
-        id: initialPacienteData?.id || `paciente-${crypto.randomUUID()}`, // Changed prefix
+        id: initialPacienteData?.id || `paciente-${crypto.randomUUID()}`, 
         idPersona: personaData.id,
         persona: personaData,
         fechaIngreso: format(values.fechaIngreso, "dd/MM/yyyy"),
@@ -186,8 +186,7 @@ export function AddPacienteForm({
   const title = isEditMode ? "Editar Paciente" : (isCreatingNewPersonaFlow ? "Registrar Nueva Persona y Paciente" : "Asignar Rol de Paciente");
   const description = isEditMode ? "Modifique los datos del paciente." : (isCreatingNewPersonaFlow ? "Complete los campos para la nueva persona y su rol." : "Complete los detalles del rol para la persona seleccionada.");
 
-  const disableDocTypeAndNumber = isEditMode || (!!selectedPersonaToPreload && !isCreatingNewPersonaFlow);
-  const disableOtherPersonaFields = !!selectedPersonaToPreload && !isCreatingNewPersonaFlow && !isEditMode;
+  const isPersonaFieldsDisabled = (!!selectedPersonaToPreload && !isCreatingNewPersonaFlow && !isEditMode) || (isEditMode);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -207,7 +206,7 @@ export function AddPacienteForm({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Tipo de Documento</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={disableDocTypeAndNumber}>
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isPersonaFieldsDisabled || isEditMode}>
                         <FormControl>
                             <SelectTrigger><SelectValue placeholder="Seleccione..." /></SelectTrigger>
                         </FormControl>
@@ -225,7 +224,7 @@ export function AddPacienteForm({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Número de Documento</FormLabel>
-                        <FormControl><Input placeholder="12345678" {...field} disabled={disableDocTypeAndNumber} /></FormControl>
+                        <FormControl><Input placeholder="12345678" {...field} disabled={isPersonaFieldsDisabled || isEditMode} /></FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -237,7 +236,7 @@ export function AddPacienteForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nombres</FormLabel>
-                    <FormControl><Input placeholder="Ej: Ana" {...field} disabled={disableOtherPersonaFields} /></FormControl>
+                    <FormControl><Input placeholder="Ej: Ana" {...field} disabled={isPersonaFieldsDisabled && !isEditMode} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -249,7 +248,7 @@ export function AddPacienteForm({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Apellido Paterno</FormLabel>
-                        <FormControl><Input placeholder="Ej: Torres" {...field} disabled={disableOtherPersonaFields} /></FormControl>
+                        <FormControl><Input placeholder="Ej: Torres" {...field} disabled={isPersonaFieldsDisabled && !isEditMode} /></FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -260,7 +259,7 @@ export function AddPacienteForm({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Apellido Materno</FormLabel>
-                        <FormControl><Input placeholder="Ej: Quispe" {...field} disabled={disableOtherPersonaFields} /></FormControl>
+                        <FormControl><Input placeholder="Ej: Quispe" {...field} disabled={isPersonaFieldsDisabled && !isEditMode} /></FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -275,7 +274,7 @@ export function AddPacienteForm({
                         <FormLabel className="mb-1.5">Fecha de Nacimiento</FormLabel>
                         <Popover><PopoverTrigger asChild>
                         <FormControl>
-                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")} disabled={disableOtherPersonaFields}>
+                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")} disabled={isPersonaFieldsDisabled && !isEditMode}>
                             {field.value ? format(field.value, "PPP", {locale: es}) : <span>Seleccione fecha</span>}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
@@ -296,7 +295,7 @@ export function AddPacienteForm({
                     <FormItem className="space-y-2 pt-2">
                         <FormLabel>Sexo</FormLabel>
                         <FormControl>
-                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={disableOtherPersonaFields}>
+                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={isPersonaFieldsDisabled && !isEditMode}>
                             {sexoOptions.map(opt => (
                                 <FormItem key={opt.value} className="flex items-center space-x-2 space-y-0">
                                 <FormControl><RadioGroupItem value={opt.value} id={`sexo-paciente-${opt.value}`} /></FormControl>
@@ -316,7 +315,7 @@ export function AddPacienteForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Dirección</FormLabel>
-                    <FormControl><Input placeholder="Av. Principal 123" {...field} disabled={disableOtherPersonaFields} /></FormControl>
+                    <FormControl><Input placeholder="Av. Principal 123" {...field} disabled={isPersonaFieldsDisabled && !isEditMode} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -327,7 +326,7 @@ export function AddPacienteForm({
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Teléfono</FormLabel>
-                    <FormControl><Input placeholder="+51 987654321" {...field} disabled={disableOtherPersonaFields} /></FormControl>
+                    <FormControl><Input placeholder="987654321" {...field} disabled={isPersonaFieldsDisabled && !isEditMode} /></FormControl>
                     <FormMessage />
                 </FormItem>
                 )}
@@ -456,3 +455,4 @@ export function AddPacienteForm({
     </Dialog>
   );
 }
+

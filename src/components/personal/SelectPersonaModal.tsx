@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -29,6 +30,9 @@ interface SelectPersonaModalProps {
   onSelectPersona: (persona: Persona) => void;
   onCreateNewPersona: () => void;
   existingPersonas: Persona[];
+  modalTitle?: string;
+  modalDescription: string; // Make this required
+  createButtonLabel: string; // Make this required
 }
 
 export function SelectPersonaModal({
@@ -37,6 +41,9 @@ export function SelectPersonaModal({
   onSelectPersona,
   onCreateNewPersona,
   existingPersonas,
+  modalTitle = "Buscar Persona",
+  modalDescription,
+  createButtonLabel,
 }: SelectPersonaModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -54,9 +61,9 @@ export function SelectPersonaModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[95vw] sm:max-w-lg md:max-w-2xl lg:max-w-3xl p-0">
         <DialogHeader className="p-6 pb-4">
-          <DialogTitle>Buscar Persona</DialogTitle>
+          <DialogTitle>{modalTitle}</DialogTitle>
           <DialogDescription>
-            Busca una persona por DNI o nombre completo para asignarle un rol de personal, o crea una nueva.
+            {modalDescription}
           </DialogDescription>
         </DialogHeader>
         <div className="px-6 pb-4">
@@ -70,43 +77,45 @@ export function SelectPersonaModal({
             />
           </div>
         </div>
-        <ScrollArea className="px-6 h-[40vh] md:h-[50vh] border-t border-b">
-          <Table>
-            <TableHeader className="sticky top-0 bg-muted/50 z-10">
-              <TableRow>
-                <TableHead>Documento</TableHead>
-                <TableHead>Nombre Completo</TableHead>
-                <TableHead>Teléfono</TableHead>
-                <TableHead className="text-right">Acción</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredPersonas.length > 0 ? (
-                filteredPersonas.map((persona) => (
-                  <TableRow key={persona.id}>
-                    <TableCell>{persona.tipoDocumento}: {persona.numeroDocumento}</TableCell>
-                    <TableCell>{`${persona.nombre} ${persona.apellidoPaterno} ${persona.apellidoMaterno}`}</TableCell>
-                    <TableCell>{persona.telefono}</TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" onClick={() => onSelectPersona(persona)}>
-                        Seleccionar
-                      </Button>
+        <ScrollArea className="h-[40vh] md:h-[50vh] border-t border-b">
+          <div className="overflow-x-auto px-6"> {/* Added px-6 here */}
+            <Table className="min-w-[500px] sm:min-w-full"> {/* Ensure table has min-width for scroll */}
+              <TableHeader className="sticky top-0 bg-muted/50 z-10">
+                <TableRow>
+                  <TableHead className="whitespace-nowrap">Documento</TableHead>
+                  <TableHead className="whitespace-nowrap">Nombre Completo</TableHead>
+                  <TableHead className="whitespace-nowrap">Teléfono</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Acción</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredPersonas.length > 0 ? (
+                  filteredPersonas.map((persona) => (
+                    <TableRow key={persona.id}>
+                      <TableCell className="whitespace-nowrap">{persona.tipoDocumento}: {persona.numeroDocumento}</TableCell>
+                      <TableCell className="whitespace-nowrap">{`${persona.nombre} ${persona.apellidoPaterno} ${persona.apellidoMaterno}`}</TableCell>
+                      <TableCell className="whitespace-nowrap">{persona.telefono}</TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" onClick={() => onSelectPersona(persona)}>
+                          Seleccionar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                      No se encontraron personas. Puede crear una nueva.
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
-                    No se encontraron personas. Puede crear una nueva.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </ScrollArea>
         <DialogFooter className="p-6 flex flex-col sm:flex-row justify-between items-center gap-2">
           <Button variant="default" onClick={onCreateNewPersona} className="w-full sm:w-auto">
-            Crear Persona y Asignar como Personal
+            {createButtonLabel}
           </Button>
           <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
             Cerrar

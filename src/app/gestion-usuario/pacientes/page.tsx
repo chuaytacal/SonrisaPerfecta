@@ -16,8 +16,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ArrowUpDown, MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight, Eye } from "lucide-react";
-import { AddPacienteForm } from "@/components/pacientes/AddPacienteForm"; // Changed import
-import { SelectPersonaModal } from "@/components/personal/SelectPersonaModal"; // Re-use for persona selection
+import { AddPacienteForm } from "@/components/pacientes/AddPacienteForm"; 
+import { SelectPersonaModal } from "@/components/personal/SelectPersonaModal"; 
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -27,15 +27,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Persona, Paciente, EtiquetaPaciente } from "@/types"; // Added Paciente, EtiquetaPaciente
+import type { Persona, Paciente, EtiquetaPaciente } from "@/types"; 
 
 // Mock data for Personas (can be shared or fetched)
 const mockPersonasData: Persona[] = [
-  { id: "persona-1", tipoDocumento: "DNI", numeroDocumento: "73124568", nombre: "Joe", apellidoPaterno: "Schilder", apellidoMaterno: "Mann", fechaNacimiento: new Date("1985-05-15"), sexo: "M", direccion: "Av. Siempre Viva 123", telefono: "+51 943 567 821", email: "joe.schilder@example.com" },
-  { id: "persona-2", tipoDocumento: "DNI", numeroDocumento: "18273645", nombre: "Phoebe", apellidoPaterno: "Venturi", apellidoMaterno: "Ross", fechaNacimiento: new Date("1990-08-22"), sexo: "F", direccion: "Calle Falsa 456", telefono: "+51 981 234 670", email: "phoebe.venturi@example.com" },
-  { id: "persona-3", tipoDocumento: "DNI", numeroDocumento: "49205873", nombre: "Caroline", apellidoPaterno: "Pandolfi", apellidoMaterno: "Geller", fechaNacimiento: new Date("1988-11-30"), sexo: "F", direccion: "Jr. Desconocido 789", telefono: "+51 967 891 234", email: "caroline.pandolfi@example.com" },
-  { id: "persona-p1", tipoDocumento: "DNI", numeroDocumento: "76543210", nombre: "Mario", apellidoPaterno: "Bros", apellidoMaterno: "Nintendo", fechaNacimiento: new Date("1983-07-09"), sexo: "M", direccion: "Mushroom Kingdom", telefono: "+51 912345678", email: "mario@example.com" },
-  { id: "persona-p2", tipoDocumento: "EXTRANJERIA", numeroDocumento: "X1234567", nombre: "Luigi", apellidoPaterno: "Bros", apellidoMaterno: "Nintendo", fechaNacimiento: new Date("1983-07-09"), sexo: "M", direccion: "Mushroom Kingdom", telefono: "+51 987654321", email: "luigi@example.com" },
+  { id: "persona-1", tipoDocumento: "DNI", numeroDocumento: "73124568", nombre: "Joe", apellidoPaterno: "Schilder", apellidoMaterno: "Mann", fechaNacimiento: new Date("1985-05-15"), sexo: "M", direccion: "Av. Siempre Viva 123", telefono: "943567821", email: "joe.schilder@example.com" },
+  { id: "persona-2", tipoDocumento: "DNI", numeroDocumento: "18273645", nombre: "Phoebe", apellidoPaterno: "Venturi", apellidoMaterno: "Ross", fechaNacimiento: new Date("1990-08-22"), sexo: "F", direccion: "Calle Falsa 456", telefono: "981234670", email: "phoebe.venturi@example.com" },
+  { id: "persona-3", tipoDocumento: "DNI", numeroDocumento: "49205873", nombre: "Caroline", apellidoPaterno: "Pandolfi", apellidoMaterno: "Geller", fechaNacimiento: new Date("1988-11-30"), sexo: "F", direccion: "Jr. Desconocido 789", telefono: "967891234", email: "caroline.pandolfi@example.com" },
+  { id: "persona-p1", tipoDocumento: "DNI", numeroDocumento: "76543210", nombre: "Mario", apellidoPaterno: "Bros", apellidoMaterno: "Nintendo", fechaNacimiento: new Date("1983-07-09"), sexo: "M", direccion: "Mushroom Kingdom", telefono: "912345678", email: "mario@example.com" },
+  { id: "persona-p2", tipoDocumento: "EXTRANJERIA", numeroDocumento: "X1234567", nombre: "Luigi", apellidoPaterno: "Bros", apellidoMaterno: "Nintendo", fechaNacimiento: new Date("1983-07-09"), sexo: "M", direccion: "Mushroom Kingdom", telefono: "987654321", email: "luigi@example.com" },
 ];
 
 const mockPacientesData: Paciente[] = [
@@ -373,8 +373,8 @@ const columns: ColumnDef<Paciente>[] = [
         searchColumnId="persona.nombre" 
         statusColumnId="estado"
         statusOptions={statusOptions}
-        onAdd={handleOpenAddPacienteFlow} // Changed handler
-        addButtonLabel="Añadir Paciente" // Changed label
+        onAdd={handleOpenAddPacienteFlow} 
+        addButtonLabel="Añadir Paciente" 
       >
         <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
@@ -394,9 +394,11 @@ const columns: ColumnDef<Paciente>[] = [
         onSelectPersona={handleSelectPersona}
         onCreateNewPersona={handleCreateNewPersona}
         existingPersonas={mockPersonasData} 
+        modalDescription="Busca una persona por DNI o nombre completo para asignarle el rol de paciente, o crea una nueva persona."
+        createButtonLabel="Crear Persona y Asignar como Paciente"
       />
 
-      <AddPacienteForm // Changed component
+      <AddPacienteForm 
         open={isAddPacienteFormOpen}
         onOpenChange={(isOpen) => {
             setIsAddPacienteFormOpen(isOpen);
@@ -406,10 +408,10 @@ const columns: ColumnDef<Paciente>[] = [
                 setIsCreatingNewPersonaFlow(false);
             }
         }}
-        initialPacienteData={editingPaciente} // Changed prop name
+        initialPacienteData={editingPaciente} 
         selectedPersonaToPreload={selectedPersonaToPreload}
         isCreatingNewPersonaFlow={isCreatingNewPersonaFlow}
-        onPacienteSaved={handleSavePaciente} // Changed prop name
+        onPacienteSaved={handleSavePaciente} 
       />
       {pacienteToAction && confirmAction && (
         <ConfirmationDialog
@@ -426,3 +428,4 @@ const columns: ColumnDef<Paciente>[] = [
     </div>
   );
 }
+

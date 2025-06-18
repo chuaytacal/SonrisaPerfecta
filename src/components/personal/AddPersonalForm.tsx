@@ -49,13 +49,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 const personalFormSchema = z.object({
   tipoDocumento: z.enum(["DNI", "EXTRANJERIA", "PASAPORTE"], { required_error: "Seleccione un tipo de documento." }),
   numeroDocumento: z.string().min(1, { message: "El número de documento es requerido." }),
-  nombre: z.string().min(2, { message: "El nombre debe tener al least 2 caracteres." }),
-  apellidoPaterno: z.string().min(2, { message: "El apellido paterno debe tener al least 2 caracteres." }),
-  apellidoMaterno: z.string().min(2, { message: "El apellido materno debe tener al least 2 caracteres." }),
+  nombre: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
+  apellidoPaterno: z.string().min(2, { message: "El apellido paterno debe tener al menos 2 caracteres." }),
+  apellidoMaterno: z.string().min(2, { message: "El apellido materno debe tener al menos 2 caracteres." }),
   fechaNacimiento: z.date({ required_error: "La fecha de nacimiento es requerida."}),
   sexo: z.enum(["M", "F"], { required_error: "Seleccione un sexo." }),
   direccion: z.string().min(1, {message: "La dirección es requerida."}),
-  telefono: z.string().min(9, { message: "El teléfono debe tener al least 9 caracteres." }).regex(/^(?:\+51\s?)?(9\d{8})$/, { message: "Formato de teléfono peruano inválido."}),
+  telefono: z.string().min(9, { message: "El teléfono debe tener 9 dígitos y empezar con 9." }).regex(/^9\d{8}$/, { message: "Formato de teléfono inválido. Debe ser 9XXXXXXXX."}),
   fechaIngreso: z.date({ required_error: "La fecha de ingreso es requerida."}), 
   estado: z.enum(["Activo", "Inactivo"], { required_error: "Seleccione un estado." }),
 });
@@ -132,7 +132,7 @@ export function AddPersonalForm({
   async function onSubmit(values: PersonalFormValues) {
     const emailToSave = (isEditMode && initialPersonalData?.persona.email) || 
                         (selectedPersonaToPreload?.email) || 
-                        (initialPersonalData?.persona.email) || // Ensure email is preserved if creating new persona from existing
+                        (initialPersonalData?.persona.email) || 
                         ""; 
 
     const personaData: Persona = { 
@@ -168,8 +168,8 @@ export function AddPersonalForm({
   const description = isEditMode ? "Modifique los datos del miembro del personal." : (isCreatingNewPersonaFlow ? "Complete los campos para la nueva persona y su rol." : "Complete los detalles del rol para la persona seleccionada.");
 
   // Determine if Persona fields should be disabled
-  const disableDocTypeAndNumber = isEditMode || (!!selectedPersonaToPreload && !isCreatingNewPersonaFlow);
-  const disableOtherPersonaFields = !!selectedPersonaToPreload && !isCreatingNewPersonaFlow && !isEditMode;
+  const isPersonaFieldsDisabled = (!!selectedPersonaToPreload && !isCreatingNewPersonaFlow && !isEditMode) || (isEditMode);
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -189,7 +189,7 @@ export function AddPersonalForm({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Tipo de Documento</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={disableDocTypeAndNumber}>
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isPersonaFieldsDisabled || isEditMode}>
                         <FormControl>
                             <SelectTrigger><SelectValue placeholder="Seleccione..." /></SelectTrigger>
                         </FormControl>
@@ -207,7 +207,7 @@ export function AddPersonalForm({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Número de Documento</FormLabel>
-                        <FormControl><Input placeholder="12345678" {...field} disabled={disableDocTypeAndNumber} /></FormControl>
+                        <FormControl><Input placeholder="12345678" {...field} disabled={isPersonaFieldsDisabled || isEditMode} /></FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -219,7 +219,7 @@ export function AddPersonalForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nombres</FormLabel>
-                    <FormControl><Input placeholder="Ej: Ana" {...field} disabled={disableOtherPersonaFields} /></FormControl>
+                    <FormControl><Input placeholder="Ej: Ana" {...field} disabled={isPersonaFieldsDisabled && !isEditMode} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -231,7 +231,7 @@ export function AddPersonalForm({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Apellido Paterno</FormLabel>
-                        <FormControl><Input placeholder="Ej: Torres" {...field} disabled={disableOtherPersonaFields} /></FormControl>
+                        <FormControl><Input placeholder="Ej: Torres" {...field} disabled={isPersonaFieldsDisabled && !isEditMode} /></FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -242,7 +242,7 @@ export function AddPersonalForm({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Apellido Materno</FormLabel>
-                        <FormControl><Input placeholder="Ej: Quispe" {...field} disabled={disableOtherPersonaFields} /></FormControl>
+                        <FormControl><Input placeholder="Ej: Quispe" {...field} disabled={isPersonaFieldsDisabled && !isEditMode} /></FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -257,7 +257,7 @@ export function AddPersonalForm({
                         <FormLabel className="mb-1.5">Fecha de Nacimiento</FormLabel>
                         <Popover><PopoverTrigger asChild>
                         <FormControl>
-                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")} disabled={disableOtherPersonaFields}>
+                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")} disabled={isPersonaFieldsDisabled && !isEditMode}>
                             {field.value ? format(field.value, "PPP", {locale: es}) : <span>Seleccione fecha</span>}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
@@ -278,7 +278,7 @@ export function AddPersonalForm({
                     <FormItem className="space-y-2 pt-2">
                         <FormLabel>Sexo</FormLabel>
                         <FormControl>
-                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={disableOtherPersonaFields}>
+                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={isPersonaFieldsDisabled && !isEditMode}>
                             {sexoOptions.map(opt => (
                                 <FormItem key={opt.value} className="flex items-center space-x-2 space-y-0">
                                 <FormControl><RadioGroupItem value={opt.value} id={`sexo-${opt.value}`} /></FormControl>
@@ -298,7 +298,7 @@ export function AddPersonalForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Dirección</FormLabel>
-                    <FormControl><Input placeholder="Av. Principal 123" {...field} disabled={disableOtherPersonaFields} /></FormControl>
+                    <FormControl><Input placeholder="Av. Principal 123" {...field} disabled={isPersonaFieldsDisabled && !isEditMode} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -309,7 +309,7 @@ export function AddPersonalForm({
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Teléfono</FormLabel>
-                    <FormControl><Input placeholder="+51 987654321" {...field} disabled={disableOtherPersonaFields} /></FormControl>
+                    <FormControl><Input placeholder="987654321" {...field} disabled={isPersonaFieldsDisabled && !isEditMode} /></FormControl>
                     <FormMessage />
                 </FormItem>
                 )}
@@ -386,3 +386,4 @@ export function AddPersonalForm({
     </Dialog>
   );
 }
+
