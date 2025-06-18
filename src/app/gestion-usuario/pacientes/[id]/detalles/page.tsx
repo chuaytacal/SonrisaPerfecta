@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
@@ -499,7 +500,7 @@ export default function DetallePacientePage() {
                   <div><Label className="text-xs text-muted-foreground">Tipo Documento</Label><p className="font-medium">{persona.tipoDocumento}</p></div>
                   <div><Label className="text-xs text-muted-foreground">N° Documento</Label><p className="font-medium">{persona.numeroDocumento}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Fecha de Ingreso (Paciente)</Label><p className="font-medium">{createdDate}</p></div>
-                  <div><Label className="text-xs text-muted-foreground">Estado (Paciente)</Label><p className="font-medium"><Badge variant={paciente.estado === 'Activo' ? 'default' : 'destructive'}>{paciente.estado}</Badge></p></div>
+                  <div><Label className="text-xs text-muted-foreground">Estado (Paciente)</Label><div className="font-medium"><Badge variant={paciente.estado === 'Activo' ? 'default' : 'destructive'}>{paciente.estado}</Badge></div></div>
                   <div><Label className="text-xs text-muted-foreground">N° Historia Clínica</Label><p className="font-medium">{paciente.id.substring(paciente.id.length-6).toUpperCase()}</p></div>
                 </div>
                 <div className="flex justify-end pt-4">
@@ -546,4 +547,5 @@ export default function DetallePacientePage() {
     </div>
   );
 }
+
 
