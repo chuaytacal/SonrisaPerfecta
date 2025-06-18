@@ -347,19 +347,19 @@ const columns: ColumnDef<Paciente>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(paciente.idPersona)}>
+            <DropdownMenuItem onSelect={() => navigator.clipboard.writeText(paciente.idPersona)}>
               Copiar ID Persona
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => openEditModal(paciente)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleDelete(paciente)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+            <DropdownMenuItem onSelect={() => openEditModal(paciente)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => handleDelete(paciente)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
               <Trash2 className="mr-2 h-4 w-4" /> Eliminar
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleToggleStatus(paciente)}>
+            <DropdownMenuItem onSelect={() => handleToggleStatus(paciente)}>
               {paciente.estado === "Activo" ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
               {paciente.estado === "Activo" ? "Desactivar" : "Activar"}
             </DropdownMenuItem>
-             <DropdownMenuItem onClick={() => handleViewDetails(paciente.id)}>
+             <DropdownMenuItem onSelect={() => handleViewDetails(paciente.id)}>
                 <Eye className="mr-2 h-4 w-4" /> Ver Detalles
             </DropdownMenuItem>
           </DropdownMenuContent>
