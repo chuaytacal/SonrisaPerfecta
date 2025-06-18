@@ -12,7 +12,7 @@ export interface Persona {
   sexo: Sexo;
   direccion: string;
   telefono: string;
-  email: string; // Email remains in Persona, but might not be shown in all forms
+  email: string;
 }
 
 export type EtiquetaPaciente =
@@ -23,16 +23,38 @@ export type EtiquetaPaciente =
   | "Hipertenso"
   | "Covid+"
   | "Postquirúrgico"
-  | "Anciano";
+  | "Anciano"
+  | "Nuevo Tag Ejemplo"; // Added for testing tag functionality
 
+export interface AntecedentesMedicosData {
+  q1_hospitalizado?: "Sí" | "No" | string;
+  q1_porque?: string;
+  q1_donde?: string;
+  q2_atencionMedica?: "Sí" | "No" | string;
+  q2_porque?: string;
+  q2_donde?: string;
+  q3_alergico?: "Sí" | "No" | string;
+  q3_cuales?: string;
+  q4_hemorragia?: "Sí" | "No" | string;
+  q5_enfermedades?: string[];
+  q6_otraEnfermedad?: "Sí" | "No" | string;
+  q6_cual?: string;
+  q7_medicacionActual?: "Sí" | "No" | string;
+  q7_cual?: string;
+  q8_embarazada?: "Sí" | "No" | string;
+  q8_semanas?: string;
+  q9_hipertenso?: "Sí" | "No" | string;
+  q10_ultimaConsultaDental?: string;
+}
 export interface Paciente {
-  id: string; // ID del registro de Paciente
-  idPersona: string; // FK a la tabla Persona
-  persona: Persona; // Datos de la persona anidados
-  fechaIngreso: string; // "DD/MM/YYYY" - Fecha de ingreso como paciente
+  id: string;
+  idPersona: string;
+  persona: Persona;
+  fechaIngreso: string; // "DD/MM/YYYY"
   estado: "Activo" | "Inactivo";
   etiquetas: EtiquetaPaciente[];
-  // avatarUrl?: string; // Pacientes typically don't have a separate avatar from Persona
+  notas?: string;
+  antecedentesMedicos?: AntecedentesMedicosData;
 }
 
 
