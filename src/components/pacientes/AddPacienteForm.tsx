@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox"; // Added for etiquetas
+import { Checkbox } from "@/components/ui/checkbox"; 
 import React, { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
@@ -186,16 +186,17 @@ export function AddPacienteForm({
   const title = isEditMode ? "Editar Paciente" : (isCreatingNewPersonaFlow ? "Registrar Nueva Persona y Paciente" : "Asignar Rol de Paciente");
   const description = isEditMode ? "Modifique los datos del paciente." : (isCreatingNewPersonaFlow ? "Complete los campos para la nueva persona y su rol." : "Complete los detalles del rol para la persona seleccionada.");
 
-  const isPersonaFieldsDisabled = (!!selectedPersonaToPreload && !isCreatingNewPersonaFlow && !isEditMode) || (isEditMode);
+  const isTipoDocNumDisabled = isEditMode || (!!selectedPersonaToPreload && !isCreatingNewPersonaFlow);
+  const isOtherPersonaFieldsDisabled = (!!selectedPersonaToPreload && !isCreatingNewPersonaFlow && !isEditMode);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-lg p-0">
+      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-2xl p-0">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[70vh] md:max-h-[calc(80vh-150px)]">
+        <ScrollArea className="max-h-[75vh] md:max-h-[calc(85vh-150px)]">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-6 pb-6 pt-2">
               <h3 className="text-md font-semibold text-muted-foreground border-b pb-1">Datos Personales</h3>
@@ -206,7 +207,7 @@ export function AddPacienteForm({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Tipo de Documento</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isPersonaFieldsDisabled || isEditMode}>
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isTipoDocNumDisabled}>
                         <FormControl>
                             <SelectTrigger><SelectValue placeholder="Seleccione..." /></SelectTrigger>
                         </FormControl>
@@ -224,7 +225,7 @@ export function AddPacienteForm({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Número de Documento</FormLabel>
-                        <FormControl><Input placeholder="12345678" {...field} disabled={isPersonaFieldsDisabled || isEditMode} /></FormControl>
+                        <FormControl><Input placeholder="12345678" {...field} disabled={isTipoDocNumDisabled} /></FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -236,7 +237,7 @@ export function AddPacienteForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nombres</FormLabel>
-                    <FormControl><Input placeholder="Ej: Ana" {...field} disabled={isPersonaFieldsDisabled && !isEditMode} /></FormControl>
+                    <FormControl><Input placeholder="Ej: Ana" {...field} disabled={isOtherPersonaFieldsDisabled && !isEditMode} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -248,7 +249,7 @@ export function AddPacienteForm({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Apellido Paterno</FormLabel>
-                        <FormControl><Input placeholder="Ej: Torres" {...field} disabled={isPersonaFieldsDisabled && !isEditMode} /></FormControl>
+                        <FormControl><Input placeholder="Ej: Torres" {...field} disabled={isOtherPersonaFieldsDisabled && !isEditMode} /></FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -259,7 +260,7 @@ export function AddPacienteForm({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Apellido Materno</FormLabel>
-                        <FormControl><Input placeholder="Ej: Quispe" {...field} disabled={isPersonaFieldsDisabled && !isEditMode} /></FormControl>
+                        <FormControl><Input placeholder="Ej: Quispe" {...field} disabled={isOtherPersonaFieldsDisabled && !isEditMode} /></FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -274,7 +275,7 @@ export function AddPacienteForm({
                         <FormLabel className="mb-1.5">Fecha de Nacimiento</FormLabel>
                         <Popover><PopoverTrigger asChild>
                         <FormControl>
-                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")} disabled={isPersonaFieldsDisabled && !isEditMode}>
+                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")} disabled={isOtherPersonaFieldsDisabled && !isEditMode}>
                             {field.value ? format(field.value, "PPP", {locale: es}) : <span>Seleccione fecha</span>}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
@@ -295,7 +296,7 @@ export function AddPacienteForm({
                     <FormItem className="space-y-2 pt-2">
                         <FormLabel>Sexo</FormLabel>
                         <FormControl>
-                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={isPersonaFieldsDisabled && !isEditMode}>
+                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={isOtherPersonaFieldsDisabled && !isEditMode}>
                             {sexoOptions.map(opt => (
                                 <FormItem key={opt.value} className="flex items-center space-x-2 space-y-0">
                                 <FormControl><RadioGroupItem value={opt.value} id={`sexo-paciente-${opt.value}`} /></FormControl>
@@ -315,7 +316,7 @@ export function AddPacienteForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Dirección</FormLabel>
-                    <FormControl><Input placeholder="Av. Principal 123" {...field} disabled={isPersonaFieldsDisabled && !isEditMode} /></FormControl>
+                    <FormControl><Input placeholder="Av. Principal 123" {...field} disabled={isOtherPersonaFieldsDisabled && !isEditMode} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -326,7 +327,7 @@ export function AddPacienteForm({
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Teléfono</FormLabel>
-                    <FormControl><Input placeholder="987654321" {...field} disabled={isPersonaFieldsDisabled && !isEditMode} /></FormControl>
+                    <FormControl><Input placeholder="987654321" {...field} disabled={isOtherPersonaFieldsDisabled && !isEditMode} /></FormControl>
                     <FormMessage />
                 </FormItem>
                 )}
@@ -371,7 +372,7 @@ export function AddPacienteForm({
                           Seleccione las etiquetas relevantes para el paciente.
                         </FormDescription>
                       </div>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
                         {predefinedEtiquetas.map((item) => (
                           <FormField
                             key={item}

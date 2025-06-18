@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowUpDown, MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight, Eye } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react"; // Removed Eye
 import { AddPersonalForm } from "@/components/personal/AddPersonalForm";
 import { SelectPersonaModal } from "@/components/personal/SelectPersonaModal";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -340,9 +340,7 @@ const columns: ColumnDef<Personal>[] = [
               {personal.estado === "Activo" ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
               {personal.estado === "Activo" ? "Desactivar" : "Activar"}
             </DropdownMenuItem>
-             <DropdownMenuItem onClick={() => alert(`Ver detalles de ${personal.persona.nombre}`)}>
-                <Eye className="mr-2 h-4 w-4" /> Ver Detalles
-            </DropdownMenuItem>
+             {/* Ver Detalles removed */}
           </DropdownMenuContent>
         </DropdownMenu>
       );

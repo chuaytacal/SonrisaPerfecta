@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from 'next/navigation'; // Import for navigation
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +31,7 @@ import {
 import type { Persona, Paciente, EtiquetaPaciente } from "@/types"; 
 
 // Mock data for Personas (can be shared or fetched)
-const mockPersonasData: Persona[] = [
+export const mockPersonasData: Persona[] = [ // Exported for use in details page
   { id: "persona-1", tipoDocumento: "DNI", numeroDocumento: "73124568", nombre: "Joe", apellidoPaterno: "Schilder", apellidoMaterno: "Mann", fechaNacimiento: new Date("1985-05-15"), sexo: "M", direccion: "Av. Siempre Viva 123", telefono: "943567821", email: "joe.schilder@example.com" },
   { id: "persona-2", tipoDocumento: "DNI", numeroDocumento: "18273645", nombre: "Phoebe", apellidoPaterno: "Venturi", apellidoMaterno: "Ross", fechaNacimiento: new Date("1990-08-22"), sexo: "F", direccion: "Calle Falsa 456", telefono: "981234670", email: "phoebe.venturi@example.com" },
   { id: "persona-3", tipoDocumento: "DNI", numeroDocumento: "49205873", nombre: "Caroline", apellidoPaterno: "Pandolfi", apellidoMaterno: "Geller", fechaNacimiento: new Date("1988-11-30"), sexo: "F", direccion: "Jr. Desconocido 789", telefono: "967891234", email: "caroline.pandolfi@example.com" },
@@ -38,7 +39,7 @@ const mockPersonasData: Persona[] = [
   { id: "persona-p2", tipoDocumento: "EXTRANJERIA", numeroDocumento: "X1234567", nombre: "Luigi", apellidoPaterno: "Bros", apellidoMaterno: "Nintendo", fechaNacimiento: new Date("1983-07-09"), sexo: "M", direccion: "Mushroom Kingdom", telefono: "987654321", email: "luigi@example.com" },
 ];
 
-const mockPacientesData: Paciente[] = [
+export const mockPacientesData: Paciente[] = [ // Exported for use in details page
   {
     id: "paciente-1",
     idPersona: "persona-p1",
@@ -67,6 +68,7 @@ const mockPacientesData: Paciente[] = [
 
 
 export default function PacientesPage() {
+  const router = useRouter(); // Initialize router for navigation
   const [pacienteList, setPacienteList] = React.useState<Paciente[]>(mockPacientesData);
   const [isAddPacienteFormOpen, setIsAddPacienteFormOpen] = React.useState(false);
   const [editingPaciente, setEditingPaciente] = React.useState<Paciente | null>(null);
@@ -176,6 +178,10 @@ export default function PacientesPage() {
         setPacienteToAction(null);
     });
     setIsConfirmDeleteDialogOpen(true);
+  };
+
+  const handleViewDetails = (pacienteId: string) => {
+    router.push(`/gestion-usuario/pacientes/${pacienteId}/detalles`);
   };
 
 const columns: ColumnDef<Paciente>[] = [
@@ -335,7 +341,7 @@ const columns: ColumnDef<Paciente>[] = [
               {paciente.estado === "Activo" ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
               {paciente.estado === "Activo" ? "Desactivar" : "Activar"}
             </DropdownMenuItem>
-             <DropdownMenuItem onClick={() => alert(`Ver detalles de ${paciente.persona.nombre}`)}> {/* Placeholder */}
+             <DropdownMenuItem onClick={() => handleViewDetails(paciente.id)}>
                 <Eye className="mr-2 h-4 w-4" /> Ver Detalles
             </DropdownMenuItem>
           </DropdownMenuContent>
