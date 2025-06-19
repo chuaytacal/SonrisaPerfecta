@@ -200,7 +200,7 @@ export default function PacientesPage() {
   };
 
   const handleViewDetails = (pacienteId: string) => {
-    router.push(`/gestion-usuario/pacientes/${pacienteId}/detalles`);
+    router.push(`/gestion-usuario/pacientes/${pacienteId}/filiacion`);
   };
 
 const columns: ColumnDef<Paciente>[] = [
