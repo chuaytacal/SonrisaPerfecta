@@ -10,7 +10,6 @@ import type { Paciente as PacienteType, Persona, EtiquetaPaciente } from '@/type
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import Odontograma from '@/components/odontograma/Odontograma'; // Assuming Odontograma component exists or will be created
 
 // Define ToothIconCustom locally for error display or import from a shared location if available
 const ToothIconCustomSvg = (props: React.SVGProps<SVGSVGElement>) => (
@@ -84,7 +83,6 @@ export default function OdontogramaPage() {
           onAddTag={handleDummyAddTag}
           patientId={patientId}
         />
-        <Odontograma paciente={paciente} />
       </div>
     </div>
   );
