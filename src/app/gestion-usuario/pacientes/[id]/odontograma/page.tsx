@@ -3,6 +3,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { mockPacientesData } from '@/app/gestion-usuario/pacientes/page';
@@ -11,7 +12,7 @@ import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-// Define ToothIconCustom locally for error display or import from a shared location if available
+// Define ToothIconCustomSvg locally for error display or import from a shared location if available
 const ToothIconCustomSvg = (props: React.SVGProps<SVGSVGElement>) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -29,6 +30,11 @@ const ToothIconCustomSvg = (props: React.SVGProps<SVGSVGElement>) => (
       <path d="M7.25 16.5c.64.92 1.57 1.5 2.58 1.5h4.34c1.01 0 1.94-.58 2.58-1.5"/>
     </svg>
   );
+
+const TeethComponent = dynamic(() => import('@/components/odontograma/Teeth').then(mod => mod.Teeth), {
+  ssr: false,
+  loading: () => <p className="text-center py-10">Cargando Odontograma...</p>
+});
 
 export default function OdontogramaPage() {
   const params = useParams();
@@ -73,7 +79,7 @@ export default function OdontogramaPage() {
   return (
     <div className="flex flex-col lg:flex-row gap-6 p-4 md:p-6 bg-background min-h-screen">
       <ResumenPaciente paciente={paciente} persona={persona} onBack={() => router.push('/gestion-usuario/pacientes')} />
-      <div className="flex-1">
+      <div className="flex-1 space-y-6">
         <EtiquetasNotasSalud
           etiquetas={paciente.etiquetas || []}
           notas={paciente.notas || "Sin notas registradas."}
@@ -83,6 +89,14 @@ export default function OdontogramaPage() {
           onAddTag={handleDummyAddTag}
           patientId={patientId}
         />
+        <Card>
+          <CardHeader>
+            <CardTitle>Odontograma</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TeethComponent />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
