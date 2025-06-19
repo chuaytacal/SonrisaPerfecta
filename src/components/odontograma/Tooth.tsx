@@ -12,27 +12,27 @@ type ToothAProps = {
   dientes: DientesMap;
   onClick: () => void;
   typeTeeth: any;
-  rotated: boolean; // Explicitly boolean
-  reflected: boolean; // Explicitly boolean
+  rotated: boolean;
+  reflected: boolean;
   numTooth: number;
-  scale: number; // Explicitly number
-  separation: number; // Explicitly number
+  scale: number;
+  separation: number;
   rangoSelect: { id: number; numTooth: number; jaw: 'superior' | 'inferior' }[];
 };
 
 export function ToothA({ id, dientes, onClick, typeTeeth, rotated = false, reflected = false, numTooth, scale = 0.25, separation = 50, rangoSelect }: ToothAProps) {
-  const hallazgos = dientes[numTooth] || {}; // Initialize as empty object if no findings
+  const hallazgos = dientes[numTooth] || {};
   const xPos = id * separation;
 
   return (
-    <Group 
+    <Group
       key={`tooth-group-${numTooth}-${id}`} x={xPos+30} y={120}
       scaleX={(reflected ? -1 : 1) * scale}
-      scaleY={(rotated ? -1 : 1) * scale}   
+      scaleY={(rotated ? -1 : 1) * scale}
       offsetX={200 / 2}
       offsetY={350 / 2}
     >
-      <Group 
+      <Group
         onClick={onClick}
         key={`clickable-tooth-${numTooth}`}
       >
@@ -49,7 +49,7 @@ export function ToothA({ id, dientes, onClick, typeTeeth, rotated = false, refle
                 ];
               })()}
             </Group>
-          </>  
+          </>
         )}
         {typeTeeth==2 && (
           <>
@@ -62,7 +62,7 @@ export function ToothA({ id, dientes, onClick, typeTeeth, rotated = false, refle
                 ];
               })()}
             </Group>
-          </>  
+          </>
         )}
         {typeTeeth==3 && (
           <>
@@ -76,7 +76,7 @@ export function ToothA({ id, dientes, onClick, typeTeeth, rotated = false, refle
                 ];
               })()}
             </Group>
-          </>  
+          </>
         )}
         {typeTeeth==4 && (
           <>
@@ -89,7 +89,7 @@ export function ToothA({ id, dientes, onClick, typeTeeth, rotated = false, refle
                 ];
               })()}
             </Group>
-          </>  
+          </>
         )}
         {typeTeeth==5 && (
           <>
@@ -103,7 +103,7 @@ export function ToothA({ id, dientes, onClick, typeTeeth, rotated = false, refle
                 ];
               })()}
             </Group>
-          </>  
+          </>
         )}
       </Group>
 
@@ -112,11 +112,9 @@ export function ToothA({ id, dientes, onClick, typeTeeth, rotated = false, refle
       {rangoSelect?.some(item => Number(item.numTooth) === Number(numTooth)) && (
         <Rect x={0} y={-35} width={200} height={400} fill="rgb(59 130 246 / .5)" opacity={0.5} />
       )}
-  
+
     </Group>
   );
 }
 
 export default ToothA;
-
-    

@@ -2,8 +2,8 @@
 'use client';
 
 import React, { useState }  from 'react';
-import { Group, Rect, Line, Text } from 'react-konva'; // Static imports
-import type { Hallazgo } from './setting';
+import { Group, Rect, Line, Text } from 'react-konva';
+import type { Hallazgo as HallazgoType } from './setting';
 
 export function ShowFaceA() {
   return (
@@ -22,11 +22,10 @@ export function ShowFaceA() {
 export function ShowFaceB() {
     return (
         <Group x={0} y={150}>
-          {/* Diente base (estructura) */}
-          {[ 
-            [10, 10, 70, 70, 70, 130, 10, 190], 
-            [190, 10, 130, 70, 130, 130, 190, 190], 
-            [10, 10, 190, 10, 130, 70, 70, 70], 
+          {[
+            [10, 10, 70, 70, 70, 130, 10, 190],
+            [190, 10, 130, 70, 130, 130, 190, 190],
+            [10, 10, 190, 10, 130, 70, 70, 70],
             [10, 190, 190, 190, 130, 130, 70, 130]
           ].map((pts, i) => (
             <Line key={`showfaceB-line-${i}`} points={pts} fill="white" stroke="black" strokeWidth={3} closed />
@@ -40,10 +39,10 @@ export function ShowFaceB() {
 export function ShowFaceC() {
     return (
         <Group x={0} y={150}>
-              {[ 
-                [10, 10, 70, 70, 70, 130, 10, 190], 
-                [190, 10, 130, 70, 130, 130, 190, 190], 
-                [10, 10, 190, 10, 130, 100, 70, 100], 
+              {[
+                [10, 10, 70, 70, 70, 130, 10, 190],
+                [190, 10, 130, 70, 130, 130, 190, 190],
+                [10, 10, 190, 10, 130, 100, 70, 100],
                 [10, 190, 190, 190, 130, 100, 70, 100]
               ].map((pts, i) => (
                 <Line key={`showfaceC-line-${i}`} points={pts} fill="white" stroke="black" strokeWidth={3} closed />
@@ -52,51 +51,41 @@ export function ShowFaceC() {
     );
 }
 
-type InteractiveFaceProps = { // Renamed Props to InteractiveFaceProps for clarity
-    onSelectCara: (hallazgo: Hallazgo) => void;
+type InteractiveFaceProps = {
+    onSelectCara: (hallazgo: HallazgoType) => void;
 };
-  
-export function InteractiveFace({ onSelectCara }: InteractiveFaceProps) { // Use new prop type name
-    const [filled, setFilled] = useState({
-      M: false, 
-      D: false, 
-      O: false, 
-      C: false, 
-      V: false, 
+
+export function InteractiveFace({ onSelectCara }: InteractiveFaceProps) {
+    const [filled, setFilled] = useState<Record<string, boolean>>({
+      M: false, D: false, O: false, C: false, V: false,
     });
-  
     const [locked, setLocked] = useState(false);
-  
-    const caraLabels: Record<keyof typeof filled, string> = {
-      M: 'Mesial',
-      D: 'Distal',
-      O: 'Oclusal/Incisal',
-      C: 'Cervical',
-      V: 'Vestibular/Lingual',
+
+    const caraLabels: Record<string, string> = {
+      M: 'Mesial', D: 'Distal', O: 'Oclusal/Incisal', C: 'Cervical', V: 'Vestibular/Lingual',
     };
-  
-    const handleClick = (key: keyof typeof filled) => {
+
+    const handleClick = (key: string) => {
       if (locked) return;
-  
+
       setFilled((prev) => ({ ...prev, [key]: true }));
       setLocked(true);
-  
-      const hallazgo: Hallazgo = {
+
+      const hallazgo: HallazgoType = {
         tipo: key,
         abreviatura: key,
-        color: '', // Color will be determined by currentMode in Teeth.tsx
+        color: '',
         nombre: caraLabels[key],
       };
-  
       onSelectCara(hallazgo);
     };
-  
+
     return (
       <Group x={0} y={0}>
         <Line
           key="interactive-M"
           points={[10, 10, 70, 70, 70, 130, 10, 190]}
-          fill={filled.M ? 'hsl(var(--primary))' : 'white'} // Use theme color
+          fill={filled.M ? 'hsl(var(--primary))' : 'white'}
           stroke="black"
           strokeWidth={3}
           closed
@@ -148,5 +137,3 @@ export function InteractiveFace({ onSelectCara }: InteractiveFaceProps) { // Use
       </Group>
     );
   }
-
-    

@@ -2,10 +2,9 @@
 'use client';
 
 import React from 'react';
-import { Group, Line, Circle, Rect, Text, Arrow, Arc, Ellipse } from 'react-konva'; // Static imports
+import { Group, Line, Circle, Rect, Text, Arrow, Arc, Ellipse } from 'react-konva';
 import type { HallazgosPorDiente } from './setting';
 
-// Props type for ToothAnnotations
 interface ToothAnnotationsProps {
   hallazgos: HallazgosPorDiente;
   rotated: boolean;
@@ -15,10 +14,9 @@ interface ToothAnnotationsProps {
 
 export function ToothAnnotations({ hallazgos, rotated, reflected, numTooth }: ToothAnnotationsProps) {
   const b = { x: -5, y: 10, width: 210, height: 350 };
-  
-  // Ensure hallazgos is an object before trying to access properties
+
   if (typeof hallazgos !== 'object' || hallazgos === null) {
-    return null; // Or some default empty rendering
+    return null;
   }
 
   return (
@@ -31,7 +29,7 @@ export function ToothAnnotations({ hallazgos, rotated, reflected, numTooth }: To
       )}
 
       {hallazgos.FD && (
-        <Line points={[b.x + b.width, 45, b.x + 10, 345]} stroke={hallazgos.FD.color} strokeWidth={8} lineCap="round" 
+        <Line points={[b.x + b.width, 45, b.x + 10, 345]} stroke={hallazgos.FD.color} strokeWidth={8} lineCap="round"
         scaleX={(reflected ? -1 : 1)}
         offsetX={(reflected? 200: 0)}
         />
@@ -40,8 +38,8 @@ export function ToothAnnotations({ hallazgos, rotated, reflected, numTooth }: To
         <Group x={5} y={130}>
         <Line
           points={[
-            0, 30, 
-            190, 30 
+            0, 30,
+            190, 30
           ]}
           stroke={hallazgos.SD.color}
           strokeWidth={10}
@@ -102,7 +100,7 @@ export function ToothAnnotations({ hallazgos, rotated, reflected, numTooth }: To
         <Text
           x={50}
           y={45}
-          text={String(numTooth)} 
+          text={String(numTooth)}
           fontSize={70}
           fontFamily="Calibri"
           fill="black"
@@ -337,7 +335,7 @@ export function ToothAnnotations({ hallazgos, rotated, reflected, numTooth }: To
         </Group>
       )}
 
-      {hallazgos.PDCL && hallazgos.PDCL.color && ( 
+      {hallazgos.PDCL && hallazgos.PDCL.color && (
         <Group x={0} y={-70}>
           <Line points={[100, 0, 60, 50, 140, 50]} stroke={hallazgos.PDCL.color} strokeWidth={8} closed />
         </Group>
@@ -357,7 +355,7 @@ export function ToothAnnotations({ hallazgos, rotated, reflected, numTooth }: To
       )}
 
       {hallazgos?.D?.grupo?.[0] === numTooth && (
-        <Group x={200} y={250} 
+        <Group x={200} y={250}
         scaleX={(reflected ? -1 : 1)}
         offsetX={(reflected?-200: 0)}
         >
@@ -375,7 +373,7 @@ export function ToothAnnotations({ hallazgos, rotated, reflected, numTooth }: To
         </Group>
       )}
       {hallazgos?.D?.grupo?.[1] === numTooth && (
-        <Group x={0} y={250} 
+        <Group x={0} y={250}
         scaleX={(reflected ? -1 : 1)}
         offsetX={(reflected? 200: 0)}
         >
@@ -456,8 +454,8 @@ export function ToothAnnotations({ hallazgos, rotated, reflected, numTooth }: To
           <Ellipse
             x={102}
             y={34}
-            radiusX={120} 
-            radiusY={60} 
+            radiusX={120}
+            radiusY={60}
             fill="transparent"
             stroke={hallazgos.F.color}
             strokeWidth={8}
@@ -472,8 +470,8 @@ export function ToothAnnotations({ hallazgos, rotated, reflected, numTooth }: To
           <Ellipse
             x={42}
             y={34}
-            radiusX={120} 
-            radiusY={60} 
+            radiusX={120}
+            radiusY={60}
             fill="transparent"
             stroke={hallazgos.F.color}
             strokeWidth={8}
@@ -483,5 +481,3 @@ export function ToothAnnotations({ hallazgos, rotated, reflected, numTooth }: To
     </>
   );
 }
-
-    
