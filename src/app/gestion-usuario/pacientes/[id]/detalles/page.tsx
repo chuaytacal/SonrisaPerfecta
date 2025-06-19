@@ -55,10 +55,6 @@ const enfermedadesOptions = [
   "Apoplejía", "Accidentes vasculares", "Pérdida de peso"
 ];
 
-const predefinedEtiquetas: EtiquetaPaciente[] = [
-  "Alergia a Penicilina", "Diabético", "Menor de Edad", "Fumador", "Hipertenso", "Covid+", "Postquirúrgico", "Anciano", "Nuevo Tag Ejemplo"
-];
-
 
 const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -93,7 +89,7 @@ const initialAntecedentesState: AntecedentesMedicosData = {
   q5_enfermedades: ["Hipertensión arterial"],
   q6_otraEnfermedad: "No", q6_cual: "N/A",
   q7_medicacionActual: "Sí", q7_cual: "Losartán para la presión",
-  q8_embarazada: "No", q8_semanas: "N/A", // Default based on initial mock, adjust if needed
+  q8_embarazada: "No", q8_semanas: "N/A",
   q9_hipertenso: "Sí",
   q10_ultimaConsultaDental: "Hace 6 meses",
 };
@@ -111,17 +107,26 @@ export default function DetallePacientePage() {
   const [patientAppointments, setPatientAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [currentNotes, setCurrentNotes] = useState<string>("");
-  const [editingNotesText, setEditingNotesText] = useState<string>("");
-  const [isEditingNotes, setIsEditingNotes] = useState<boolean>(false);
-
   const [antecedentesForm, setAntecedentesForm] = useState<AntecedentesMedicosData>(initialAntecedentesState);
-  const [displayedAlergias, setDisplayedAlergias] = useState<string[]>([]);
-  const [displayedEnfermedades, setDisplayedEnfermedades] = useState<string[]>([]);
   const [isAddPacienteFormOpen, setIsAddPacienteFormOpen] = useState(false);
-  const [currentPatientTags, setCurrentPatientTags] = useState<EtiquetaPaciente[]>([]);
-  const [isTagModalOpen, setIsTagModalOpen] = useState(false);
-  const [selectedTagToAdd, setSelectedTagToAdd] = useState<EtiquetaPaciente | "">("");
+
+  // State lifted from EtiquetasNotasSalud
+  const [currentDisplayedNotas, setCurrentDisplayedNotas] = useState<string>("Sin notas registradas.");
+  const [currentDisplayedEtiquetas, setCurrentDisplayedEtiquetas] = useState<EtiquetaPaciente[]>([]);
+  const [currentDisplayedAlergias, setCurrentDisplayedAlergias] = useState<string[]>([]);
+  const [currentDisplayedEnfermedades, setCurrentDisplayedEnfermedades] = useState<string[]>([]);
+
+
+  const deriveAlergiasFromAntecedentes = (antecedentes?: AntecedentesMedicosData): string[] => {
+    if (antecedentes && antecedentes.q3_cuales && antecedentes.q3_alergico === "Sí") {
+      return antecedentes.q3_cuales.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+  };
+
+  const deriveEnfermedadesFromAntecedentes = (antecedentes?: AntecedentesMedicosData): string[] => {
+    return antecedentes?.q5_enfermedades || [];
+  };
 
 
   useEffect(() => {
@@ -129,28 +134,29 @@ export default function DetallePacientePage() {
     if (foundPaciente) {
       setPaciente(foundPaciente);
       setPersona(foundPaciente.persona);
-      setCurrentNotes(foundPaciente.notas || "Sin notas registradas.");
-      setEditingNotesText(foundPaciente.notas || "");
-      setCurrentPatientTags(foundPaciente.etiquetas || []);
+
       const initialFormState = {
-        ...initialAntecedentesState, // Start with general defaults
-        ...(foundPaciente.antecedentesMedicos || {}), // Override with patient-specific if they exist
+        ...initialAntecedentesState,
+        ...(foundPaciente.antecedentesMedicos || {}),
       };
-      // Ensure q5_enfermedades is always an array
       if (!Array.isArray(initialFormState.q5_enfermedades)) {
         initialFormState.q5_enfermedades = foundPaciente.antecedentesMedicos?.q5_enfermedades ? [foundPaciente.antecedentesMedicos.q5_enfermedades as unknown as string] : [];
       }
-
-
       setAntecedentesForm(initialFormState);
-
-      // Initialize displayed alergias/enfermedades from the form state
-      setDisplayedAlergias(initialFormState.q3_cuales && initialFormState.q3_alergico === "Sí" ? initialFormState.q3_cuales.split(',').map(s => s.trim()).filter(Boolean) : []);
-      setDisplayedEnfermedades(initialFormState.q5_enfermedades || []);
+      
+      // Set states that will be passed to EtiquetasNotasSalud
+      setCurrentDisplayedNotas(foundPaciente.notas || "Sin notas registradas.");
+      setCurrentDisplayedEtiquetas(foundPaciente.etiquetas || []);
+      setCurrentDisplayedAlergias(deriveAlergiasFromAntecedentes(foundPaciente.antecedentesMedicos));
+      setCurrentDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(foundPaciente.antecedentesMedicos));
 
     } else {
       setPaciente(null);
       setPersona(null);
+      setCurrentDisplayedNotas("Sin notas registradas.");
+      setCurrentDisplayedEtiquetas([]);
+      setCurrentDisplayedAlergias([]);
+      setCurrentDisplayedEnfermedades([]);
     }
     setLoading(false);
   }, [patientId]);
@@ -182,21 +188,19 @@ export default function DetallePacientePage() {
   };
 
   const handleSaveAntecedentes = () => {
-    // Here you would typically send data to a backend
-    // For now, we'll just update the "displayed" alergias/enfermedades
-    const alergiasArray = antecedentesForm.q3_cuales && antecedentesForm.q3_alergico === "Sí"
-        ? antecedentesForm.q3_cuales.split(',').map(s => s.trim()).filter(Boolean)
-        : [];
-    setDisplayedAlergias(alergiasArray);
-    setDisplayedEnfermedades(antecedentesForm.q5_enfermedades || []);
-
-    // Update mockPacientesData (simulating save)
     const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
-    if (pacienteIndex > -1) {
-        mockPacientesData[pacienteIndex] = {
-            ...mockPacientesData[pacienteIndex],
-            antecedentesMedicos: { ...antecedentesForm }
+    if (pacienteIndex > -1 && paciente) {
+        const updatedAntecedentes = { ...antecedentesForm };
+        const updatedPatient = {
+            ...paciente,
+            antecedentesMedicos: updatedAntecedentes
         };
+        mockPacientesData[pacienteIndex] = updatedPatient;
+        setPaciente(updatedPatient); // Update local paciente state
+        
+        // Update displayed alergias/enfermedades for EtiquetasNotasSalud
+        setCurrentDisplayedAlergias(deriveAlergiasFromAntecedentes(updatedAntecedentes));
+        setCurrentDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(updatedAntecedentes));
     }
 
     toast({
@@ -205,56 +209,70 @@ export default function DetallePacientePage() {
       variant: "default"
     });
   };
-
-  const handleSaveNotes = () => {
-    setCurrentNotes(editingNotesText);
-    // Simulate saving to backend/mock data
-     const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
-    if (pacienteIndex > -1) {
-        mockPacientesData[pacienteIndex].notas = editingNotesText;
-    }
-    setIsEditingNotes(false);
-    toast({ title: "Notas Guardadas", description: "Las notas del paciente han sido actualizadas."});
-  };
-
-  const handleCancelEditNotes = () => {
-    setEditingNotesText(currentNotes === "Sin notas registradas." ? "" : currentNotes);
-    setIsEditingNotes(false);
-  };
   
-  const handleSavePacienteDetails = (updatedPaciente: PacienteType) => {
-    // Update the main paciente state
-    setPaciente(updatedPaciente);
-    if(updatedPaciente.persona) {
-      setPersona(updatedPaciente.persona);
+  const handleUpdateNotesInDetalles = (newNotes: string) => {
+    const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
+    if (pacienteIndex > -1 && paciente) {
+        const updatedPatient = { ...paciente, notas: newNotes };
+        mockPacientesData[pacienteIndex] = updatedPatient;
+        setPaciente(updatedPatient);
+        setCurrentDisplayedNotas(newNotes);
+        toast({ title: "Notas Guardadas", description: "Las notas del paciente han sido actualizadas."});
     }
-    // Update the mock data array (important for persistence across navigations in this mock setup)
-    const index = mockPacientesData.findIndex(p => p.id === updatedPaciente.id);
-    if (index !== -1) {
-      mockPacientesData[index] = updatedPaciente;
+  };
+
+  const handleAddTagInDetalles = (newTag: EtiquetaPaciente) => {
+    const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
+    if (pacienteIndex > -1 && paciente) {
+        if (paciente.etiquetas && paciente.etiquetas.includes(newTag)) {
+            toast({ title: "Etiqueta Duplicada", description: "Esta etiqueta ya existe para el paciente.", variant: "destructive"});
+            return false; // Indicate failure
+        }
+        const newTags = [...(paciente.etiquetas || []), newTag];
+        const updatedPatient = { ...paciente, etiquetas: newTags };
+        mockPacientesData[pacienteIndex] = updatedPatient;
+        setPaciente(updatedPatient);
+        setCurrentDisplayedEtiquetas(newTags);
+        toast({ title: "Etiqueta Agregada", description: `Etiqueta "${newTag}" agregada al paciente.`});
+        return true; // Indicate success
+    }
+    return false;
+  };
+
+
+  const handleSavePacienteDetails = (updatedPacienteFromForm: PacienteType) => {
+    const pacienteIndex = mockPacientesData.findIndex(p => p.id === updatedPacienteFromForm.id);
+    if (pacienteIndex > -1) {
+      const existingPatient = mockPacientesData[pacienteIndex];
+      const fullyUpdatedPatient: PacienteType = {
+        ...existingPatient, 
+        idPersona: updatedPacienteFromForm.persona.id,
+        persona: { ...existingPatient.persona, ...updatedPacienteFromForm.persona },
+        fechaIngreso: updatedPacienteFromForm.fechaIngreso || existingPatient.fechaIngreso,
+        estado: updatedPacienteFromForm.estado || existingPatient.estado,
+        // These should ideally come from the form if editable there, or be preserved.
+        // For now, assuming AddPacienteForm only edits persona and direct paciente fields.
+        notas: updatedPacienteFromForm.notas !== undefined ? updatedPacienteFromForm.notas : existingPatient.notas,
+        etiquetas: updatedPacienteFromForm.etiquetas || existingPatient.etiquetas,
+        antecedentesMedicos: updatedPacienteFromForm.antecedentesMedicos || existingPatient.antecedentesMedicos,
+      };
+
+      mockPacientesData[pacienteIndex] = fullyUpdatedPatient;
+      
+      setPaciente(fullyUpdatedPatient); 
+      setPersona(fullyUpdatedPatient.persona);
+      
+      // Also update derived states for EtiquetasNotasSalud if they changed
+      setCurrentDisplayedNotas(fullyUpdatedPatient.notas || "Sin notas registradas.");
+      setCurrentDisplayedEtiquetas(fullyUpdatedPatient.etiquetas || []);
+      setCurrentDisplayedAlergias(deriveAlergiasFromAntecedentes(fullyUpdatedPatient.antecedentesMedicos));
+      setCurrentDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(fullyUpdatedPatient.antecedentesMedicos));
     }
     setIsAddPacienteFormOpen(false);
     toast({
       title: "Paciente Actualizado",
       description: "Los datos del paciente han sido actualizados.",
     });
-  };
-
-  const handleAddTag = () => {
-    if (selectedTagToAdd && !currentPatientTags.includes(selectedTagToAdd)) {
-      const newTags = [...currentPatientTags, selectedTagToAdd];
-      setCurrentPatientTags(newTags);
-      // Simulate saving to backend/mock data
-      const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
-      if (pacienteIndex > -1) {
-          mockPacientesData[pacienteIndex].etiquetas = newTags;
-      }
-      toast({ title: "Etiqueta Agregada", description: `Etiqueta "${selectedTagToAdd}" agregada al paciente.`});
-      setSelectedTagToAdd(""); // Reset selection
-      setIsTagModalOpen(false);
-    } else if (currentPatientTags.includes(selectedTagToAdd as EtiquetaPaciente)) {
-        toast({ title: "Etiqueta Duplicada", description: "Esta etiqueta ya existe para el paciente.", variant: "destructive"});
-    }
   };
 
 
@@ -396,9 +414,13 @@ export default function DetallePacientePage() {
 
       <div className="flex-1">
         <EtiquetasNotasSalud 
-          etiquetas={paciente.etiquetas}
-          enfermedades={paciente?.antecedentesMedicos?.q5_enfermedades || []}
-          alergias={paciente?.antecedentesMedicos?.q3_cuales?.split(',') || []}
+          etiquetas={currentDisplayedEtiquetas}
+          notas={currentDisplayedNotas}
+          alergias={currentDisplayedAlergias}
+          enfermedades={currentDisplayedEnfermedades}
+          onSaveNotes={handleUpdateNotesInDetalles}
+          onAddTag={handleAddTagInDetalles}
+          patientId={patientId} // Still needed for unique key in map or local modal logic if any
           />
 
         <Tabs defaultValue="datosPersonales" className="w-full">
@@ -460,12 +482,10 @@ export default function DetallePacientePage() {
         <AddPacienteForm
             open={isAddPacienteFormOpen}
             onOpenChange={setIsAddPacienteFormOpen}
-            initialPacienteData={paciente}
+            initialPacienteData={paciente} // Pass the full paciente object
             onPacienteSaved={handleSavePacienteDetails}
         />
       )}
     </div>
   );
 }
-
-
