@@ -19,17 +19,24 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  webpack: (config, { isServer }) => {
-    // Prevent attempting to bundle the 'canvas' module on the client-side.
-    // Konva's Node.js-specific parts might try to require it, but it's not
-    // needed for browser rendering and causes build errors.
-    if (!isServer) {
-      config.resolve.alias['canvas'] = false;
-    }
-
-    // Important: return the modified config
-    return config;
+  experimental: {
+    turbo: {
+      resolveAlias: {
+        // This is to handle the 'canvas' module import by Konva when using Turbopack
+        canvas: './empty.js', 
+      },
+    },
   },
+  // The webpack alias for 'canvas' is typically for Webpack-based builds.
+  // Since Turbopack is being used (as per package.json script),
+  // the experimental.turbo.resolveAlias approach is preferred.
+  // Keeping the Webpack config commented out or removed if Turbopack is the primary target.
+  // webpack: (config, { isServer }) => {
+  //   if (!isServer) {
+  //     config.resolve.alias['canvas'] = false;
+  //   }
+  //   return config;
+  // },
 };
 
 export default nextConfig;
