@@ -2,20 +2,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Stage, Layer, Group } from 'react-konva';
+import { Stage, Layer, Group, Rect, Line, Text, Circle, Arrow, Arc, Ellipse } from 'react-konva'; // Static imports
 import { ChevronDown, ChevronUp, ArrowLeft, ArrowRight, Trash2 } from "lucide-react";
 import ToothA from './Tooth';
-import { 
-    DientesMap, 
-    SettingSupperJaw, 
-    SettingsLowerJaw, 
-    Hallazgos, 
-    CurrentMode, 
-    Hallazgo as HallazgoType, // Renamed import for clarity if Hallazgo is also a value
-    ToothDisplays, 
-    OpenModeal,
-    DetalleHallazgo
-} from './setting';
+import type { DientesMap, Hallazgo as HallazgoType, CurrentMode, ToothDisplays, OpenModeal, DetalleHallazgo } from './setting';
+import { SettingSupperJaw, SettingsLowerJaw, Hallazgos } from './setting';
 import { InteractiveFace } from './ToothFace';
 
 export function Teeth() {
@@ -23,7 +14,7 @@ export function Teeth() {
   const [openDetails, setOpenDetails] = useState<Record<string, boolean>>({});
   const [activeView, setActiveView] = useState<'agregar' | 'eliminar'>('agregar');
   const [toModal, setToModal] = useState<OpenModeal>({
-    selectedTooth: null,
+    selectedTooth: null, // Initialize as null
     code: '',
     to: ''
   });
@@ -64,10 +55,9 @@ export function Teeth() {
       const currentDisplay = toothDisplays[toothNumber];
       let shouldClearDisplay = false;
       if (currentDisplay) {
-        if (hallazgoData.abreviatura === currentDisplay.abreviatura) {
+        // Check if the display to clear matches the main hallazgo or any of its details
+        if (hallazgoData.abreviatura === currentDisplay.abreviatura || (hallazgoData.detalle && hallazgoData.detalle.some(d => d.abreviatura === currentDisplay.abreviatura)) ) {
             shouldClearDisplay = true;
-        } else if (hallazgoData.detalle) {
-            // This logic might need to be more robust if a detail was specifically displayed
         }
       }
 
@@ -82,9 +72,12 @@ export function Teeth() {
       setDientes((prev) => {
         const nuevo = { ...prev };
         if (nuevo[toothNumber]) {
-          delete nuevo[toothNumber][code];
-          if (Object.keys(nuevo[toothNumber]).length === 0) {
+          const updatedToothHallazgos = { ...nuevo[toothNumber] };
+          delete updatedToothHallazgos[code];
+          if (Object.keys(updatedToothHallazgos).length === 0) {
             delete nuevo[toothNumber];
+          } else {
+            nuevo[toothNumber] = updatedToothHallazgos;
           }
         }
         return nuevo;
@@ -93,96 +86,104 @@ export function Teeth() {
   }, [dientes, toothDisplays]);
 
   const confirmarEliminacionGrupo = useCallback(() => {
-    if (!toModal || !Array.isArray(toModal.group) || !toModal.code) {
+    if (!toModal || !Array.isArray(toModal.group) || !toModal.code || toModal.selectedTooth === null) {
       setToModal({ selectedTooth: null, code: '', to: '' });
       return;
     }
     const { code, group } = toModal;
 
-    setDientes((prev) => {
-      const nuevo = { ...prev };
+    setDientes((prevDientes) => {
+      const nuevosDientes = { ...prevDientes };
       for (const dienteNum of group) {
-        if (nuevo[dienteNum] && nuevo[dienteNum][code]) {
-          delete nuevo[dienteNum][code];
-          if (Object.keys(nuevo[dienteNum]).length === 0) {
-            delete nuevo[dienteNum];
+        if (nuevosDientes[dienteNum] && nuevosDientes[dienteNum][code]) {
+          const updatedToothHallazgos = { ...nuevosDientes[dienteNum] };
+          delete updatedToothHallazgos[code];
+          
+          setToothDisplays(prevDisplays => {
+            const newDisplays = {...prevDisplays};
+            if(newDisplays[dienteNum]?.abreviatura === Hallazgos.find(h => h.tipo === code)?.abreviatura) {
+                delete newDisplays[dienteNum];
+            }
+            return newDisplays;
+          });
+
+          if (Object.keys(updatedToothHallazgos).length === 0) {
+            delete nuevosDientes[dienteNum];
+          } else {
+            nuevosDientes[dienteNum] = updatedToothHallazgos;
           }
         }
       }
-      return nuevo;
+      return nuevosDientes;
     });
 
     setToModal({ selectedTooth: null, code: '', to: '' });
-  }, [toModal]);
+  }, [toModal, setDientes, setToothDisplays]);
 
   const cancelarEliminacionGrupo = useCallback(() => {
     setToModal({ selectedTooth: null, code: '', to: '' });
   }, []);
 
   const handleRemoveToothCodeDetalle = useCallback((toothNumber: number, code: string, idx: number) => {
-    const currentToothDisplay = toothDisplays[toothNumber];
-    const currentDientesForTooth = dientes[toothNumber];
-    const currentCodeData = currentDientesForTooth?.[code];
-    const currentDetalleArray = currentCodeData?.detalle;
-
-    if (currentDetalleArray && currentDetalleArray[idx]?.abreviatura === currentToothDisplay?.abreviatura) {
-        let newDataAbbr = '';
-        if (currentDetalleArray[idx - 1]) {
-            newDataAbbr = currentDetalleArray[idx - 1].abreviatura;
-        } else if (currentDetalleArray[idx + 1]) {
-            newDataAbbr = currentDetalleArray[idx + 1].abreviatura;
-        }
-        
-        const mainHallazgo = Hallazgos.find(h => h.tipo === code);
-        let newColor = currentToothDisplay?.color || currentMode.color;
-
-        if (newDataAbbr === '') {
-            if (mainHallazgo?.abreviatura) {
-                newDataAbbr = mainHallazgo.abreviatura;
-                newColor = mainHallazgo.color || currentMode.color;
-            }
+    setDientes((prevDientes) => {
+        const dienteActual = prevDientes[toothNumber];
+        if (!dienteActual || !dienteActual[code] || !Array.isArray(dienteActual[code].detalle)) {
+            return prevDientes;
         }
 
-        setToothDisplays((prev) => {
-            const nuevo = { ...prev };
-            if (newDataAbbr !== '') {
-                nuevo[toothNumber] = { ...(nuevo[toothNumber] || {} as ToothDisplays), abreviatura: newDataAbbr, color: newColor };
-            } else if (nuevo[toothNumber]) {
-                 delete nuevo[toothNumber];
+        const detalleActual = dienteActual[code].detalle![idx];
+        const nuevosDetalles = dienteActual[code].detalle!.filter((_, i) => i !== idx);
+
+        // Si el detalle eliminado era el que se estaba mostrando, actualizar el display
+        if (toothDisplays[toothNumber]?.abreviatura === detalleActual?.abreviatura) {
+            let nuevaAbreviaturaDisplay = Hallazgos.find(h => h.tipo === code)?.abreviatura || ''; // Fallback a la abreviatura principal
+            let nuevoColorDisplay = Hallazgos.find(h => h.tipo === code)?.color || currentMode.color;
+
+            if (nuevosDetalles.length > 0) {
+                // Podríamos elegir el primer detalle restante, o la abreviatura principal si no hay más detalles
+                nuevaAbreviaturaDisplay = nuevosDetalles[0].abreviatura;
+                // El color para un detalle específico usualmente hereda del hallazgo principal o del currentMode
+                // Aquí asumimos que el color no cambia drásticamente, o se usa el color del hallazgo principal
             }
-            return nuevo;
-        });
-    }
-
-    setDientes((prev) => {
-        const prevToothData = prev[toothNumber];
-        if (!prevToothData) return prev;
-
-        const prevCodeData = prevToothData[code];
-        if (!prevCodeData || !Array.isArray(prevCodeData.detalle)) return prev;
-
-        const newDetalle = prevCodeData.detalle.filter((_, i) => i !== idx);
+            
+            if (nuevaAbreviaturaDisplay) {
+                 setToothDisplays(prevDisplays => ({
+                    ...prevDisplays,
+                    [toothNumber]: { abreviatura: nuevaAbreviaturaDisplay, color: nuevoColorDisplay },
+                }));
+            } else {
+                setToothDisplays(prevDisplays => {
+                    const newDisplays = {...prevDisplays};
+                    delete newDisplays[toothNumber];
+                    return newDisplays;
+                });
+            }
+        }
 
         return {
-            ...prev,
+            ...prevDientes,
             [toothNumber]: {
-                ...prevToothData,
+                ...dienteActual,
                 [code]: {
-                    ...prevCodeData,
-                    detalle: newDetalle.length > 0 ? newDetalle : undefined,
+                    ...dienteActual[code],
+                    detalle: nuevosDetalles.length > 0 ? nuevosDetalles : undefined,
                 },
             },
         };
     });
-  }, [dientes, toothDisplays, currentMode.color]);
+  }, [dientes, toothDisplays, currentMode.color, setDientes, setToothDisplays]);
 
   const handleToothClick = useCallback((toothNum: number, id: number, jaw: 'superior' | 'inferior') => {
+    if (currentMode.position === -1 || !Hallazgos[currentMode.position]) return;
+
+    const hallazgoDefinition = Hallazgos[currentMode.position];
+    if (!hallazgoDefinition) return;
+    
+    const { tipo, denominacion, abreviatura, detalle: detallesHallazgoDefinition, color: hallazgoColorDef } = hallazgoDefinition;
+    const effectiveColor = hallazgoColorDef === '' ? currentMode.color : hallazgoColorDef;
+
+
     if (activeView === 'agregar') {
-      if (currentMode.position === -1 || !Hallazgos[currentMode.position]) return;
-
-      const hallazgoSeleccionado = Hallazgos[currentMode.position];
-      const { tipo, denominacion, abreviatura, detalle: detallesHallazgo, color } = hallazgoSeleccionado;
-
       if (['AOF', 'AOR', 'ET', 'PDPF', 'PDC', 'PDPR'].includes(tipo)) {
         setRangoSeleccion((prev) => {
           const nuevoElemento = { id, numTooth: toothNum, jaw };
@@ -192,78 +193,71 @@ export function Teeth() {
         });
       } else if (['D', 'F', 'PDS', 'TD'].includes(tipo)) {
         const dentalArch = jaw === 'superior' ? SettingSupperJaw : SettingsLowerJaw;
-        const nextId = dentalArch[id + 1] ? id + 1 : (dentalArch[id - 1] ? id - 1 : -1);
-        if (nextId === -1) return;
-        const nextToothItem = dentalArch[nextId];
-        if (nextToothItem && typeof nextToothItem.number === 'number') { 
+        const nextItemIndex = dentalArch[id + 1] ? id + 1 : (dentalArch[id - 1] ? id - 1 : -1);
+        if (nextItemIndex === -1) return;
+        const nextToothItem = dentalArch[nextItemIndex];
+        if (nextToothItem && typeof nextToothItem.number === 'number') {
           setRangoSeleccion([
             { id: id, numTooth: toothNum, jaw },
-            { id: nextId, numTooth: nextToothItem.number, jaw }
+            { id: nextItemIndex, numTooth: nextToothItem.number, jaw }
           ]);
         }
       } else {
         setDientes((prevDientes) => {
           const currentToothState = prevDientes[toothNum] || {};
           const selectedDetailIndex = currentMode.detalle;
-          const hallazgoDetallesArray: DetalleHallazgo[] = Array.isArray(detallesHallazgo) ? detallesHallazgo : [];
-
-          let currentDetailsForHallazgo: DetalleHallazgo[] = currentToothState[tipo]?.detalle || [];
-          let newDetailsArrayForHallazgoImmutable = [...currentDetailsForHallazgo];
-
-          if (selectedDetailIndex !== -1 && hallazgoDetallesArray[selectedDetailIndex]) {
-            const detailToAdd = hallazgoDetallesArray[selectedDetailIndex];
-            const detailAbreviatura = detailToAdd.tipo; 
-            const detailNombre = detailToAdd.denominacion;
-            const yaExiste = newDetailsArrayForHallazgoImmutable.some(d => d.abreviatura === detailAbreviatura);
-            if (!yaExiste) {
-              newDetailsArrayForHallazgoImmutable = [...newDetailsArrayForHallazgoImmutable, { abreviatura: detailAbreviatura, nombre: detailNombre }];
+          const hallazgoDefDetallesArray: DetalleHallazgo[] = Array.isArray(detallesHallazgoDefinition) ? detallesHallazgoDefinition : [];
+          
+          let detalleParaGuardar: DetalleHallazgo[] | undefined = currentToothState[tipo]?.detalle || undefined;
+          let displayAbreviatura = abreviatura;
+          
+          if (selectedDetailIndex !== -1 && hallazgoDefDetallesArray[selectedDetailIndex]) {
+            const detailToAdd = hallazgoDefDetallesArray[selectedDetailIndex];
+            const existingDetails = detalleParaGuardar || [];
+            const detailAlreadyExists = existingDetails.some(d => d.abreviatura === detailToAdd.tipo);
+            if (!detailAlreadyExists) {
+                 detalleParaGuardar = [...existingDetails, { abreviatura: detailToAdd.tipo, nombre: detailToAdd.denominacion }];
             }
+            displayAbreviatura = detailToAdd.tipo;
           }
 
-          const finalColor = color === '' ? currentMode.color : color;
+
           let nuevoValor: HallazgoType = {
             tipo: tipo,
-            color: finalColor,
+            color: effectiveColor,
             nombre: denominacion,
             abreviatura: abreviatura,
-            ...(newDetailsArrayForHallazgoImmutable.length > 0 && { detalle: newDetailsArrayForHallazgoImmutable }),
+            ...(detalleParaGuardar && { detalle: detalleParaGuardar }),
           };
 
           if (currentMode.direccion) nuevoValor.direccion = currentMode.direccion;
-
-          if (newDetailsArrayForHallazgoImmutable.length > 0 && selectedDetailIndex !== -1 && hallazgoDetallesArray[selectedDetailIndex] && !['RT', 'RD', 'LCD'].includes(tipo)) {
-             setToothDisplays(prevDisplays => ({
-              ...prevDisplays,
-              [toothNum]: { abreviatura: hallazgoDetallesArray[selectedDetailIndex].tipo, color: finalColor },
-            }));
-          } else if (abreviatura !== '') {
-            setToothDisplays(prevDisplays => ({
-              ...prevDisplays,
-              [toothNum]: { abreviatura: abreviatura, color: finalColor },
-            }));
-          }
           
-          if(currentMode.cara && ['RT', 'RD', 'LCD'].includes(tipo)) {
+          if (currentMode.cara && ['RT', 'RD', 'LCD'].includes(tipo)) {
             const caraAAgregar = currentMode.cara;
             let carasExistentes: HallazgoType[] = currentToothState[tipo]?.cara || [];
             const caraYaExiste = carasExistentes.some(c => c.tipo === caraAAgregar.tipo);
             
             let nuevasCaras;
             if(!caraYaExiste){
-                nuevasCaras = [...carasExistentes, {...caraAAgregar, color: finalColor}];
+                nuevasCaras = [...carasExistentes, {...caraAAgregar, color: effectiveColor}];
             } else {
-                nuevasCaras = carasExistentes.map(c => c.tipo === caraAAgregar.tipo ? {...c, color: finalColor} : c);
+                nuevasCaras = carasExistentes.map(c => c.tipo === caraAAgregar.tipo ? {...c, color: effectiveColor} : c);
             }
             nuevoValor.cara = nuevasCaras;
-
-            if (abreviatura) {
-                setToothDisplays(prevDisplays_1 => ({
-                ...prevDisplays_1,
-                [toothNum]: { abreviatura: abreviatura, color: finalColor },
-                }));
-            }
           }
 
+          if (displayAbreviatura) {
+            setToothDisplays(prevDisplays => ({
+              ...prevDisplays,
+              [toothNum]: { abreviatura: displayAbreviatura, color: effectiveColor },
+            }));
+          } else if (abreviatura){
+             setToothDisplays(prevDisplays => ({
+              ...prevDisplays,
+              [toothNum]: { abreviatura: abreviatura, color: effectiveColor },
+            }));
+          }
+          
           return {
             ...prevDientes,
             [toothNum]: {
@@ -274,13 +268,13 @@ export function Teeth() {
         });
 
         if (['RT', 'RD', 'LCD'].includes(tipo)) {
-          setToModal({ selectedTooth: toothNum, code: tipo, to: 'toToothFace', detalle: detallesHallazgo });
+          setToModal({ selectedTooth: toothNum, code: tipo, to: 'toToothFace', detalle: Array.isArray(detallesHallazgoDefinition) ? detallesHallazgoDefinition : [] });
         }
       }
     } else if (activeView === 'eliminar') {
       setSelectedTooth(toothNum);
     }
-  }, [activeView, currentMode, dientes, toothDisplays, Hallazgos, SettingSupperJaw, SettingsLowerJaw]); 
+  }, [activeView, currentMode, setRangoSeleccion, setDientes, setToothDisplays, setToModal]); 
 
   useEffect(() => {
     if (rangoSeleccion.length === 2) {
@@ -288,73 +282,73 @@ export function Teeth() {
         setRangoSeleccion([]);
         return;
       }
-      const { tipo, denominacion, abreviatura, detalle: detallesHallazgo, color } = Hallazgos[currentMode.position];
-      if (!rangoSeleccion[0]) {
+      const hallazgoDefinition = Hallazgos[currentMode.position];
+      if (!hallazgoDefinition) {
+          setRangoSeleccion([]); return;
+      }
+      const { tipo, denominacion, abreviatura, detalle: detallesHallazgoDefinition, color: hallazgoColorDef } = hallazgoDefinition;
+      const effectiveColor = hallazgoColorDef === '' ? currentMode.color : hallazgoColorDef;
+      
+      if (!rangoSeleccion[0] || !rangoSeleccion[1]) {
         setRangoSeleccion([]); return;
       }
       const dentalArch = rangoSeleccion[0].jaw === 'superior' ? SettingSupperJaw : SettingsLowerJaw;
 
-      setDientes((prev) => {
-        const nuevo = { ...prev };
+      setDientes((prevDientes) => {
+        const nuevosDientes = { ...prevDientes };
         const group: number[] = [];
-        if (!rangoSeleccion[0] || !rangoSeleccion[1]) return prev;
         const inicio = Math.min(rangoSeleccion[0].id, rangoSeleccion[1].id);
         const fin = Math.max(rangoSeleccion[0].id, rangoSeleccion[1].id);
 
         for (let i = inicio; i <= fin; i++) {
           const tooth = dentalArch[i];
-          if (tooth && typeof tooth.number === 'number' && (!nuevo[tooth.number]?.[tipo] || ['D', 'F', 'PDS', 'TD'].includes(tipo))) {
+          if (tooth && typeof tooth.number === 'number' && (!nuevosDientes[tooth.number]?.[tipo] || ['D', 'F', 'PDS', 'TD'].includes(tipo))) {
             group.push(tooth.number);
           }
         }
 
+        let detalleParaGuardar: DetalleHallazgo[] | undefined = undefined;
+        const hallazgoDefDetallesArray: DetalleHallazgo[] = Array.isArray(detallesHallazgoDefinition) ? detallesHallazgoDefinition : [];
+        if (currentMode.detalle !== -1 && hallazgoDefDetallesArray[currentMode.detalle]) {
+          detalleParaGuardar = [{ 
+            abreviatura: hallazgoDefDetallesArray[currentMode.detalle].tipo, 
+            nombre: hallazgoDefDetallesArray[currentMode.detalle].denominacion 
+          }];
+        }
+        
         for (let toothNumber of group) {
-          const hallazgoDetallesArray = Array.isArray(detallesHallazgo) ? detallesHallazgo : [];
-          const selectedDetailDataArray: DetalleHallazgo[] = (currentMode.detalle !== -1 && hallazgoDetallesArray[currentMode.detalle])
-            ? [{ abreviatura: hallazgoDetallesArray[currentMode.detalle].tipo, nombre: hallazgoDetallesArray[currentMode.detalle].denominacion }]
-            : [];
-          
-          nuevo[toothNumber] = {
-            ...(nuevo[toothNumber] || {}),
+          nuevosDientes[toothNumber] = {
+            ...(nuevosDientes[toothNumber] || {}),
             [tipo]: {
               tipo: tipo,
-              color: color === '' ? currentMode.color : color,
+              color: effectiveColor,
               nombre: denominacion,
               grupo: group,
               abreviatura: abreviatura,
-              detalle: selectedDetailDataArray.length > 0 ? selectedDetailDataArray : undefined,
+              detalle: detalleParaGuardar,
             }
           };
         }
-        return nuevo;
+        return nuevosDientes;
       });
       setRangoSeleccion([]);
     }
-  }, [rangoSeleccion, currentMode, Hallazgos, SettingSupperJaw, SettingsLowerJaw]);
-
-  useEffect(() => {
-    console.log('Dientes state updated:', dientes);
-  }, [dientes]);
-  useEffect(() => {
-    console.log('ToModal state updated:', toModal);
-  }, [toModal]);
-  useEffect(() => {
-    console.log('Current mode:',currentMode); 
-  }, [currentMode]);
+  }, [rangoSeleccion, currentMode, setDientes, setRangoSeleccion]);
 
   const handleSaveFaceSelection = useCallback(() => {
     if(toModal.selectedTooth !== null && toModal.code && currentMode.cara){
+        const toothNum = toModal.selectedTooth;
+        const code = toModal.code;
+        const baseHallazgoInfo = Hallazgos.find(h => h.tipo === code); 
+        const effectiveColor = baseHallazgoInfo?.color === '' ? currentMode.color : (baseHallazgoInfo?.color || currentMode.color);
+
         setDientes(prevDientes => {
-            const toothNum = toModal.selectedTooth as number;
-            const code = toModal.code;
             const currentToothState = prevDientes[toothNum] || {};
-            const baseHallazgoInfo = Hallazgos.find(h => h.tipo === code); 
-            
             const hallazgoActual = currentToothState[code] || {
                 tipo: code,
                 nombre: baseHallazgoInfo?.denominacion || '',
                 abreviatura: baseHallazgoInfo?.abreviatura || '',
-                color: currentMode.color, 
+                color: effectiveColor, 
             };
             
             let carasExistentes: HallazgoType[] = hallazgoActual.cara || [];
@@ -364,23 +358,22 @@ export function Teeth() {
             let nuevasCaras;
             if(caraYaExisteIndex !== -1){
                 nuevasCaras = carasExistentes.map((c, index) => 
-                    index === caraYaExisteIndex ? { ...c, color: caraAAgregar.color || currentMode.color } : c
+                    index === caraYaExisteIndex ? { ...c, color: caraAAgregar.color || effectiveColor } : c
                 );
             } else {
-                nuevasCaras = [...carasExistentes, {...caraAAgregar, color: caraAAgregar.color || currentMode.color }];
+                nuevasCaras = [...carasExistentes, {...caraAAgregar, color: caraAAgregar.color || effectiveColor }];
             }
             
             const hallazgoActualizado : HallazgoType = {
                 ...hallazgoActual, 
-                tipo: code, 
-                color: currentMode.color, 
+                color: effectiveColor, 
                 cara: nuevasCaras,
             };
 
             if (baseHallazgoInfo?.abreviatura) {
                  setToothDisplays(prevDisplays => ({
                     ...prevDisplays,
-                    [toothNum]: { abreviatura: baseHallazgoInfo.abreviatura, color: currentMode.color },
+                    [toothNum]: { abreviatura: baseHallazgoInfo.abreviatura, color: effectiveColor },
                 }));
             }
 
@@ -394,11 +387,11 @@ export function Teeth() {
         });
     }
     setToModal({ selectedTooth: null, code: '', to: '' });
-    setCurrentMode(prev => ({...prev, cara: undefined, detalle: -1})); 
-  }, [toModal, currentMode, Hallazgos]);
+    setCurrentMode(prev => ({...prev, cara: undefined, detalle: -1}));
+  }, [toModal, currentMode, setDientes, setToothDisplays, setCurrentMode, setToModal]);
 
   if (!isClient) {
-    return <p className="text-center py-10">Cargando Odontograma...</p>; // Or a skeleton loader
+    return <p className="text-center py-10">Cargando Odontograma...</p>;
   }
 
   return (
@@ -409,7 +402,7 @@ export function Teeth() {
           {SettingSupperJaw.map((setting, idx) => (
             <div
               key={`supper-display-${idx}`}
-              onClick={() => setSelectedTooth(setting.number)}
+              onClick={() => activeView === 'eliminar' && setSelectedTooth(setting.number)}
               className="bg-gray-200 m-0.5 p-1 text-center cursor-pointer h-8 w-10 md:h-10 md:w-12 text-xs md:text-sm flex items-center justify-center"
               style={{ width: 'auto', minWidth: '40px', color: toothDisplays[setting.number]?.color || 'inherit' }}
             >
@@ -461,7 +454,7 @@ export function Teeth() {
           {SettingsLowerJaw.map((setting, idx) => (
             <div
               key={`lower-display-${idx}`}
-              onClick={() => setSelectedTooth(setting.number)}
+              onClick={() => activeView === 'eliminar' && setSelectedTooth(setting.number)}
               className="bg-gray-200 m-0.5 p-1 text-center cursor-pointer h-8 w-10 md:h-10 md:w-12 text-xs md:text-sm flex items-center justify-center"
               style={{ width: 'auto', minWidth: '40px', color: toothDisplays[setting.number]?.color || 'inherit' }}
             >
@@ -477,8 +470,8 @@ export function Teeth() {
           <button
             onClick={() => {
               setActiveView('agregar');
-              setSelectedTooth(null);
-              setRangoSeleccion([]);
+              setSelectedTooth(null); 
+              setRangoSeleccion([]); 
             }}
             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${activeView === 'agregar' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
@@ -488,7 +481,7 @@ export function Teeth() {
           <button
             onClick={() => {
               setActiveView('eliminar');
-              setRangoSeleccion([]);
+              setRangoSeleccion([]); 
             }}
             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${activeView === 'eliminar' ? 'bg-destructive text-destructive-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
@@ -506,9 +499,9 @@ export function Teeth() {
 
                 Object.entries(Hallazgos).forEach(([key, hallazgo]) => {
                   if (['RD', 'RT', 'LCD'].includes(hallazgo.tipo)) {
-                    tiposEspeciales.push([key, hallazgo]);
+                    tiposEspeciales.push([key, hallazgo as HallazgoType]);
                   } else {
-                    tiposNormales.push([key, hallazgo]);
+                    tiposNormales.push([key, hallazgo as HallazgoType]);
                   }
                 });
 
@@ -520,25 +513,24 @@ export function Teeth() {
                         <div className="flex flex-wrap gap-1.5">
                           {tiposEspeciales.map(([key, hallazgo]) => {
                             let effectiveColor = hallazgo.color;
-                            if (hallazgo.color === '') {
-                                if (hallazgo.tipo === 'LCD') effectiveColor = '#E40000';
-                                else if (hallazgo.tipo === 'RD') effectiveColor = '#0880D7'; // Defaulting RD to blue if empty for example
+                            if (hallazgo.color === '') { 
+                                if (hallazgo.tipo === 'LCD') effectiveColor = '#E40000'; 
+                                else if (hallazgo.tipo === 'RD') effectiveColor = '#0880D7'; 
                                 else if (hallazgo.tipo === 'RT') effectiveColor = '#E40000';
                             }
                             
                             let colorClass = "";
                             if (effectiveColor === '#E40000') colorClass = "text-red-600 border-red-500 hover:bg-red-50 focus:bg-red-100";
                             else if (effectiveColor === '#0880D7') colorClass = "text-blue-600 border-blue-500 hover:bg-blue-50 focus:bg-blue-100";
-                            // Add more color conditions if necessary
                             
                             return (
                               <button
                                 key={key}
                                 onClick={() => setCurrentMode({
                                   position: Number(key),
-                                  color: effectiveColor || '#0880D7', // Fallback color
-                                  detalle: hallazgo.detalle && hallazgo.detalle.length > 0 ? 0 : -1,
-                                  cara: undefined, // Reset cara when selecting a new general finding
+                                  color: effectiveColor || '#0880D7', 
+                                  detalle: hallazgo.detalle && hallazgo.detalle.length > 0 ? 0 : -1, 
+                                  cara: undefined, 
                                 })}
                                 className={`px-2 py-1 rounded border text-xs font-medium transition-all ${colorClass} ${currentMode?.position === Number(key) ? (effectiveColor === '#E40000' ? 'bg-red-50 ring-1 ring-red-500' : 'bg-blue-50 ring-1 ring-blue-500') : 'bg-background'
                                   }`}
@@ -558,7 +550,7 @@ export function Teeth() {
                             <div
                               className={`flex items-center p-1.5 cursor-pointer hover:bg-muted/50 rounded-t-md transition-colors ${currentMode?.position === Number(key) ? 'bg-muted' : ''
                                 }`}
-                              onClick={() => setCurrentMode({ position: Number(key), color: hallazgo.color === '' ? currentMode.color || '#0880D7' : hallazgo.color, detalle: hallazgo.detalle && hallazgo.detalle.length > 0 ? 0 : -1, cara: undefined })}
+                              onClick={() => setCurrentMode({ position: Number(key), color: hallazgo.color === '' ? (currentMode.color || '#0880D7') : (hallazgo.color || '#0880D7'), detalle: hallazgo.detalle && hallazgo.detalle.length > 0 ? 0 : -1, cara: undefined })}
                             >
                               <span className="font-medium text-foreground flex-1">{hallazgo.denominacion}</span>
                               {(hallazgo.color === '' || (hallazgo.detalle && hallazgo.detalle.length > 0) || hallazgo.tipo === 'GI') && (
@@ -586,13 +578,13 @@ export function Teeth() {
                                     <button onClick={() => setCurrentMode((prev) => ({ ...prev, color: '#0880D7' }))} className={`flex items-center p-1 rounded-md text-xs transition-colors hover:bg-blue-100/50 ${currentMode?.color === '#0880D7' && currentMode.position === Number(key) ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-500' : 'text-muted-foreground'}`} title="Buen estado"><div className="w-3 h-3 mr-1.5 rounded-full bg-blue-500 border border-blue-600"></div>Buen Estado</button>
                                   </div>
                                 )}
-                                {hallazgo.detalle && hallazgo.detalle.length > 0 && (
+                                {Array.isArray(hallazgo.detalle) && hallazgo.detalle.length > 0 && (
                                   <div className="flex flex-wrap gap-1 my-1">
                                     {hallazgo.detalle.map((item, idx) => (
                                       <button
                                         key={idx}
-                                        onClick={() => setCurrentMode(prev => ({ ...prev, position: Number(key), detalle: idx, color: hallazgo.color === '' ? prev.color || '#0880D7' : hallazgo.color || '#0880D7' }))}
-                                        className={`px-1.5 py-0.5 rounded border text-[10px] leading-tight transition-colors ${currentMode?.detalle === idx && currentMode.position === Number(key) ? (hallazgo.color === '' ? (currentMode.color === '#0880D7' ? 'bg-blue-100 border-blue-500 text-blue-700 ring-1 ring-blue-400' : 'bg-red-100 border-red-500 text-red-700 ring-1 ring-red-400') : (hallazgo.color === '#0880D7' ? 'bg-blue-100 border-blue-500 text-blue-700 ring-1 ring-blue-400' : 'bg-red-100 border-red-500 text-red-700 ring-1 ring-red-400'))) : 'bg-background hover:bg-muted border-border text-foreground/80'}`}
+                                        onClick={() => setCurrentMode(prev => ({ ...prev, position: Number(key), detalle: idx, color: hallazgo.color === '' ? (prev.color || '#0880D7') : (hallazgo.color || '#0880D7') }))}
+                                        className={`px-1.5 py-0.5 rounded border text-[10px] leading-tight transition-colors ${currentMode?.detalle === idx && currentMode.position === Number(key) ? (hallazgo.color === '' ? (currentMode.color === '#0880D7' ? 'bg-blue-100 border-blue-500 text-blue-700 ring-1 ring-blue-400' : 'bg-red-100 border-red-500 text-red-700 ring-1 ring-red-400') : ((hallazgo.color || currentMode.color) === '#0880D7' ? 'bg-blue-100 border-blue-500 text-blue-700 ring-1 ring-blue-400' : 'bg-red-100 border-red-500 text-red-700 ring-1 ring-red-400'))) : 'bg-background hover:bg-muted border-border text-foreground/80'}`}
                                       >{item.abreviatura || item.tipo}</button>
                                     ))}
                                   </div>
@@ -608,12 +600,11 @@ export function Teeth() {
               })()}
             </div>
           </div>
-        ) : (
+        ) : ( 
           <div className="h-full">
-            {selectedTooth !== null ? (
+            {selectedTooth !== null && dientes[selectedTooth] && Object.keys(dientes[selectedTooth]).length > 0 ? (
               <div className="p-1 space-y-1.5 max-h-[70vh] overflow-y-auto pr-1">
-                {dientes[selectedTooth] && Object.keys(dientes[selectedTooth]).length > 0 ? (
-                  Object.entries(dientes[selectedTooth]).map(([code, hallazgoData]) => (
+                {Object.entries(dientes[selectedTooth]).map(([code, hallazgoData]) => (
                     <div key={code} className="p-1.5 bg-card border border-border rounded-md shadow-sm text-xs">
                       <div onClick={() => handleRemoveToothCode(selectedTooth, code)} className="flex items-center justify-between p-1 font-medium text-foreground rounded-t-md cursor-pointer hover:bg-destructive/10 transition-colors" title="Click para eliminar toda la condición">
                         <span>{hallazgoData.nombre}</span>
@@ -631,7 +622,7 @@ export function Teeth() {
                       )}
                        {hallazgoData.cara && hallazgoData.cara.length > 0 && (
                             <div className="mt-1 pt-1 border-t border-border">
-                                <span className="text-xs text-muted-foreground">Caras afectadas: </span>
+                                <span className="text-xs text-muted-foreground">Caras afectadas: </span> 
                                 {hallazgoData.cara.map((caraItem, caraIdx) => (
                                     <span key={caraIdx} className="text-xs font-medium p-0.5 bg-gray-200 rounded mr-1" style={{ color: caraItem.color || hallazgoData.color }}>
                                         {caraItem.abreviatura || caraItem.tipo}
@@ -640,13 +631,12 @@ export function Teeth() {
                             </div>
                         )}
                     </div>
-                  ))
-                ) : (
-                  <div className="p-4 text-center text-muted-foreground text-sm">Diente sin hallazgos.</div>
-                )}
+                  ))}
               </div>
             ) : (
-              <div className="p-4 text-center text-muted-foreground text-sm h-full flex items-center justify-center">Seleccione un diente para ver o eliminar hallazgos.</div>
+              <div className="p-4 text-center text-muted-foreground text-sm h-full flex items-center justify-center">
+                {selectedTooth === null ? "Seleccione un diente para ver o eliminar hallazgos." : "Diente sin hallazgos."}
+              </div>
             )}
           </div>
         )}
