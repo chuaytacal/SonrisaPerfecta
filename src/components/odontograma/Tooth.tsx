@@ -2,15 +2,15 @@
 'use client';
 
 import React from 'react';
-import { Group, Rect, Line, Text, Circle, Arrow, Arc, Ellipse } from 'react-konva'; // Static imports
+import { Group, Rect, Line, Text, Circle, Arrow, Arc, Ellipse } from 'react-konva';
 import { ToothAnnotations } from './ToothAnnotations';
-import type { DientesMap } from './setting';
+import type { HallazgosPorDiente } from './setting';
 import {ShowFaceA, ShowFaceC, ShowFaceB} from './ToothFace';
 
-type ToothAProps = {
+type ToothProps = {
   id: number;
-  dientes: DientesMap;
-  onClick: () => void;
+  dientes: HallazgosPorDiente;
+  onClick: (event: any) => void; // event es el evento de Konva
   typeTeeth: any;
   rotated: boolean;
   reflected: boolean;
@@ -20,22 +20,23 @@ type ToothAProps = {
   rangoSelect: { id: number; numTooth: number; jaw: 'superior' | 'inferior' }[];
 };
 
-export function ToothA({ id, dientes, onClick, typeTeeth, rotated = false, reflected = false, numTooth, scale = 0.25, separation = 50, rangoSelect }: ToothAProps) {
-  const hallazgos = dientes[numTooth] || {};
+export function Tooth({ id, dientes, onClick, typeTeeth, rotated = false, reflected = false, numTooth, scale = 0.25, separation = 50, rangoSelect }: ToothProps) {
+  const hallazgos = dientes; 
   const xPos = id * separation;
 
   return (
     <Group
-      key={`tooth-group-${numTooth}-${id}`} x={xPos+30} y={120}
+      key={`tooth-group-${numTooth}-${id}`} x={xPos + (separation / 2)} y={120}
       scaleX={(reflected ? -1 : 1) * scale}
       scaleY={(rotated ? -1 : 1) * scale}
-      offsetX={200 / 2}
-      offsetY={350 / 2}
+      offsetX={100} 
+      offsetY={175} 
+      onClick={onClick} // El evento onClick se pasa directamente al Group principal
+      onTap={onClick} // Para dispositivos táctiles
+      hitGraphEnabled={true} // Asegura que el grupo sea clickeable
     >
-      <Group
-        onClick={onClick}
-        key={`clickable-tooth-${numTooth}`}
-      >
+      {/* Formas del diente - estas deben ser clickeables si son parte de la detección del clic */}
+      <Group key={`clickable-tooth-shape-${numTooth}`} listening={false}> {/* Hacemos que las formas internas no escuchen eventos para que el Group padre los maneje */}
         {typeTeeth==1 && (
           <>
             <ShowFaceA/>
@@ -107,14 +108,15 @@ export function ToothA({ id, dientes, onClick, typeTeeth, rotated = false, refle
         )}
       </Group>
 
+      {/* Las anotaciones no deberían ser clickeables por defecto, a menos que tengan su propio manejo */}
       <ToothAnnotations hallazgos={hallazgos} rotated={rotated} reflected={reflected} numTooth={numTooth} />
 
+      {/* El rectángulo de selección de rango no debería interferir con el clic del diente */}
       {rangoSelect?.some(item => Number(item.numTooth) === Number(numTooth)) && (
-        <Rect x={0} y={-35} width={200} height={400} fill="rgb(59 130 246 / .5)" opacity={0.5} />
+        <Rect x={0} y={-35} width={200} height={400} fill="rgb(59 130 246 / .5)" opacity={0.5} listening={false} />
       )}
-
     </Group>
   );
 }
 
-export default ToothA;
+export default Tooth;
