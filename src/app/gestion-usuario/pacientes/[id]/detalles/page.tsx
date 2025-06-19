@@ -44,6 +44,8 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog"
+import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
+import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
 
 
 const enfermedadesOptions = [
@@ -390,96 +392,14 @@ export default function DetallePacientePage() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 p-4 md:p-6 bg-background min-h-screen">
-      <Card className="w-full lg:w-[320px] lg:max-w-xs shrink-0 self-start sticky top-6">
-        <CardContent className="pt-6 flex flex-col items-center text-center">
-          <Button variant="ghost" onClick={() => router.back()} className="self-start mb-2 -ml-2"><ArrowLeft className="mr-2 h-4 w-4" /> Volver</Button>
-          <Avatar className="h-24 w-24 mb-4">
-            <AvatarImage src={`https://placehold.co/100x100.png?text=${persona.nombre[0]}${persona.apellidoPaterno[0]}`} alt={`${persona.nombre} ${persona.apellidoPaterno}`} data-ai-hint="person portrait"/>
-            <AvatarFallback>{persona.nombre[0]}{persona.apellidoPaterno[0]}</AvatarFallback>
-          </Avatar>
-          <h2 className="text-xl font-semibold">{`${persona.nombre} ${persona.apellidoPaterno} ${persona.apellidoMaterno}`}</h2>
-          <p className="text-sm text-muted-foreground">{age} años</p>
-          <p className="text-xs text-muted-foreground mt-1">Paciente desde: {createdDate}</p>
-          <div className="flex space-x-2 mt-4">
-            <Button variant="outline" size="icon" asChild><a href={`https://wa.me/${persona.telefono.replace(/\s+/g, '')}`} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><MessageSquare className="h-4 w-4" /></a></Button>
-            <Button variant="outline" size="icon" asChild><a href={`mailto:${persona.email}`} aria-label="Email"><Mail className="h-4 w-4" /></a></Button>
-            <Button variant="outline" size="icon" onClick={() => alert(`Llamar a ${persona.telefono}`)} aria-label="Llamar"><Phone className="h-4 w-4" /></Button>
-          </div>
-          <Separator className="my-6" />
-          <div className="w-full space-y-1 text-left">
-            <Button variant="ghost" className="w-full justify-start text-primary bg-primary/10"><Users className="mr-2 h-4 w-4" /> Filiación</Button>
-            <Button variant="ghost" className="w-full justify-start"><CalendarIconLucide className="mr-2 h-4 w-4" /> Historia clínica</Button>
-             <Button variant="ghost" className="w-full justify-start">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="M12.546 2.303a1 1 0 0 0-1.092 0L2.803 8.349a1 1 0 0 0-.355.705V19a1 1 0 0 0 1 1h17.104a1 1 0 0 0 1-1V9.054a1 1 0 0 0-.355-.705Z"/><path d="M12 21V11l-5 2.5V16Z"/><path d="M12 11l5 2.5V16Z"/><path d="M18.5 14.5V10l-6-3-6 3v4.5L12 18Z"/><path d="M2 8h20"/></svg> Odontograma
-            </Button>
-          </div>
-          <Button className="mt-6 w-full" onClick={() => alert("Funcionalidad 'Comienza aquí' no implementada")}>¡Comienza aquí!</Button>
-        </CardContent>
-      </Card>
+      <ResumenPaciente paciente={paciente} persona={persona} onBack={() => router.push('/gestion-usuario/pacientes')} />
 
       <div className="flex-1">
-        <Card className="mb-6">
-          <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-start">
-            <div className="space-y-2">
-              <Label className="flex items-center text-sm font-medium text-muted-foreground"><Tags className="mr-2 h-4 w-4" />Etiquetas</Label>
-              <div className="flex flex-wrap gap-1">
-                {currentPatientTags.length > 0 ? currentPatientTags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>) : <Badge variant="outline">Sin etiquetas</Badge>}
-              </div>
-               <Dialog open={isTagModalOpen} onOpenChange={setIsTagModalOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 p-0 h-auto mt-1"><PlusCircle className="mr-1 h-3 w-3"/> Agregar Etiqueta</Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader><DialogTitle>Agregar Etiqueta</DialogTitle><DialogDescription>Seleccione una etiqueta para agregar al paciente.</DialogDescription></DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <Select value={selectedTagToAdd} onValueChange={(value) => setSelectedTagToAdd(value as EtiquetaPaciente)}>
-                        <SelectTrigger><SelectValue placeholder="Seleccione una etiqueta..." /></SelectTrigger>
-                        <SelectContent>
-                            <SelectGroup>
-                                <SelectLabel>Etiquetas Disponibles</SelectLabel>
-                                {predefinedEtiquetas.filter(tag => !currentPatientTags.includes(tag)).map(tag => (
-                                    <SelectItem key={tag} value={tag}>{tag}</SelectItem>
-                                ))}
-                            </SelectGroup>
-                        </SelectContent>
-                    </Select>
-                  </div>
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setIsTagModalOpen(false)}>Cancelar</Button>
-                    <Button type="submit" onClick={handleAddTag} disabled={!selectedTagToAdd}>Agregar</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="notas-paciente" className="flex items-center text-sm font-medium text-muted-foreground"><FileText className="mr-2 h-4 w-4" />Notas</Label>
-              {isEditingNotes ? (
-                <div className="space-y-2">
-                  <Textarea id="notas-paciente-edit" placeholder="Escribe aquí..." value={editingNotesText} onChange={(e) => setEditingNotesText(e.target.value)} rows={4} className="text-sm"/>
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="sm" onClick={handleCancelEditNotes}><X className="mr-1 h-3 w-3"/>Cancelar</Button>
-                    <Button size="sm" onClick={handleSaveNotes}><Save className="mr-1 h-3 w-3"/>Guardar</Button>
-                  </div>
-                </div>
-              ) : (
-                <Card onClick={() => { setEditingNotesText(currentNotes === "Sin notas registradas." ? "" : currentNotes); setIsEditingNotes(true);}} className="p-3 min-h-[80px] cursor-pointer hover:bg-muted/50">
-                    <p className="text-sm whitespace-pre-wrap">{currentNotes || "Clic para agregar notas..."}</p>
-                </Card>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center text-sm font-medium text-muted-foreground"><AlertTriangle className="mr-2 h-4 w-4 text-orange-500" />Salud General</Label>
-              <div>
-                <h4 className="font-medium text-xs text-foreground mb-1">Enfermedades:</h4>
-                {displayedEnfermedades.length > 0 ? displayedEnfermedades.map(enf => <Badge key={enf} variant="outline" className="border-orange-500 text-orange-600 mr-1 mb-1">{enf}</Badge>) : <Badge variant="outline" className="font-normal">Sin enfermedades registradas</Badge>}
-              </div>
-              <div className="mt-2">
-                <h4 className="font-medium text-xs text-foreground mb-1">Alergias:</h4>
-                {displayedAlergias.length > 0 ? displayedAlergias.map(alergia => <Badge key={alergia} variant="outline" className="border-red-500 text-red-600 mr-1 mb-1">{alergia}</Badge>) : <Badge variant="outline" className="font-normal">Sin alergias registradas</Badge>}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <EtiquetasNotasSalud 
+          etiquetas={paciente.etiquetas}
+          enfermedades={paciente?.antecedentesMedicos?.q5_enfermedades || []}
+          alergias={paciente?.antecedentesMedicos?.q3_cuales?.split(',') || []}
+          />
 
         <Tabs defaultValue="datosPersonales" className="w-full">
           <TabsList className="mb-4 grid w-full grid-cols-3">
