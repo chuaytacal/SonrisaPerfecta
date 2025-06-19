@@ -24,10 +24,7 @@ const nextConfig: NextConfig = {
     // Konva's Node.js-specific parts might try to require it, but it's not
     // needed for browser rendering and causes build errors.
     if (!isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        canvas: false,
-      };
+      config.resolve.alias['canvas'] = false;
     }
 
     // Important: return the modified config
