@@ -2,44 +2,44 @@
 'use client';
 
 import React from 'react';
-import { Group, Rect, Line, Text, Circle, Arc, Ellipse } from 'react-konva'; // Removed Arrow as it wasn't used here directly
+import { Group as KonvaGroup, Rect, Line, Text, Circle, Arc, Ellipse } from 'react-konva';
 import { ToothAnnotations } from './ToothAnnotations';
 import type { HallazgosPorDiente } from './setting';
 import { ShowFaceA, ShowFaceC, ShowFaceB } from './ToothFace';
 
 type ToothProps = {
   id: number;
-  dientes: HallazgosPorDiente; // This should be specific to THIS tooth: dientes[numTooth]
-  onClick: (event: any) => void; 
-  typeTeeth: number; // Assuming this is a number
+  dientes: HallazgosPorDiente;
+  onClick: (event: any) => void;
+  typeTeeth: number;
   rotated: boolean;
   reflected: boolean;
   numTooth: number;
-  scale?: number; // Optional with default
-  separation?: number; // Optional with default
+  scale?: number;
+  separation?: number;
   rangoSelect: Array<{ id: number; numTooth: number; jaw: 'superior' | 'inferior' }>;
 };
 
 export function Tooth({
   id,
-  dientes, // This is HallazgosPorDiente for the current tooth
+  dientes,
   onClick,
   typeTeeth,
   rotated = false,
   reflected = false,
   numTooth,
-  scale = 0.25,
-  separation = 50,
+  scale = 0.28, // Matched scale from Teeth.tsx
+  separation = 55, // Matched separation from Teeth.tsx
   rangoSelect
 }: ToothProps) {
-  
-  const hallazgosParaEsteDiente = dientes; // Use the passed prop directly
+
+  const hallazgosParaEsteDiente = dientes;
   const xPos = id * separation;
 
   const isSelectedInRange = rangoSelect?.some(item => Number(item.numTooth) === Number(numTooth));
 
   return (
-    <KonvaGroup // Renamed to KonvaGroup to avoid conflict if Group is imported from elsewhere
+    <KonvaGroup
       key={`tooth-group-${numTooth}-${id}`}
       x={xPos + (separation / 2)}
       y={120}
@@ -124,28 +124,26 @@ export function Tooth({
         )}
       </KonvaGroup>
 
-      {/* Annotations - ensure 'hallazgos' is correctly 'HallazgosPorDiente' for this tooth */}
       <ToothAnnotations hallazgos={hallazgosParaEsteDiente} rotated={rotated} reflected={reflected} numTooth={numTooth} />
 
-      {/* Selection highlight */}
       {isSelectedInRange && (
         <Rect x={0} y={-35} width={200} height={400} fill="rgba(59, 130, 246, 0.3)" listening={false} />
       )}
-       <Text 
+       <Text
             text={String(numTooth)}
-            x={100} 
-            y={-20} 
-            fontSize={60} 
-            fill="black" 
-            align="center" 
+            x={100}
+            y={-20}
+            fontSize={60}
+            fill="black"
+            align="center"
             verticalAlign="middle"
-            offsetX={100/2} // Center text
+            offsetX={100/2} 
             offsetY={60/2}
-            scaleY={rotated ? -1: 1} // Counter-rotate if tooth is rotated
+            scaleY={rotated ? -1: 1}
             scaleX={reflected ? -1: 1}
         />
     </KonvaGroup>
   );
 }
 
-export default Tooth; // Ensure this is the export used by Teeth.tsx
+export default Tooth;
