@@ -39,7 +39,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { format, differenceInYears } from "date-fns"
+import { format, differenceInYears, subYears } from "date-fns"
 import { es } from "date-fns/locale";
 import { CalendarIcon, Tag, UserSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -95,6 +95,16 @@ const pacienteFormSchema = z.object({
       if (!data.apoderado_apellidoMaterno || data.apoderado_apellidoMaterno.length < 2) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["apoderado_apellidoMaterno"] });
       if (!data.apoderado_telefono || !/^9\d{8}$/.test(data.apoderado_telefono)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Teléfono inválido", path: ["apoderado_telefono"] });
       if (!data.apoderado_sexo) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["apoderado_sexo"] });
+      if (!data.apoderado_direccion) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["apoderado_direccion"] });
+
+      if (!data.apoderado_fechaNacimiento) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["apoderado_fechaNacimiento"] });
+      } else {
+        const apoderadoAge = differenceInYears(new Date(), data.apoderado_fechaNacimiento);
+        if (apoderadoAge < 18) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "El apoderado debe ser mayor de edad.", path: ["apoderado_fechaNacimiento"] });
+        }
+      }
     }
 });
 
@@ -136,7 +146,8 @@ export function AddPacienteForm({
       telefono: "",
       estado: "Activo",
       etiquetas: [],
-      apoderado_tipoDocumento: "DNI"
+      apoderado_tipoDocumento: "DNI",
+      apoderado_direccion: "",
     },
   });
 
@@ -156,6 +167,8 @@ export function AddPacienteForm({
         form.setValue("apoderado_apellidoMaterno", undefined);
         form.setValue("apoderado_sexo", undefined);
         form.setValue("apoderado_telefono", undefined);
+        form.setValue("apoderado_fechaNacimiento", undefined);
+        form.setValue("apoderado_direccion", undefined);
       }
     } else {
       setIsMinor(false);
@@ -189,6 +202,8 @@ export function AddPacienteForm({
             defaultVals.apoderado_apellidoMaterno = initialApoderadoData.apellidoMaterno;
             defaultVals.apoderado_sexo = initialApoderadoData.sexo;
             defaultVals.apoderado_telefono = initialApoderadoData.telefono;
+            defaultVals.apoderado_fechaNacimiento = initialApoderadoData.fechaNacimiento ? new Date(initialApoderadoData.fechaNacimiento) : undefined;
+            defaultVals.apoderado_direccion = initialApoderadoData.direccion;
         }
 
       } else if (selectedPersonaToPreload && !isCreatingNewPersonaFlow) { 
@@ -217,9 +232,9 @@ export function AddPacienteForm({
             nombre: values.apoderado_nombre!,
             apellidoPaterno: values.apoderado_apellidoPaterno!,
             apellidoMaterno: values.apoderado_apellidoMaterno!,
-            fechaNacimiento: values.apoderado_fechaNacimiento || new Date(),
+            fechaNacimiento: values.apoderado_fechaNacimiento!,
             sexo: values.apoderado_sexo!,
-            direccion: values.apoderado_direccion || "", 
+            direccion: values.apoderado_direccion!, 
             telefono: values.apoderado_telefono!,
             email: initialApoderadoData?.email || "", 
         };
@@ -247,7 +262,6 @@ export function AddPacienteForm({
         estado: values.estado,
         etiquetas: (values.etiquetas as EtiquetaPaciente[]) || [],
         idApoderado: apoderadoPersona?.id,
-        // Preserve un-edited fields
         notas: initialPacienteData?.notas,
         antecedentesMedicos: initialPacienteData?.antecedentesMedicos,
     };
@@ -559,6 +573,28 @@ export function AddPacienteForm({
                       )}
                     />
                   </div>
+                  <FormField
+                    control={form.control}
+                    name="apoderado_fechaNacimiento"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel className="mb-1.5">Fecha de Nacimiento del Apoderado</FormLabel>
+                        <Popover><PopoverTrigger asChild>
+                        <FormControl>
+                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>
+                            {field.value ? format(field.value, "PPP", {locale: es}) : <span>Seleccione fecha</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                        </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > subYears(new Date(), 18) || date < new Date("1900-01-01")} initialFocus locale={es} captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear() - 18}/>
+                        </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      <FormField control={form.control} name="apoderado_telefono"
                         render={({ field }) => (
@@ -584,6 +620,13 @@ export function AddPacienteForm({
                         )}
                       />
                   </div>
+                  <FormField control={form.control} name="apoderado_direccion"
+                    render={({ field }) => (
+                        <FormItem><FormLabel>Dirección del Apoderado</FormLabel>
+                        <FormControl><Input placeholder="Av. Secundaria 456" {...field} value={field.value ?? ""} /></FormControl><FormMessage />
+                        </FormItem>
+                    )}
+                    />
                 </>
               )}
 

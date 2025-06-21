@@ -456,9 +456,10 @@ export default function FiliacionPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   <div><Label className="text-xs text-muted-foreground">Nombres</Label><p className="font-medium">{persona.nombre}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Apellidos</Label><p className="font-medium">{`${persona.apellidoPaterno} ${persona.apellidoMaterno}`}</p></div>
-                  <div><Label className="text-xs text-muted-foreground">Nacionalidad</Label><p className="font-medium">Peruana</p></div>
+                  <div><Label className="text-xs text-muted-foreground">Sexo</Label><p className="font-medium">{persona.sexo === "M" ? "Masculino" : "Femenino"}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Teléfono Celular</Label><p className="font-medium">{persona.telefono}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Fecha de Nacimiento</Label><p className="font-medium">{persona.fechaNacimiento ? format(new Date(persona.fechaNacimiento), 'dd/MM/yyyy', { locale: es }) : 'N/A'}</p></div>
+                  <div><Label className="text-xs text-muted-foreground">Dirección</Label><p className="font-medium">{persona.direccion}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Tipo Documento</Label><p className="font-medium">{persona.tipoDocumento}</p></div>
                   <div><Label className="text-xs text-muted-foreground">N° Documento</Label><p className="font-medium">{persona.numeroDocumento}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Fecha de Ingreso (Paciente)</Label><p className="font-medium">{createdDate}</p></div>
@@ -481,6 +482,8 @@ export default function FiliacionPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                       <div><Label className="text-xs text-muted-foreground">Nombres</Label><p className="font-medium">{apoderado.nombre}</p></div>
                       <div><Label className="text-xs text-muted-foreground">Apellidos</Label><p className="font-medium">{`${apoderado.apellidoPaterno} ${apoderado.apellidoMaterno}`}</p></div>
+                      <div><Label className="text-xs text-muted-foreground">Sexo</Label><p className="font-medium">{apoderado.sexo === "M" ? "Masculino" : "Femenino"}</p></div>
+                      <div><Label className="text-xs text-muted-foreground">Dirección</Label><p className="font-medium">{apoderado.direccion}</p></div>
                       <div><Label className="text-xs text-muted-foreground">Tipo Documento</Label><p className="font-medium">{apoderado.tipoDocumento}</p></div>
                       <div><Label className="text-xs text-muted-foreground">N° Documento</Label><p className="font-medium">{apoderado.numeroDocumento}</p></div>
                       <div><Label className="text-xs text-muted-foreground">Teléfono Celular</Label><p className="font-medium">{apoderado.telefono}</p></div>
