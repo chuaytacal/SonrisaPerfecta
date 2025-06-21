@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/popover"
 import { format, differenceInYears, subYears } from "date-fns"
 import { es } from "date-fns/locale";
-import { CalendarIcon, Tag, UserSquare } from "lucide-react";
+import { CalendarIcon, Tag, UserSquare, User, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -289,7 +289,9 @@ export function AddPacienteForm({
         <ScrollArea className="max-h-[75vh] md:max-h-[calc(85vh-150px)]">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-6 pb-6 pt-2">
-              <h3 className="text-md font-semibold text-muted-foreground border-b pb-1">Datos del Paciente</h3>
+              <h3 className="text-md font-semibold text-muted-foreground border-b pb-1 flex items-center">
+                <User className="mr-2 h-5 w-5" /> Datos del Paciente
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                     control={form.control}
@@ -423,7 +425,9 @@ export function AddPacienteForm({
                 )}
               />
               
-              <h3 className="text-md font-semibold text-muted-foreground border-b pb-1 pt-4">Datos de Rol (Paciente)</h3>
+              <h3 className="text-md font-semibold text-muted-foreground border-b pb-1 pt-4 flex items-center">
+                <ClipboardList className="mr-2 h-5 w-5" /> Datos de Rol (Paciente)
+              </h3>
               <FormField
                 control={form.control}
                 name="fechaIngreso" 
@@ -573,52 +577,45 @@ export function AddPacienteForm({
                       )}
                     />
                   </div>
-                  <FormField
-                    control={form.control}
-                    name="apoderado_fechaNacimiento"
-                    render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                        <FormLabel className="mb-1.5">Fecha de Nacimiento del Apoderado</FormLabel>
-                        <Popover><PopoverTrigger asChild>
-                        <FormControl>
-                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>
-                            {field.value ? format(field.value, "PPP", {locale: es}) : <span>Seleccione fecha</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                        </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > subYears(new Date(), 18) || date < new Date("1900-01-01")} initialFocus locale={es} captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear() - 18}/>
-                        </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <FormField control={form.control} name="apoderado_telefono"
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <FormField
+                        control={form.control}
+                        name="apoderado_fechaNacimiento"
                         render={({ field }) => (
-                          <FormItem><FormLabel>Teléfono del Apoderado</FormLabel>
-                            <FormControl><Input placeholder="987654321" {...field} value={field.value ?? ""} /></FormControl><FormMessage />
-                          </FormItem>
+                        <FormItem className="flex flex-col">
+                            <FormLabel className="mb-1.5">Fecha de Nacimiento del Apoderado</FormLabel>
+                            <Popover><PopoverTrigger asChild>
+                            <FormControl>
+                                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>
+                                {field.value ? format(field.value, "PPP", {locale: es}) : <span>Seleccione fecha</span>}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                            </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > subYears(new Date(), 18) || date < new Date("1900-01-01")} initialFocus locale={es} captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear() - 18}/>
+                            </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                        </FormItem>
                         )}
-                      />
+                    />
                     <FormField control={form.control} name="apoderado_sexo"
                         render={({ field }) => (
-                          <FormItem className="space-y-2 pt-2"><FormLabel>Sexo</FormLabel>
+                        <FormItem className="space-y-2 pt-2"><FormLabel>Sexo</FormLabel>
                             <FormControl>
-                              <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4">
+                            <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4">
                                 {sexoOptions.map(opt => (
-                                  <FormItem key={`apoderado-sexo-${opt.value}`} className="flex items-center space-x-2 space-y-0">
+                                <FormItem key={`apoderado-sexo-${opt.value}`} className="flex items-center space-x-2 space-y-0">
                                     <FormControl><RadioGroupItem value={opt.value} id={`apoderado-sexo-${opt.value}`} /></FormControl>
                                     <FormLabel htmlFor={`apoderado-sexo-${opt.value}`} className="font-normal">{opt.label}</FormLabel>
-                                  </FormItem>
+                                </FormItem>
                                 ))}
-                              </RadioGroup>
+                            </RadioGroup>
                             </FormControl><FormMessage />
-                          </FormItem>
+                        </FormItem>
                         )}
-                      />
+                    />
                   </div>
                   <FormField control={form.control} name="apoderado_direccion"
                     render={({ field }) => (
@@ -626,7 +623,14 @@ export function AddPacienteForm({
                         <FormControl><Input placeholder="Av. Secundaria 456" {...field} value={field.value ?? ""} /></FormControl><FormMessage />
                         </FormItem>
                     )}
-                    />
+                  />
+                  <FormField control={form.control} name="apoderado_telefono"
+                    render={({ field }) => (
+                        <FormItem><FormLabel>Teléfono del Apoderado</FormLabel>
+                        <FormControl><Input placeholder="987654321" {...field} value={field.value ?? ""} /></FormControl><FormMessage />
+                        </FormItem>
+                    )}
+                  />
                 </>
               )}
 

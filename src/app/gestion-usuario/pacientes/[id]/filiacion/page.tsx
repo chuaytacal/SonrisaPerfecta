@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Mail, MessageSquare, Phone, ArrowLeft, Edit, PlusCircle, Users, CalendarDays as CalendarIconLucide, AlertTriangle, FileText, Tags, Save, X, UserSquare } from 'lucide-react';
+import { Mail, MessageSquare, Phone, ArrowLeft, Edit, PlusCircle, Users, CalendarDays as CalendarIconLucide, AlertTriangle, FileText, Tags, Save, X, UserSquare, User } from 'lucide-react';
 import { mockPacientesData, mockPersonasData } from '@/app/gestion-usuario/pacientes/page'; // Import shared mock data
 import type { Paciente as PacienteType, Persona, AntecedentesMedicosData, EtiquetaPaciente } from '@/types';
 import { format, differenceInYears, parse as parseDate } from 'date-fns';
@@ -451,20 +451,26 @@ export default function FiliacionPage() {
           </TabsList>
           <TabsContent value="datosPersonales">
             <Card>
-              <CardHeader><CardTitle>Información del Paciente</CardTitle><CardDescription>Detalles personales y de contacto del paciente.</CardDescription></CardHeader>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                    <User className="mr-2 h-5 w-5 text-primary" />
+                    Información del Paciente
+                </CardTitle>
+                <CardDescription>Detalles personales y de contacto del paciente.</CardDescription>
+              </CardHeader>
               <CardContent className="space-y-4 text-sm">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   <div><Label className="text-xs text-muted-foreground">Nombres</Label><p className="font-medium">{persona.nombre}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Apellidos</Label><p className="font-medium">{`${persona.apellidoPaterno} ${persona.apellidoMaterno}`}</p></div>
+                  <div><Label className="text-xs text-muted-foreground">Tipo Documento</Label><p className="font-medium">{persona.tipoDocumento}</p></div>
+                  <div><Label className="text-xs text-muted-foreground">N° Documento</Label><p className="font-medium">{persona.numeroDocumento}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Sexo</Label><p className="font-medium">{persona.sexo === "M" ? "Masculino" : "Femenino"}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Teléfono Celular</Label><p className="font-medium">{persona.telefono}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Fecha de Nacimiento</Label><p className="font-medium">{persona.fechaNacimiento ? format(new Date(persona.fechaNacimiento), 'dd/MM/yyyy', { locale: es }) : 'N/A'}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Dirección</Label><p className="font-medium">{persona.direccion}</p></div>
-                  <div><Label className="text-xs text-muted-foreground">Tipo Documento</Label><p className="font-medium">{persona.tipoDocumento}</p></div>
-                  <div><Label className="text-xs text-muted-foreground">N° Documento</Label><p className="font-medium">{persona.numeroDocumento}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Fecha de Ingreso (Paciente)</Label><p className="font-medium">{createdDate}</p></div>
-                  <div><Label className="text-xs text-muted-foreground">Estado (Paciente)</Label><div className="font-medium"><Badge variant={paciente.estado === 'Activo' ? 'default' : 'destructive'}>{paciente.estado}</Badge></div></div>
                   <div><Label className="text-xs text-muted-foreground">N° Historia Clínica</Label><p className="font-medium">{paciente.id.substring(paciente.id.length-6).toUpperCase()}</p></div>
+                  <div><Label className="text-xs text-muted-foreground">Estado (Paciente)</Label><div className="font-medium"><Badge variant={paciente.estado === 'Activo' ? 'default' : 'destructive'}>{paciente.estado}</Badge></div></div>
                 </div>
                 <div className="flex justify-end pt-4">
                   <Button variant="outline" size="sm" onClick={() => setIsAddPacienteFormOpen(true)}><Edit className="mr-1 h-3 w-3"/> Editar Campos</Button>
@@ -482,11 +488,12 @@ export default function FiliacionPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                       <div><Label className="text-xs text-muted-foreground">Nombres</Label><p className="font-medium">{apoderado.nombre}</p></div>
                       <div><Label className="text-xs text-muted-foreground">Apellidos</Label><p className="font-medium">{`${apoderado.apellidoPaterno} ${apoderado.apellidoMaterno}`}</p></div>
-                      <div><Label className="text-xs text-muted-foreground">Sexo</Label><p className="font-medium">{apoderado.sexo === "M" ? "Masculino" : "Femenino"}</p></div>
-                      <div><Label className="text-xs text-muted-foreground">Dirección</Label><p className="font-medium">{apoderado.direccion}</p></div>
                       <div><Label className="text-xs text-muted-foreground">Tipo Documento</Label><p className="font-medium">{apoderado.tipoDocumento}</p></div>
                       <div><Label className="text-xs text-muted-foreground">N° Documento</Label><p className="font-medium">{apoderado.numeroDocumento}</p></div>
+                      <div><Label className="text-xs text-muted-foreground">Sexo</Label><p className="font-medium">{apoderado.sexo === "M" ? "Masculino" : "Femenino"}</p></div>
                       <div><Label className="text-xs text-muted-foreground">Teléfono Celular</Label><p className="font-medium">{apoderado.telefono}</p></div>
+                      <div><Label className="text-xs text-muted-foreground">Fecha de Nacimiento</Label><p className="font-medium">{apoderado.fechaNacimiento ? format(new Date(apoderado.fechaNacimiento), 'dd/MM/yyyy', { locale: es }) : 'N/A'}</p></div>
+                      <div><Label className="text-xs text-muted-foreground">Dirección</Label><p className="font-medium">{apoderado.direccion}</p></div>
                     </div>
                   </CardContent>
               </Card>
