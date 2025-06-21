@@ -58,6 +58,18 @@ export interface Paciente {
   idApoderado?: string;
 }
 
+export interface Procedimiento {
+  id: string;
+  denominacion: string;
+  descripcion: string;
+  precioBase: number;
+}
+
+export interface MotivoCita {
+  id: string;
+  nombre: string;
+}
+
 
 export interface Service {
   id: string;
@@ -82,3 +94,14 @@ export interface TimeSlot {
   id: string;
   time: string; // e.g., "09:00 AM"
 }
+
+// Representa la tabla 'especialista' que es el Personal
+export type Personal = {
+  id: string; // ID del registro de Personal/Especialista
+  idPersona: string; // FK a la tabla Persona
+  persona: Persona; // Datos de la persona anidados
+  especialidad: string; // "Ortodoncia", "Endodoncia", etc.
+  fechaIngreso: string; // "DD/MM/YYYY" - Fecha de ingreso como personal
+  estado: "Activo" | "Inactivo";
+  avatarUrl?: string; // Específico del rol de personal
+};

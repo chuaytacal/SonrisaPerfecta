@@ -28,65 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Persona, Paciente, EtiquetaPaciente, AntecedentesMedicosData } from "@/types"; 
-
-// Mock data for Personas (can be shared or fetched)
-export const mockPersonasData: Persona[] = [ 
-  { id: "persona-1", tipoDocumento: "DNI", numeroDocumento: "73124568", nombre: "Joe", apellidoPaterno: "Schilder", apellidoMaterno: "Mann", fechaNacimiento: new Date("1985-05-15"), sexo: "M", direccion: "Av. Siempre Viva 123", telefono: "943567821", email: "joe.schilder@example.com" },
-  { id: "persona-2", tipoDocumento: "DNI", numeroDocumento: "18273645", nombre: "Phoebe", apellidoPaterno: "Venturi", apellidoMaterno: "Ross", fechaNacimiento: new Date("1990-08-22"), sexo: "F", direccion: "Calle Falsa 456", telefono: "981234670", email: "phoebe.venturi@example.com" },
-  { id: "persona-3", tipoDocumento: "DNI", numeroDocumento: "49205873", nombre: "Caroline", apellidoPaterno: "Pandolfi", apellidoMaterno: "Geller", fechaNacimiento: new Date("1988-11-30"), sexo: "F", direccion: "Jr. Desconocido 789", telefono: "967891234", email: "caroline.pandolfi@example.com" },
-  { id: "persona-p1", tipoDocumento: "DNI", numeroDocumento: "76543210", nombre: "Mario", apellidoPaterno: "Bros", apellidoMaterno: "Nintendo", fechaNacimiento: new Date("1983-07-09"), sexo: "M", direccion: "Mushroom Kingdom", telefono: "912345678", email: "mario@example.com" },
-  { id: "persona-p2", tipoDocumento: "EXTRANJERIA", numeroDocumento: "X1234567", nombre: "Luigi", apellidoPaterno: "Bros", apellidoMaterno: "Nintendo", fechaNacimiento: new Date("2015-04-10"), sexo: "M", direccion: "Mushroom Kingdom", telefono: "987654321", email: "luigi@example.com" },
-  { id: "persona-g1", tipoDocumento: "DNI", numeroDocumento: "29876543", nombre: "Peach", apellidoPaterno: "Toadstool", apellidoMaterno: "Mushroom", fechaNacimiento: new Date("1985-11-18"), sexo: "F", direccion: "Mushroom Castle", telefono: "999888777", email: "peach@example.com" },
-];
-
-const initialAntecedentesExample: AntecedentesMedicosData = {
-  q1_hospitalizado: "No", q1_porque: "N/A", q1_donde: "N/A",
-  q2_atencionMedica: "Sí", q2_porque: "Control de rutina", q2_donde: "Clínica Local",
-  q3_alergico: "Sí", q3_cuales: "Penicilina",
-  q4_hemorragia: "No",
-  q5_enfermedades: ["Hipertensión arterial"],
-  q6_otraEnfermedad: "No", q6_cual: "N/A",
-  q7_medicacionActual: "Sí", q7_cual: "Losartán para la presión",
-  q8_embarazada: "No", q8_semanas: "N/A",
-  q9_hipertenso: "Sí",
-  q10_ultimaConsultaDental: "Hace 6 meses",
-};
-
-export const mockPacientesData: Paciente[] = [ 
-  {
-    id: "paciente-1",
-    idPersona: "persona-p1",
-    persona: mockPersonasData.find(p => p.id === "persona-p1")!,
-    fechaIngreso: "10/01/2024",
-    estado: "Activo",
-    etiquetas: ["Diabético", "Hipertenso"],
-    notas: "Paciente refiere sensibilidad dental al frío. Programar revisión.",
-    antecedentesMedicos: initialAntecedentesExample,
-  },
-  {
-    id: "paciente-2",
-    idPersona: "persona-p2",
-    persona: mockPersonasData.find(p => p.id === "persona-p2")!,
-    fechaIngreso: "15/03/2024",
-    estado: "Activo",
-    etiquetas: ["Menor de Edad"],
-    notas: "Acompañado por su madre. Buena higiene bucal.",
-    antecedentesMedicos: { ...initialAntecedentesExample, q3_alergico: "No", q3_cuales: "", q5_enfermedades: [] },
-    idApoderado: "persona-g1",
-  },
-  {
-    id: "paciente-3",
-    idPersona: "persona-3", 
-    persona: mockPersonasData.find(p => p.id === "persona-3")!,
-    fechaIngreso: "20/05/2023",
-    estado: "Inactivo",
-    etiquetas: ["Fumador", "Postquirúrgico"],
-    notas: "Control post-extracción molar. Cita de seguimiento pendiente.",
-    antecedentesMedicos: { ...initialAntecedentesExample, q8_embarazada: "Sí", q8_semanas: "12" },
-  }
-];
-
+import type { Persona, Paciente } from "@/types"; 
+import { mockPacientesData, mockPersonasData } from "@/lib/data";
 
 export default function PacientesPage() {
   const router = useRouter(); 

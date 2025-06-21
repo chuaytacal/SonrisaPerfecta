@@ -30,8 +30,7 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import type { Personal } from "@/app/gestion-usuario/personal/page"; 
-import type { Persona, TipoDocumento, Sexo } from "@/types"; 
+import type { Personal, Persona, TipoDocumento, Sexo } from "@/types"; 
 import { Calendar } from "@/components/ui/calendar"
 import {
   Popover,
@@ -56,6 +55,7 @@ const personalFormSchema = z.object({
   sexo: z.enum(["M", "F"], { required_error: "Seleccione un sexo." }),
   direccion: z.string().min(1, {message: "La dirección es requerida."}),
   telefono: z.string().min(9, { message: "El teléfono debe tener 9 dígitos y empezar con 9." }).regex(/^9\d{8}$/, { message: "Formato de teléfono inválido. Debe ser 9XXXXXXXX."}),
+  especialidad: z.string().min(1, "La especialidad es requerida."),
   fechaIngreso: z.date({ required_error: "La fecha de ingreso es requerida."}), 
   estado: z.enum(["Activo", "Inactivo"], { required_error: "Seleccione un estado." }),
 });
@@ -93,6 +93,7 @@ export function AddPersonalForm({
       sexo: "M",
       direccion: "",
       telefono: "",
+      especialidad: "",
       fechaIngreso: new Date(),
       estado: "Activo",
     },
@@ -103,7 +104,7 @@ export function AddPersonalForm({
       let defaultVals: Partial<PersonalFormValues> = {
         tipoDocumento: "DNI", numeroDocumento: "", nombre: "", apellidoPaterno: "", apellidoMaterno: "",
         fechaNacimiento: new Date(), sexo: "M", direccion: "", telefono: "",
-        fechaIngreso: new Date(), estado: "Activo",
+        especialidad: "", fechaIngreso: new Date(), estado: "Activo",
       };
 
       if (isEditMode && initialPersonalData) { 
@@ -111,6 +112,7 @@ export function AddPersonalForm({
         defaultVals = {
             ...persona, 
             fechaNacimiento: new Date(persona.fechaNacimiento), 
+            especialidad: initialPersonalData.especialidad,
             fechaIngreso: initialPersonalData.fechaIngreso ? new Date(initialPersonalData.fechaIngreso.split('/').reverse().join('-')) : new Date(),
             estado: initialPersonalData.estado,
         };
@@ -118,6 +120,7 @@ export function AddPersonalForm({
         defaultVals = {
             ...selectedPersonaToPreload,
             fechaNacimiento: new Date(selectedPersonaToPreload.fechaNacimiento),
+            especialidad: "", // Especialidad needs to be filled
             fechaIngreso: new Date(),
             estado: "Activo",
         };
@@ -154,10 +157,10 @@ export function AddPersonalForm({
         id: initialPersonalData?.id || `personal-${crypto.randomUUID()}`, // Reuse existing ID if editing, else generate new
         idPersona: personaData.id,
         persona: personaData,
-        // especialidad: values.especialidad, // Campo eliminado
+        especialidad: values.especialidad,
         fechaIngreso: format(values.fechaIngreso, "dd/MM/yyyy"),
         estado: values.estado,
-        // avatarUrl: values.avatarUrl || "", // Campo eliminado
+        avatarUrl: initialPersonalData?.avatarUrl || "",
     };
 
     await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
@@ -166,7 +169,7 @@ export function AddPersonalForm({
 
   const tipoDocumentoOptions: TipoDocumento[] = ["DNI", "EXTRANJERIA", "PASAPORTE"];
   const sexoOptions: {label: string, value: Sexo}[] = [{label: "Masculino", value: "M"}, {label: "Femenino", value: "F"}];
-  // const especialidadOptions = ["Ortodoncia", "Endodoncia", "Periodoncia", "Odontopediatría", "Cirugía Oral", "General"]; // Campo eliminado
+  const especialidadOptions = ["Ortodoncia", "Endodoncia", "Periodoncia", "Odontopediatría", "Cirugía Oral", "General"];
 
   const title = isEditMode ? "Editar Personal" : (isCreatingNewPersonaFlow ? "Registrar Nueva Persona y Personal" : "Asignar Rol de Personal");
   const description = isEditMode ? "Modifique los datos del miembro del personal." : (isCreatingNewPersonaFlow ? "Complete los campos para la nueva persona y su rol." : "Complete los detalles del rol para la persona seleccionada.");
@@ -321,7 +324,26 @@ export function AddPersonalForm({
               />
               
               <h3 className="text-md font-semibold text-muted-foreground border-b pb-1 pt-4">Datos del Personal</h3>
-              {/* Especialidad and AvatarURL fields are removed */}
+              <FormField
+                control={form.control}
+                name="especialidad"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Especialidad</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccione una especialidad" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {especialidadOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="fechaIngreso" 
@@ -392,4 +414,3 @@ export function AddPersonalForm({
     </Dialog>
   );
 }
-

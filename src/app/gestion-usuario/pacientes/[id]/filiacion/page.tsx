@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Mail, MessageSquare, Phone, ArrowLeft, Edit, PlusCircle, Users, CalendarDays as CalendarIconLucide, AlertTriangle, FileText, Tags, Save, X, UserSquare, User } from 'lucide-react';
-import { mockPacientesData, mockPersonasData } from '@/app/gestion-usuario/pacientes/page'; // Import shared mock data
+import { mockPacientesData, mockPersonasData } from '@/lib/data'; // Import shared mock data
 import type { Paciente as PacienteType, Persona, AntecedentesMedicosData, EtiquetaPaciente } from '@/types';
 import { format, differenceInYears, parse as parseDate } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -75,7 +75,8 @@ const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
 const getPatientAppointments = (pacienteNombre: string | undefined): Appointment[] => {
     if (!pacienteNombre) return [];
     const allAppointments = generateInitialAppointments();
-    return allAppointments.filter(appt => appt.paciente && appt.paciente.toLowerCase().includes(pacienteNombre.split(' ')[0].toLowerCase())).slice(0, 5);
+    // In Appointment, the doctor is an object with a 'name' property
+    return allAppointments.filter(appt => appt.title.toLowerCase().includes(pacienteNombre.split(' ')[0].toLowerCase())).slice(0, 5);
 };
 
 
@@ -469,8 +470,8 @@ export default function FiliacionPage() {
                   <div><Label className="text-xs text-muted-foreground">Fecha de Nacimiento</Label><p className="font-medium">{persona.fechaNacimiento ? format(new Date(persona.fechaNacimiento), 'dd/MM/yyyy', { locale: es }) : 'N/A'}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Dirección</Label><p className="font-medium">{persona.direccion}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Fecha de Ingreso (Paciente)</Label><p className="font-medium">{createdDate}</p></div>
-                  <div><Label className="text-xs text-muted-foreground">N° Historia Clínica</Label><p className="font-medium">{paciente.id.substring(paciente.id.length-6).toUpperCase()}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Estado (Paciente)</Label><div className="font-medium"><Badge variant={paciente.estado === 'Activo' ? 'default' : 'destructive'}>{paciente.estado}</Badge></div></div>
+                  <div><Label className="text-xs text-muted-foreground">N° Historia Clínica</Label><p className="font-medium">{paciente.id.substring(paciente.id.length-6).toUpperCase()}</p></div>
                 </div>
                 <div className="flex justify-end pt-4">
                   <Button variant="outline" size="sm" onClick={() => setIsAddPacienteFormOpen(true)}><Edit className="mr-1 h-3 w-3"/> Editar Campos</Button>
@@ -513,9 +514,9 @@ export default function FiliacionPage() {
                           <TableRow key={cita.id}>
                             <TableCell>{cita.start ? format(cita.start, 'dd/MM/yyyy', { locale: es }) : 'N/A'}</TableCell>
                             <TableCell>{cita.start ? format(cita.start, 'HH:mm a', { locale: es }) : 'N/A'}</TableCell>
-                            <TableCell>{cita.doctor || 'N/A'}</TableCell>
+                            <TableCell>{cita.doctor?.persona.nombre || 'N/A'}</TableCell>
                             <TableCell>{cita.title}</TableCell>
-                            <TableCell className="text-right"><Badge variant={cita.end && new Date(cita.end) < new Date() ? 'outline' : (cita.tipoCita === 'consulta' || cita.tipoCita === 'control') ? 'default' : (cita.tipoCita === 'tratamiento') ? 'secondary' : 'outline' }>{cita.end && new Date(cita.end) < new Date() ? 'Completada' : (cita.tipoCita ? cita.tipoCita.charAt(0).toUpperCase() + cita.tipoCita.slice(1) : 'Pendiente') }</Badge></TableCell>
+                            <TableCell className="text-right"><Badge variant={cita.end && new Date(cita.end) < new Date() ? 'outline' : 'default' }>{cita.estado}</Badge></TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

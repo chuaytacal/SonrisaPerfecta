@@ -31,8 +31,8 @@ interface SelectPersonaModalProps {
   onCreateNewPersona: () => void;
   existingPersonas: Persona[];
   modalTitle?: string;
-  modalDescription: string;
-  createButtonLabel: string;
+  modalDescription?: string;
+  createButtonLabel?: string;
 }
 
 export function SelectPersonaModal({
@@ -42,8 +42,8 @@ export function SelectPersonaModal({
   onCreateNewPersona,
   existingPersonas,
   modalTitle = "Buscar Persona",
-  modalDescription,
-  createButtonLabel,
+  modalDescription = "Busca una persona existente o crea una nueva para asignarle un rol.",
+  createButtonLabel = "Crear Nueva Persona",
 }: SelectPersonaModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
 

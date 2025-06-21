@@ -1,13 +1,13 @@
 
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CalendarIcon, Trash2 } from 'lucide-react';
+import { CalendarIcon, Trash2, XIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -21,385 +21,354 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar as CalendarPicker } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import type { Appointment, AppointmentFormData } from '@/types/calendar';
+import type { Procedimiento } from '@/types';
 import { cn } from '@/lib/utils';
+import { Combobox, ComboboxOption } from '@/components/ui/combobox';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { mockPacientesData, mockPersonalData, mockMotivosCita, mockProcedimientos } from '@/lib/data';
+import { Checkbox } from '../ui/checkbox';
+
 
 const appointmentFormSchema = z.object({
-  title: z.string().min(1, "El título es requerido."),
-  startDate: z.date({ required_error: "La fecha de inicio es requerida." }),
-  startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Hora inválida (HH:MM)."),
-  endDate: z.date({ required_error: "La fecha de fin es requerida." }),
-  endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Hora inválida (HH:MM)."),
-  paciente: z.string().optional(),
-  doctor: z.string().optional(),
-  tipoCita: z.string().optional(),
+  idPaciente: z.string().min(1, "Debe seleccionar un paciente."),
+  idDoctor: z.string().min(1, "Debe seleccionar un doctor."),
+  idMotivoCita: z.string().min(1, "Debe seleccionar un motivo."),
+  fecha: z.date({ required_error: "La fecha es requerida." }),
+  horaInicio: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Hora inválida (HH:MM)."),
+  duracion: z.number().min(5, "La duración debe ser al menos 5 minutos."),
+  procedimientos: z.array(z.custom<Procedimiento>()).optional(),
+  estado: z.enum(['Confirmada', 'Pendiente', 'Cancelada']),
   notas: z.string().optional(),
-  eventColor: z.string().optional(),
-}).refine(data => {
-  const startDateTime = new Date(data.startDate);
-  const [startHours, startMinutes] = data.startTime.split(':').map(Number);
-  startDateTime.setHours(startHours, startMinutes, 0, 0);
-
-  const endDateTime = new Date(data.endDate);
-  const [endHours, endMinutes] = data.endTime.split(':').map(Number);
-  endDateTime.setHours(endHours, endMinutes, 0, 0);
-  
-  return endDateTime > startDateTime;
-}, {
-  message: "La cita debe terminar después de que comience.",
-  path: ["endDate"],
 });
 
 
 interface AppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (appointmentData: Appointment) => void;
+  onSave: (appointmentData: AppointmentFormData) => void;
   onDelete?: (appointmentId: string) => void;
-  initialData?: Partial<AppointmentFormData> & { start?: Date; end?: Date };
+  initialData?: { start: Date; end: Date };
   existingAppointment?: Appointment | null;
 }
 
-const eventColors = [
-    { label: 'Azul (Primario)', value: 'hsl(var(--primary))' },
-    { label: 'Verde', value: '#4CAF50' },
-    { label: 'Naranja', value: '#FF9800' },
-    { label: 'Rojo', value: 'hsl(var(--destructive))' },
-    { label: 'Púrpura', value: '#9C27B0' },
+const duracionOptions = [
+  { label: '15 minutos', value: 15 },
+  { label: '30 minutos', value: 30 },
+  { label: '45 minutos', value: 45 },
+  { label: '1 hora', value: 60 },
+  { label: '1 hora y 30 minutos', value: 90 },
+  { label: '2 horas', value: 120 },
 ];
 
 export function AppointmentModal({ isOpen, onClose, onSave, onDelete, initialData, existingAppointment }: AppointmentModalProps) {
+  const [procedimientosSeleccionados, setProcedimientosSeleccionados] = useState<Procedimiento[]>([]);
+  
   const form = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentFormSchema),
     defaultValues: {
-      title: '',
-      startDate: new Date(),
-      startTime: format(new Date(), 'HH:mm'),
-      endDate: new Date(),
-      endTime: format(new Date(Date.now() + 60 * 60 * 1000), 'HH:mm'), // 1 hour later
-      paciente: '',
-      doctor: '',
-      tipoCita: '',
+      idPaciente: '',
+      idDoctor: '',
+      idMotivoCita: '',
+      fecha: new Date(),
+      horaInicio: format(new Date(), 'HH:mm'),
+      duracion: 30,
+      procedimientos: [],
+      estado: 'Pendiente',
       notas: '',
-      eventColor: eventColors[0].value,
     },
   });
 
-  useEffect(() => {
-    let defaultValues: Partial<AppointmentFormData> = {
-      title: '',
-      startDate: new Date(),
-      startTime: format(new Date(), 'HH:mm'),
-      endDate: new Date(),
-      endTime: format(new Date(Date.now() + 60 * 60 * 1000), 'HH:mm'),
-      paciente: '',
-      doctor: '',
-      tipoCita: '',
-      notas: '',
-      eventColor: eventColors[0].value,
-    };
+  const pacienteOptions = useMemo((): ComboboxOption[] => 
+    mockPacientesData.map(p => ({
+      value: p.id,
+      label: `${p.persona.nombre} ${p.persona.apellidoPaterno}`
+    })), []);
 
-    if (existingAppointment) {
+  const doctorOptions = useMemo((): ComboboxOption[] =>
+    mockPersonalData
+      .filter(p => p.estado === 'Activo')
+      .map(p => ({
+        value: p.id,
+        label: `${p.persona.nombre} ${p.persona.apellidoPaterno} (${p.especialidad})`
+      })), []);
+
+  const procedimientoOptions = useMemo((): ComboboxOption[] =>
+    mockProcedimientos.map(p => ({
+      value: p.id,
+      label: `${p.denominacion} - S/ ${p.precioBase.toFixed(2)}`
+    })), []);
+
+  useEffect(() => {
+    if (isOpen) {
+      let defaultValues: Partial<AppointmentFormData>;
+      if (existingAppointment) {
+        const durationInMinutes = (existingAppointment.end.getTime() - existingAppointment.start.getTime()) / 60000;
         defaultValues = {
-            title: existingAppointment.title,
-            startDate: existingAppointment.start,
-            startTime: format(existingAppointment.start, 'HH:mm'),
-            endDate: existingAppointment.end,
-            endTime: format(existingAppointment.end, 'HH:mm'),
-            paciente: existingAppointment.paciente,
-            doctor: existingAppointment.doctor,
-            tipoCita: existingAppointment.tipoCita,
-            notas: existingAppointment.notas,
-            eventColor: existingAppointment.eventColor || eventColors[0].value,
+          idPaciente: existingAppointment.idPaciente,
+          idDoctor: existingAppointment.idDoctor,
+          idMotivoCita: existingAppointment.idMotivoCita,
+          fecha: existingAppointment.start,
+          horaInicio: format(existingAppointment.start, 'HH:mm'),
+          duracion: durationInMinutes,
+          procedimientos: existingAppointment.procedimientos || [],
+          estado: existingAppointment.estado || 'Pendiente',
+          notas: existingAppointment.notas || '',
         };
-    } else if (initialData) {
+        setProcedimientosSeleccionados(existingAppointment.procedimientos || []);
+      } else {
         defaultValues = {
-            ...defaultValues,
-            ...initialData,
-            startDate: initialData.start || new Date(),
-            startTime: initialData.start ? format(initialData.start, 'HH:mm') : format(new Date(), 'HH:mm'),
-            endDate: initialData.end || new Date(Date.now() + 60 * 60 * 1000),
-            endTime: initialData.end ? format(initialData.end, 'HH:mm') : format(new Date(Date.now() + 60*60*1000), 'HH:mm'),
+          idPaciente: '',
+          idDoctor: '',
+          idMotivoCita: '',
+          fecha: initialData?.start || new Date(),
+          horaInicio: initialData?.start ? format(initialData.start, 'HH:mm') : format(new Date(), 'HH:mm'),
+          duracion: 30,
+          procedimientos: [],
+          estado: 'Pendiente',
+          notas: '',
         };
+        setProcedimientosSeleccionados([]);
+      }
+      form.reset(defaultValues);
     }
-    form.reset(defaultValues);
-  }, [isOpen, initialData, existingAppointment, form]);
+  }, [isOpen, existingAppointment, initialData, form]);
 
   const handleSubmit = (data: AppointmentFormData) => {
-    const startDateTime = new Date(data.startDate);
-    const [startHours, startMinutes] = data.startTime.split(':').map(Number);
-    startDateTime.setHours(startHours, startMinutes, 0, 0);
-
-    const endDateTime = new Date(data.endDate);
-    const [endHours, endMinutes] = data.endTime.split(':').map(Number);
-    endDateTime.setHours(endHours, endMinutes, 0, 0);
-
-    const appointmentToSave: Appointment = {
-      id: existingAppointment?.id || crypto.randomUUID(),
-      title: data.title,
-      start: startDateTime,
-      end: endDateTime,
-      paciente: data.paciente,
-      doctor: data.doctor,
-      tipoCita: data.tipoCita,
-      notas: data.notas,
-      eventColor: data.eventColor,
-      allDay: false, 
-    };
-    onSave(appointmentToSave);
+    onSave({ ...data, procedimientos: procedimientosSeleccionados });
     onClose();
   };
 
   const handleDeleteClick = () => {
     if (existingAppointment && onDelete) {
       onDelete(existingAppointment.id);
-      onClose();
     }
+  };
+
+  const handleAddProcedimiento = (procedimientoId: string) => {
+    const procedimientoToAdd = mockProcedimientos.find(p => p.id === procedimientoId);
+    if (procedimientoToAdd && !procedimientosSeleccionados.some(p => p.id === procedimientoId)) {
+      setProcedimientosSeleccionados(prev => [...prev, procedimientoToAdd]);
+    }
+  };
+
+  const handleRemoveProcedimiento = (procedimientoId: string) => {
+    setProcedimientosSeleccionados(prev => prev.filter(p => p.id !== procedimientoId));
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[90vw] max-w-lg">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl p-0">
+        <DialogHeader className="p-6 pb-4 border-b">
           <DialogTitle>{existingAppointment ? 'Editar Cita' : 'Crear Nueva Cita'}</DialogTitle>
           <DialogDescription>
             {existingAppointment ? 'Modifique los detalles de la cita.' : 'Complete los campos para programar una nueva cita.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-2 px-1">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Título de la Cita</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ej: Limpieza Dental" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="startDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Fecha de Inicio</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                          >
-                            {field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccione fecha</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarPicker mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={es} />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
+          <form onSubmit={form.handleSubmit(handleSubmit)}>
+            <ScrollArea className="max-h-[65vh]">
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                {/* Columna Izquierda */}
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="idPaciente"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Paciente</FormLabel>
+                        <Combobox
+                          options={pacienteOptions}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Buscar paciente..."
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <div className="flex items-center space-x-2">
+                      <Checkbox id="create-new-patient" />
+                      <label htmlFor="create-new-patient" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                          Crear nuevo paciente
+                      </label>
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="idDoctor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Doctor</FormLabel>
+                        <Combobox
+                          options={doctorOptions}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Buscar doctor..."
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="idMotivoCita"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Motivo</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccione un motivo" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {mockMotivosCita.map(motivo => (
+                              <SelectItem key={motivo.id} value={motivo.id}>{motivo.nombre}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormItem>
+                    <FormLabel>Agregar Servicio (Opcional)</FormLabel>
+                     <Combobox
+                        options={procedimientoOptions}
+                        onChange={handleAddProcedimiento}
+                        placeholder="Buscar servicio..."
+                      />
                   </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="startTime"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Hora de Inicio</FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                  <div className="space-y-2">
+                    {procedimientosSeleccionados.map(proc => (
+                      <Badge key={proc.id} variant="secondary" className="flex justify-between items-center text-sm py-1 px-2">
+                        <span>{proc.denominacion}</span>
+                        <button type="button" onClick={() => handleRemoveProcedimiento(proc.id)} className="ml-2 rounded-full hover:bg-muted-foreground/20 p-0.5">
+                          <XIcon className="h-3 w-3"/>
+                          <span className="sr-only">Quitar</span>
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="endDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Fecha de Fin</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
+                {/* Columna Derecha */}
+                <div className="space-y-4">
+                   <FormField
+                      control={form.control}
+                      name="fecha"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fecha</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                >
+                                  {field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccione fecha</span>}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <CalendarPicker mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={es} />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  <FormField
+                    control={form.control}
+                    name="horaInicio"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Hora de Inicio</FormLabel>
                         <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                          >
-                            {field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccione fecha</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
+                          <Input type="time" {...field} />
                         </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarPicker mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={es} />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="endTime"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Hora de Fin</FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="paciente"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Paciente (Opcional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nombre del paciente" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="doctor"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Doctor/Personal (Opcional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nombre del doctor o personal" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="tipoCita"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo de Cita (Opcional)</FormLabel>
-                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="duracion"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Duración</FormLabel>
+                        <Select onValueChange={(val) => field.onChange(Number(val))} value={String(field.value)}>
+                            <FormControl>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {duracionOptions.map(opt => (
+                                <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="estado"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Estado</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            <SelectItem value="Pendiente">Pendiente</SelectItem>
+                            <SelectItem value="Confirmada">Confirmada</SelectItem>
+                            <SelectItem value="Cancelada">Cancelada</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="notas"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nota de la Cita (Opcional)</FormLabel>
                         <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Seleccione un tipo de cita" />
-                        </SelectTrigger>
+                          <Textarea placeholder="Añadir notas adicionales..." {...field} />
                         </FormControl>
-                        <SelectContent>
-                            <SelectItem value="consulta">Consulta</SelectItem>
-                            <SelectItem value="tratamiento">Tratamiento</SelectItem>
-                            <SelectItem value="control">Control</SelectItem>
-                            <SelectItem value="limpieza">Limpieza</SelectItem>
-                            <SelectItem value="otro">Otro</SelectItem>
-                        </SelectContent>
-                    </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="eventColor"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Color del Evento</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <div className="flex items-center gap-2">
-                          {field.value && <div className="w-4 h-4 rounded-full" style={{ backgroundColor: field.value }} />}
-                          <SelectValue placeholder="Seleccione un color" />
-                        </div>
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {eventColors.map(color => (
-                        <SelectItem key={color.value} value={color.value}>
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: color.value }} />
-                            {color.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="notas"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notas (Opcional)</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Añadir notas adicionales sobre la cita..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter className="pt-4 flex flex-col-reverse sm:flex-row sm:justify-between gap-3">
-              <div className="w-full sm:w-auto">
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            </ScrollArea>
+            <DialogFooter className="p-6 pt-4 border-t flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3">
+              <div>
                 {existingAppointment && onDelete && (
                   <Button
                     type="button"
                     variant="destructive"
                     onClick={handleDeleteClick}
                     className="w-full sm:w-auto"
-                    aria-label="Eliminar cita"
                   >
-                    <Trash2 className="h-4 w-4" /> <span className="sm:hidden ml-2">Eliminar</span>
+                    <Trash2 className="h-4 w-4 mr-2" /> Eliminar Cita
                   </Button>
                 )}
               </div>
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:justify-end">
-                <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                <Button type="button" variant="outline" onClick={onClose}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
-                  {form.formState.isSubmitting ? (existingAppointment ? 'Guardando...' : 'Creando...') : (existingAppointment ? 'Guardar Cambios' : 'Crear Cita')}
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? 'Guardando...' : 'Guardar'}
                 </Button>
               </div>
             </DialogFooter>
@@ -409,5 +378,3 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, initialDat
     </Dialog>
   );
 }
-
-    

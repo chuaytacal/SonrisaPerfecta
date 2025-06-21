@@ -45,7 +45,7 @@ import { CalendarIcon, Tag, UserSquare, User, ClipboardList } from "lucide-react
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { mockPacientesData, mockPersonasData } from "@/app/gestion-usuario/pacientes/page";
+import { mockPacientesData, mockPersonasData } from "@/lib/data";
 
 
 const pacienteFormSchema = z.object({
@@ -651,7 +651,7 @@ export function AddPacienteForm({
                         name="apoderado_fechaNacimiento"
                         render={({ field }) => (
                         <FormItem className="flex flex-col">
-                            <FormLabel className="mb-1.5">Fecha de Nacimiento del Apoderado</FormLabel>
+                            <FormLabel className="mb-1.5">Fecha de Nacimiento</FormLabel>
                             <Popover><PopoverTrigger asChild>
                             <FormControl>
                                 <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>
@@ -687,14 +687,14 @@ export function AddPacienteForm({
                   </div>
                   <FormField control={form.control} name="apoderado_direccion"
                     render={({ field }) => (
-                        <FormItem><FormLabel>Dirección del Apoderado</FormLabel>
+                        <FormItem><FormLabel>Dirección</FormLabel>
                         <FormControl><Input placeholder="Av. Secundaria 456" {...field} value={field.value ?? ""} /></FormControl><FormMessage />
                         </FormItem>
                     )}
                   />
                   <FormField control={form.control} name="apoderado_telefono"
                     render={({ field }) => (
-                        <FormItem><FormLabel>Teléfono del Apoderado</FormLabel>
+                        <FormItem><FormLabel>Teléfono</FormLabel>
                         <FormControl><Input placeholder="987654321" {...field} value={field.value ?? ""} /></FormControl><FormMessage />
                         </FormItem>
                     )}

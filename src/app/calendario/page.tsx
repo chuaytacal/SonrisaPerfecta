@@ -8,13 +8,14 @@ import parse from 'date-fns/parse';
 import startOfWeek from 'date-fns/startOfWeek';
 import getDay from 'date-fns/getDay';
 import es from 'date-fns/locale/es';
-import { addDays, setHours, setMinutes } from 'date-fns';
+import { addDays, setHours, setMinutes, addMinutes } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Plus, ChevronLeft, ChevronRight, CalendarDays, ListFilter, LayoutGrid, Rows3, Trash2 } from 'lucide-react';
 import { AppointmentModal } from '@/components/calendario/AppointmentModal';
 import type { Appointment, AppointmentFormData } from '@/types/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { mockPacientesData, mockPersonalData, mockMotivosCita } from '@/lib/data';
 
 
 const locales = {
@@ -48,64 +49,43 @@ const messages = {
 export const generateInitialAppointments = (): Appointment[] => {
   const today = new Date();
   const tomorrow = addDays(today, 1);
-  const dayAfterTomorrow = addDays(today, 2);
-  const nextWeek = addDays(today, 7);
+  
+  const paciente1 = mockPacientesData[0];
+  const doctor1 = mockPersonalData[1];
+  const motivo1 = mockMotivosCita[0];
 
+  const paciente2 = mockPacientesData[1];
+  const doctor2 = mockPersonalData[2];
+  const motivo2 = mockMotivosCita[2];
+  
   return [
     {
       id: crypto.randomUUID(),
-      title: 'Consulta Dr. Pérez',
+      title: `${motivo1.nombre} - ${paciente1.persona.nombre}`,
       start: setMinutes(setHours(today, 10), 0),
       end: setMinutes(setHours(today, 11), 0),
-      paciente: 'Ana García',
-      doctor: 'Dr. Pérez',
-      tipoCita: 'consulta',
+      idPaciente: paciente1.id,
+      idDoctor: doctor1.id,
+      paciente: paciente1,
+      doctor: doctor1,
+      idMotivoCita: motivo1.id,
+      motivoCita: motivo1,
+      estado: 'Confirmada',
       eventColor: 'hsl(var(--chart-1))',
     },
     {
       id: crypto.randomUUID(),
-      title: 'Limpieza Dental',
-      start: setMinutes(setHours(today, 14), 0),
-      end: setMinutes(setHours(today, 15), 30),
-      paciente: 'Carlos López',
-      tipoCita: 'limpieza',
+      title: `${motivo2.nombre} - ${paciente2.persona.nombre}`,
+      start: setMinutes(setHours(tomorrow, 14), 0),
+      end: setMinutes(setHours(tomorrow, 15), 30),
+      idPaciente: paciente2.id,
+      idDoctor: doctor2.id,
+      paciente: paciente2,
+      doctor: doctor2,
+      idMotivoCita: motivo2.id,
+      motivoCita: motivo2,
+      estado: 'Pendiente',
       eventColor: 'hsl(var(--chart-2))',
-    },
-    {
-      id: crypto.randomUUID(),
-      title: 'Reunión de equipo',
-      start: setMinutes(setHours(today, 16), 0),
-      end: setMinutes(setHours(today, 17), 0),
-      tipoCita: 'otro',
-      eventColor: 'hsl(var(--destructive))',
-    },
-    {
-      id: crypto.randomUUID(),
-      title: 'Ortodoncia Seguimiento',
-      start: setMinutes(setHours(tomorrow, 9), 0),
-      end: setMinutes(setHours(tomorrow, 11), 0),
-      paciente: 'Sofía Torres',
-      doctor: 'Dra. Ramos',
-      tipoCita: 'control',
-      eventColor: '#4CAF50',
-    },
-    {
-      id: crypto.randomUUID(),
-      title: 'Endodoncia',
-      start: setMinutes(setHours(dayAfterTomorrow, 11), 0),
-      end: setMinutes(setHours(dayAfterTomorrow, 12), 0),
-      paciente: 'Juan Rodríguez',
-      tipoCita: 'tratamiento',
-      eventColor: '#FF9800',
-    },
-     {
-      id: crypto.randomUUID(),
-      title: 'Cita Importante (Todo el día)',
-      start: nextWeek,
-      end: nextWeek,
-      allDay: true,
-      tipoCita: 'otro',
-      eventColor: '#9C27B0',
     }
   ];
 };
@@ -114,7 +94,7 @@ export const generateInitialAppointments = (): Appointment[] => {
 export default function CalendarioPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedSlotInfo, setSelectedSlotInfo] = useState<Partial<AppointmentFormData> & { start?: Date; end?: Date } | null>(null);
+  const [selectedSlotInfo, setSelectedSlotInfo] = useState<{ start: Date; end: Date } | null>(null);
   const [currentView, setCurrentView] = useState<keyof typeof Views>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
@@ -126,14 +106,9 @@ export default function CalendarioPage() {
   }, []);
 
   const handleSelectSlot = useCallback(({ start, end }: { start: Date; end: Date }) => {
-    // console.log('Slot selected on mobile test:', start, end); // Keep for debugging if modal issues persist
     setSelectedSlotInfo({
       start,
       end,
-      startDate: start,
-      startTime: format(start, 'HH:mm'),
-      endDate: end,
-      endTime: format(end, 'HH:mm'),
      });
     setEditingAppointment(null);
     setIsModalOpen(true);
@@ -145,21 +120,60 @@ export default function CalendarioPage() {
     setIsModalOpen(true);
   }, []);
 
-  const handleSaveAppointment = (appointmentData: Appointment) => {
+  const handleSaveAppointment = (formData: AppointmentFormData) => {
+    
+    const startDateTime = new Date(formData.fecha);
+    const [startHours, startMinutes] = formData.horaInicio.split(':').map(Number);
+    startDateTime.setHours(startHours, startMinutes, 0, 0);
+
+    const endDateTime = addMinutes(startDateTime, formData.duracion);
+    
+    const paciente = mockPacientesData.find(p => p.id === formData.idPaciente);
+    const doctor = mockPersonalData.find(p => p.id === formData.idDoctor);
+    const motivoCita = mockMotivosCita.find(m => m.id === formData.idMotivoCita);
+
+    if (!paciente || !doctor || !motivoCita) {
+      toast({
+        title: "Error al guardar",
+        description: "No se encontró el paciente, doctor o motivo de la cita.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const appointmentToSave: Appointment = {
+      id: editingAppointment?.id || crypto.randomUUID(),
+      title: `${motivoCita.nombre} - ${paciente.persona.nombre}`,
+      start: startDateTime,
+      end: endDateTime,
+      idPaciente: paciente.id,
+      idDoctor: doctor.id,
+      idMotivoCita: motivoCita.id,
+      paciente,
+      doctor,
+      motivoCita,
+      procedimientos: formData.procedimientos,
+      estado: formData.estado,
+      notas: formData.notas,
+      eventColor: editingAppointment?.eventColor || 'hsl(var(--primary))'
+    };
+
     setAppointments(prev => {
-      const existingIndex = prev.findIndex(app => app.id === appointmentData.id);
+      const existingIndex = prev.findIndex(app => app.id === appointmentToSave.id);
       if (existingIndex > -1) {
         const updatedAppointments = [...prev];
-        updatedAppointments[existingIndex] = appointmentData;
+        updatedAppointments[existingIndex] = appointmentToSave;
         return updatedAppointments;
       }
-      return [...prev, appointmentData];
+      return [...prev, appointmentToSave];
     });
+    
     toast({
       title: editingAppointment ? "Cita Actualizada" : "Cita Creada",
-      description: `La cita "${appointmentData.title}" ha sido ${editingAppointment ? 'actualizada' : 'programada'}.`,
+      description: `La cita para "${paciente.persona.nombre}" ha sido ${editingAppointment ? 'actualizada' : 'programada'}.`,
       variant: 'default'
     });
+    
     setIsModalOpen(false);
     setEditingAppointment(null);
     setSelectedSlotInfo(null);
@@ -185,18 +199,25 @@ export default function CalendarioPage() {
         borderRadius: '4px', 
         border: 'none',
       };
-      if (event.eventColor) {
-        style.backgroundColor = event.eventColor;
-       
-        if (currentView === Views.AGENDA) {
-          style.padding = '0.625rem'; 
-          style.margin = '0px';
-          style.borderRadius = '0px';
-          style.color = 'hsl(var(--card-foreground))'; 
-        } else {
-           style.color = 'hsl(var(--primary-foreground))';
-        }
+      
+      let backgroundColor = event.eventColor || 'hsl(var(--primary))';
+      if (event.estado === 'Cancelada') {
+        backgroundColor = 'hsl(var(--destructive))';
+      } else if (event.estado === 'Pendiente') {
+        backgroundColor = 'hsl(var(--chart-5))';
       }
+
+      style.backgroundColor = backgroundColor;
+
+      if (currentView === Views.AGENDA) {
+        style.padding = '0.625rem'; 
+        style.margin = '0px';
+        style.borderRadius = '0px';
+        style.color = 'hsl(var(--card-foreground))'; 
+      } else {
+          style.color = 'hsl(var(--primary-foreground))';
+      }
+
       return {
         style,
         className: 'cursor-pointer',
@@ -360,4 +381,3 @@ export default function CalendarioPage() {
     </div>
   );
 }
-

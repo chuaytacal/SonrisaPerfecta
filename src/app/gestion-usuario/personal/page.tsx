@@ -4,7 +4,7 @@
 import * as React from "react";
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
-// Removed Avatar related imports as it's no longer used here
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowUpDown, MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react"; // Removed Eye
+import { ArrowUpDown, MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight, Eye } from "lucide-react";
 import { AddPersonalForm } from "@/components/personal/AddPersonalForm";
 import { SelectPersonaModal } from "@/components/personal/SelectPersonaModal";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -28,60 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Persona, TipoDocumento, Sexo } from "@/types";
-
-
-// Representa la tabla 'especialista' que es el Personal
-export type Personal = {
-  id: string; // ID del registro de Personal/Especialista
-  idPersona: string; // FK a la tabla Persona
-  persona: Persona; // Datos de la persona anidados
-  fechaIngreso: string; // "DD/MM/YYYY" - Fecha de ingreso como personal
-  estado: "Activo" | "Inactivo";
-  // avatarUrl?: string; // Removed as per request
-  // especialidad: string; // Removed as per request
-};
-
-const mockPersonasData: Persona[] = [
-  { id: "persona-1", tipoDocumento: "DNI", numeroDocumento: "73124568", nombre: "Joe", apellidoPaterno: "Schilder", apellidoMaterno: "Mann", fechaNacimiento: new Date("1985-05-15"), sexo: "M", direccion: "Av. Siempre Viva 123", telefono: "943567821", email: "joe.schilder@example.com" },
-  { id: "persona-2", tipoDocumento: "DNI", numeroDocumento: "18273645", nombre: "Phoebe", apellidoPaterno: "Venturi", apellidoMaterno: "Ross", fechaNacimiento: new Date("1990-08-22"), sexo: "F", direccion: "Calle Falsa 456", telefono: "981234670", email: "phoebe.venturi@example.com" },
-  { id: "persona-3", tipoDocumento: "DNI", numeroDocumento: "49205873", nombre: "Caroline", apellidoPaterno: "Pandolfi", apellidoMaterno: "Geller", fechaNacimiento: new Date("1988-11-30"), sexo: "F", direccion: "Jr. Desconocido 789", telefono: "967891234", email: "caroline.pandolfi@example.com" },
-  { id: "persona-4", tipoDocumento: "DNI", numeroDocumento: "50938472", nombre: "Ricardo", apellidoPaterno: "Marchetti", apellidoMaterno: "Tribbiani", fechaNacimiento: new Date("1992-03-10"), sexo: "M", direccion: "Pje. Oculto 101", telefono: "935648290", email: "ricardo.marchetti@example.com" },
-  { id: "persona-5", tipoDocumento: "EXTRANJERIA", numeroDocumento: "X6349275", nombre: "Dorothy", apellidoPaterno: "Hussain", apellidoMaterno: "Bing", fechaNacimiento: new Date("1980-07-01"), sexo: "F", direccion: "Av. Central 202", telefono: "927401356", email: "dorothy.hussain@example.com" },
-  { id: "persona-6", tipoDocumento: "PASAPORTE", numeroDocumento: "P2107384", nombre: "Eleanor", apellidoPaterno: "Mann", apellidoMaterno: "Buffay", fechaNacimiento: new Date("1995-01-20"), sexo: "F", direccion: "Calle Sol 303", telefono: "984123758", email: "eleanor.mann@example.com" },
-  { id: "persona-7", tipoDocumento: "DNI", numeroDocumento: "85017429", nombre: "Nina", apellidoPaterno: "Francini", apellidoMaterno: "Green", fechaNacimiento: new Date("1989-09-05"), sexo: "F", direccion: "Av. Luna 404", telefono: "975320461", email: "nina.francini@example.com" },
-  { id: "persona-8", tipoDocumento: "DNI", numeroDocumento: "76309152", nombre: "Caroline", apellidoPaterno: "Mallet", apellidoMaterno: "Peralta", fechaNacimiento: new Date("1993-12-12"), sexo: "F", direccion: "Jr. Estrella 505", telefono: "928547103", email: "caroline.mallet@example.com" },
-];
-
-const mockPersonalData: Personal[] = [
-  {
-    id: "personal-1",
-    idPersona: "persona-1",
-    persona: mockPersonasData[0],
-    // especialidad: "Ortodoncia", // Removed
-    fechaIngreso: "17/02/2023",
-    estado: "Inactivo",
-    // avatarUrl: "https://placehold.co/40x40.png?text=JS", // Removed
-  },
-  {
-    id: "personal-2",
-    idPersona: "persona-2",
-    persona: mockPersonasData[1],
-    // especialidad: "Endodoncia", // Removed
-    fechaIngreso: "05/07/2023",
-    estado: "Activo",
-    // avatarUrl: "https://placehold.co/40x40.png?text=PV", // Removed
-  },
-  {
-    id: "personal-3",
-    idPersona: "persona-3",
-    persona: mockPersonasData[2],
-    // especialidad: "Periodoncia", // Removed
-    fechaIngreso: "11/10/2023",
-    estado: "Activo",
-    // avatarUrl: "https://placehold.co/40x40.png?text=CP", // Removed
-  },
-];
+import type { Persona, Personal } from "@/types";
+import { mockPersonasData, mockPersonalData } from "@/lib/data";
 
 
 export default function PersonalPage() {
@@ -101,7 +49,7 @@ export default function PersonalPage() {
     title: "",
     description: ""
   });
-  const [sortBy, setSortBy] = React.useState<string>("persona.nombre_asc");
+  const [sortBy, setSortBy] = React.useState<string>("nombre_asc");
 
   const handleSavePersonal = (savedPersonal: Personal) => {
     setPersonalList(prevList => {
@@ -111,6 +59,8 @@ export default function PersonalPage() {
         updatedList[existingIndex] = savedPersonal;
         return updatedList;
       }
+      // If new, ensure mockPersonasData is updated if a new Persona was created
+      // This is a simplification; in a real app, data would refetch or be managed globally
       const personaExists = mockPersonasData.find(p => p.id === savedPersonal.idPersona);
       if (!personaExists) {
         mockPersonasData.push(savedPersonal.persona);
@@ -128,7 +78,7 @@ export default function PersonalPage() {
   };
   
   const handleOpenAddPersonalFlow = () => {
-    setEditingPersonal(null); 
+    setEditingPersonal(null); // Clear any existing edit state
     setSelectedPersonaToPreload(null);
     setIsCreatingNewPersonaFlow(false);
     setIsSelectPersonaModalOpen(true);
@@ -150,8 +100,8 @@ export default function PersonalPage() {
   
   const openEditModal = (personal: Personal) => {
     setEditingPersonal(personal);
-    setSelectedPersonaToPreload(personal.persona); 
-    setIsCreatingNewPersonaFlow(false); 
+    setSelectedPersonaToPreload(personal.persona); // Preload with existing persona data
+    setIsCreatingNewPersonaFlow(false); // Not creating a new persona, but editing
     setIsAddPersonalFormOpen(true);
   };
 
@@ -232,8 +182,8 @@ const columns: ColumnDef<Personal>[] = [
      enableSorting: false,
   },
   {
-    id: "persona.nombre", 
-    accessorKey: "persona.nombre", 
+    id: "persona.nombre", // Explicitly set the ID
+    accessorKey: "persona.nombre", // Access nested property
     header: ({ column }) => {
       return (
         <Button
@@ -250,7 +200,10 @@ const columns: ColumnDef<Personal>[] = [
       const nombreCompleto = `${personal.persona.nombre} ${personal.persona.apellidoPaterno} ${personal.persona.apellidoMaterno}`;
       return (
         <div className="flex items-center space-x-3">
-          {/* Avatar removed */}
+          <Avatar>
+            <AvatarImage src={personal.avatarUrl} alt={nombreCompleto} data-ai-hint="person portrait" />
+            <AvatarFallback>{personal.persona.nombre.substring(0, 1)}{personal.persona.apellidoPaterno.substring(0,1)}</AvatarFallback>
+          </Avatar>
           <div>
             <div className="font-medium">{nombreCompleto}</div>
             <div className="text-xs text-muted-foreground">{personal.persona.tipoDocumento}: {personal.persona.numeroDocumento}</div>
@@ -258,7 +211,7 @@ const columns: ColumnDef<Personal>[] = [
         </div>
       );
     },
-    filterFn: (row, id, value) => { 
+    filterFn: (row, id, value) => { // Custom filter for full name
         const personal = row.original;
         const nombreCompleto = `${personal.persona.nombre} ${personal.persona.apellidoPaterno} ${personal.persona.apellidoMaterno}`.toLowerCase();
         const numeroDocumento = personal.persona.numeroDocumento.toLowerCase();
@@ -268,21 +221,21 @@ const columns: ColumnDef<Personal>[] = [
   },
   {
     accessorKey: "persona.telefono",
-    header: "Teléfono", // Changed header from "Contacto"
+    header: "Contacto",
     cell: ({ row }) => {
         const personal = row.original;
         return (
             <div>
                 <div>{personal.persona.telefono}</div>
-                {/* Email removed from display */}
+                <div className="text-xs text-muted-foreground">{personal.persona.email}</div>
             </div>
         )
     }
   },
-  // { // Especialidad column removed
-  //   accessorKey: "especialidad",
-  //   header: "Especialidad",
-  // },
+  {
+    accessorKey: "especialidad",
+    header: "Especialidad",
+  },
   {
     accessorKey: "fechaIngreso",
     header: ({ column }) => {
@@ -340,7 +293,9 @@ const columns: ColumnDef<Personal>[] = [
               {personal.estado === "Activo" ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
               {personal.estado === "Activo" ? "Desactivar" : "Activar"}
             </DropdownMenuItem>
-             {/* Ver Detalles removed */}
+             <DropdownMenuItem onClick={() => alert(`Ver detalles de ${personal.persona.nombre}`)}>
+                <Eye className="mr-2 h-4 w-4" /> Ver Detalles
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -354,7 +309,7 @@ const columns: ColumnDef<Personal>[] = [
   ];
 
   const sortOptions = [
-    { label: "Nombre (A-Z)", value: "persona.nombre_asc" }, 
+    { label: "Nombre (A-Z)", value: "persona.nombre_asc" }, // Updated for nested property
     { label: "Nombre (Z-A)", value: "persona.nombre_desc" },
     { label: "Fecha de Ingreso (Más Reciente)", value: "fechaIngreso_desc" },
     { label: "Fecha de Ingreso (Más Antiguo)", value: "fechaIngreso_asc" },
@@ -364,7 +319,7 @@ const columns: ColumnDef<Personal>[] = [
   return (
     <div className="w-full py-4 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Personal</h1>
+        <h1 className="text-2xl font-bold">Lista de Personal</h1>
         <p className="text-muted-foreground">
           Administra el personal de la clínica.
         </p>
@@ -396,9 +351,7 @@ const columns: ColumnDef<Personal>[] = [
         onClose={() => setIsSelectPersonaModalOpen(false)}
         onSelectPersona={handleSelectPersona}
         onCreateNewPersona={handleCreateNewPersona}
-        existingPersonas={mockPersonasData} 
-        modalDescription="Busca una persona por DNI o nombre completo para asignarle el rol de personal, o crea una nueva persona."
-        createButtonLabel="Crear Persona y Asignar como Personal"
+        existingPersonas={mockPersonasData} // Pass mock data here
       />
 
       <AddPersonalForm
@@ -425,11 +378,9 @@ const columns: ColumnDef<Personal>[] = [
             description={confirmDialogProps.description}
             confirmButtonText={confirmDialogProps.confirmButtonText}
             confirmButtonVariant={confirmDialogProps.confirmButtonVariant}
-            isLoading={false} 
+            isLoading={false} // Assuming no async operation for now
         />
       )}
     </div>
   );
 }
-
-    
