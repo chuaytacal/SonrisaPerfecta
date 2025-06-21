@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Stage, Layer, Group as KonvaGroup } from 'react-konva'; // Renamed Group to KonvaGroup to avoid conflict if any
 import { ChevronDown, ChevronUp, ArrowLeft, ArrowRight, Trash2 } from "lucide-react";
 import Tooth from './Tooth'; // Assuming ToothA was meant to be Tooth from ./Tooth.tsx
+import { Badge } from '@/components/ui/badge';
 import { DientesMap, SettingSupperJaw, SettingsLowerJaw, Hallazgos, CurrentMode, Hallazgo as HallazgoType, ToothDisplays, OpenModeal, DetalleHallazgo } from './setting';
 import { InteractiveFace } from './ToothFace';
 import { Button } from '@/components/ui/button'; // For modal buttons
