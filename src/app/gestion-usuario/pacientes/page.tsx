@@ -110,42 +110,41 @@ export default function PacientesPage() {
   const [sortBy, setSortBy] = React.useState<string>("persona.nombre_asc");
 
   const handleSavePaciente = (savedPaciente: Paciente, apoderado?: Persona) => {
-    // Save/Update apoderado if exists
+    // 1. Update/Add Apoderado Persona in the "DB"
     if (apoderado) {
       const apoderadoIndex = mockPersonasData.findIndex(p => p.id === apoderado.id);
       if (apoderadoIndex > -1) {
-        mockPersonasData[apoderadoIndex] = apoderado; // Update existing
+        mockPersonasData[apoderadoIndex] = apoderado;
       } else {
-        mockPersonasData.push(apoderado); // Add new
+        mockPersonasData.push(apoderado);
       }
     }
 
-    setPacienteList(prevList => {
-      const existingIndex = prevList.findIndex(p => p.id === savedPaciente.id);
-      if (existingIndex > -1) {
-        // Update existing paciente's persona data in mockPersonasData
-        const personaIndex = mockPersonasData.findIndex(p => p.id === savedPaciente.idPersona);
-        if(personaIndex > -1) {
-            mockPersonasData[personaIndex] = savedPaciente.persona;
-        }
-        // Update paciente in the list
-        const updatedList = [...prevList];
-        updatedList[existingIndex] = savedPaciente;
-        return updatedList;
-      }
-      
-      // Add new paciente and persona
-      const personaExists = mockPersonasData.find(p => p.id === savedPaciente.idPersona);
-      if (!personaExists) {
-        mockPersonasData.push(savedPaciente.persona); 
-      }
-      return [savedPaciente, ...prevList];
-    });
-
+    // 2. Update/Add Paciente's Persona in the "DB"
+    const personaIndex = mockPersonasData.findIndex(p => p.id === savedPaciente.idPersona);
+    if (personaIndex > -1) {
+      mockPersonasData[personaIndex] = savedPaciente.persona;
+    } else {
+      mockPersonasData.push(savedPaciente.persona);
+    }
+  
+    // 3. Update/Add Paciente in the "DB"
+    const pacienteIndex = mockPacientesData.findIndex(p => p.id === savedPaciente.id);
+    if (pacienteIndex > -1) {
+      mockPacientesData[pacienteIndex] = savedPaciente;
+    } else {
+      mockPacientesData.unshift(savedPaciente);
+    }
+  
+    // 4. Update local state from the source of truth to force re-render
+    setPacienteList([...mockPacientesData]);
+  
     toast({
       title: editingPaciente ? "Paciente Actualizado" : "Paciente Registrado",
       description: `${savedPaciente.persona.nombre} ${savedPaciente.persona.apellidoPaterno} ha sido ${editingPaciente ? 'actualizado' : 'registrado'}.`,
     });
+  
+    // Reset form/modal states
     setIsAddPacienteFormOpen(false);
     setEditingPaciente(null);
     setEditingApoderado(null);

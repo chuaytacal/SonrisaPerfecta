@@ -250,16 +250,18 @@ export default function FiliacionPage() {
 
 
   const handleSavePacienteDetails = (updatedPacienteFromForm: PacienteType, updatedApoderado?: Persona) => {
-    // Update Apoderado
+    // Update Apoderado in our mock "DB"
     if (updatedApoderado) {
         const apoderadoIndex = mockPersonasData.findIndex(p => p.id === updatedApoderado.id);
         if(apoderadoIndex > -1) {
             mockPersonasData[apoderadoIndex] = updatedApoderado;
-            setApoderado(updatedApoderado);
         }
+        setApoderado(updatedApoderado); // Update local state for immediate view
+    } else {
+        setApoderado(null); // Clear apoderado if they are no longer needed
     }
 
-    // Update Paciente and their Persona
+    // Update Paciente and their Persona in our mock "DB"
     const pacienteIndex = mockPacientesData.findIndex(p => p.id === updatedPacienteFromForm.id);
     if (pacienteIndex > -1) {
         const personaIndex = mockPersonasData.findIndex(p => p.id === updatedPacienteFromForm.idPersona);
@@ -269,9 +271,17 @@ export default function FiliacionPage() {
         
         mockPacientesData[pacienteIndex] = updatedPacienteFromForm;
       
+        // Update local state to reflect changes immediately
         setPaciente(updatedPacienteFromForm); 
         setPersona(updatedPacienteFromForm.persona);
-      
+        
+        // Re-calculate age and minority status and update state
+        const calculatedAge = updatedPacienteFromForm.persona.fechaNacimiento 
+            ? differenceInYears(new Date(), new Date(updatedPacienteFromForm.persona.fechaNacimiento)) 
+            : NaN;
+        setIsMinor(!isNaN(calculatedAge) && calculatedAge < 18);
+
+        // Update derived state for EtiquetasNotasSalud for consistency
         setDisplayedNotas(updatedPacienteFromForm.notas || "Sin notas registradas.");
         setDisplayedEtiquetas(updatedPacienteFromForm.etiquetas || []);
         setDisplayedAlergias(deriveAlergiasFromAntecedentes(updatedPacienteFromForm.antecedentesMedicos));
