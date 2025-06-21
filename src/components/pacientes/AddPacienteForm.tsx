@@ -45,17 +45,8 @@ import { CalendarIcon, Tag, UserSquare, User, ClipboardList } from "lucide-react
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { mockPacientesData, mockPersonasData } from "@/app/gestion-usuario/pacientes/page";
 
-const predefinedEtiquetas: EtiquetaPaciente[] = [
-  "Alergia a Penicilina",
-  "Diabético",
-  "Menor de Edad",
-  "Fumador",
-  "Hipertenso",
-  "Covid+",
-  "Postquirúrgico",
-  "Anciano",
-];
 
 const pacienteFormSchema = z.object({
   // Persona fields
@@ -85,6 +76,32 @@ const pacienteFormSchema = z.object({
   apoderado_direccion: z.string().optional(),
   apoderado_telefono: z.string().optional(),
 }).superRefine((data, ctx) => {
+    // Validation for Document Number length based on type
+    if (data.tipoDocumento === 'DNI' && data.numeroDocumento.length !== 8) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "El DNI debe tener 8 dígitos.",
+            path: ["numeroDocumento"],
+        });
+    }
+    if ((data.tipoDocumento === 'EXTRANJERIA' || data.tipoDocumento === 'PASAPORTE') && (data.numeroDocumento.length < 8 || data.numeroDocumento.length > 12)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Debe tener entre 8 y 12 caracteres.",
+            path: ["numeroDocumento"],
+        });
+    }
+    // Validation for Apoderado Document Number length
+    if (data.apoderado_tipoDocumento && data.apoderado_numeroDocumento) {
+        if (data.apoderado_tipoDocumento === 'DNI' && data.apoderado_numeroDocumento.length !== 8) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "El DNI debe tener 8 dígitos.", path: ["apoderado_numeroDocumento"] });
+        }
+        if ((data.apoderado_tipoDocumento === 'EXTRANJERIA' || data.apoderado_tipoDocumento === 'PASAPORTE') && (data.apoderado_numeroDocumento.length < 8 || data.apoderado_numeroDocumento.length > 12)) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Debe tener entre 8 y 12 caracteres.", path: ["apoderado_numeroDocumento"] });
+        }
+    }
+
+
     if (!data.fechaNacimiento) return;
     const age = differenceInYears(new Date(), data.fechaNacimiento);
     if (age < 18) {
@@ -159,7 +176,6 @@ export function AddPacienteForm({
       const minor = age < 18;
       setIsMinor(minor);
       if (!minor) {
-        // Clear apoderado fields if patient becomes an adult
         form.setValue("apoderado_tipoDocumento", undefined);
         form.setValue("apoderado_numeroDocumento", undefined);
         form.setValue("apoderado_nombre", undefined);
@@ -178,6 +194,7 @@ export function AddPacienteForm({
 
   useEffect(() => {
     if (open) {
+      form.reset(); // Reset form state and errors on open
       let defaultVals: Partial<PacienteFormValues> = {
         tipoDocumento: "DNI", numeroDocumento: "", nombre: "", apellidoPaterno: "", apellidoMaterno: "",
         sexo: "M", direccion: "", telefono: "",
@@ -218,6 +235,46 @@ export function AddPacienteForm({
       form.reset(defaultVals);
     }
   }, [initialPacienteData, initialApoderadoData, selectedPersonaToPreload, isCreatingNewPersonaFlow, isEditMode, open, form]);
+
+
+  const handleDocumentBlur = async () => {
+    // Only run this logic if we are in a "new persona" flow and not editing.
+    if (isEditMode || !isCreatingNewPersonaFlow) {
+      return;
+    }
+  
+    // Clear previous custom errors before re-validating.
+    form.clearErrors("numeroDocumento");
+  
+    // Trigger validation for the field first (checks length based on type).
+    const isValid = await form.trigger("numeroDocumento");
+    if (!isValid) return;
+  
+    const currentNumero = form.getValues("numeroDocumento");
+  
+    // Check if patient with this document already exists.
+    const patientExists = mockPacientesData.some(p => p.persona.numeroDocumento === currentNumero);
+    if (patientExists) {
+      form.setError("numeroDocumento", {
+        type: "manual",
+        message: "Este paciente ya está registrado.",
+      });
+      return;
+    }
+  
+    // Check if a persona with this document exists (but is not a patient).
+    const personaExists = mockPersonasData.find(p => p.numeroDocumento === currentNumero);
+    if (personaExists) {
+      const { id, email, ...personaFieldsToFill } = personaExists;
+  
+      // Use reset to update multiple fields. Spread current values to preserve things like `fechaIngreso`.
+      form.reset({
+        ...form.getValues(),
+        ...personaFieldsToFill,
+        fechaNacimiento: new Date(personaExists.fechaNacimiento),
+      });
+    }
+  };
 
 
   async function onSubmit(values: PacienteFormValues) {
@@ -317,7 +374,14 @@ export function AddPacienteForm({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Número de Documento</FormLabel>
-                        <FormControl><Input placeholder="12345678" {...field} disabled={isTipoDocNumDisabled} /></FormControl>
+                        <FormControl>
+                          <Input 
+                            placeholder="12345678" 
+                            {...field} 
+                            onBlur={handleDocumentBlur} 
+                            disabled={isTipoDocNumDisabled} 
+                          />
+                        </FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -658,3 +722,6 @@ export function AddPacienteForm({
     </Dialog>
   );
 }
+
+
+    
