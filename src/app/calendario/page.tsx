@@ -357,7 +357,7 @@ export default function CalendarioPage() {
         />
       )}
       <Dialog open={isPastDateWarningOpen} onOpenChange={setIsPastDateWarningOpen}>
-        <DialogContent className="sm:max-w-md p-8 text-center">
+        <DialogContent className="sm:max-w-lg p-8 text-center">
             <DialogHeader className="space-y-4">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                     <Megaphone className="h-10 w-10 text-primary" />
