@@ -1,8 +1,9 @@
 
 "use client";
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Calendar as BigCalendar, dateFnsLocalizer, Views, Navigate } from 'react-big-calendar';
+import { useRouter } from 'next/navigation';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
 import startOfWeek from 'date-fns/startOfWeek';
@@ -12,10 +13,14 @@ import { addMinutes } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Plus, ChevronLeft, ChevronRight, CalendarDays, ListFilter, LayoutGrid, Rows3, Megaphone } from 'lucide-react';
 import { AppointmentModal } from '@/components/calendario/AppointmentModal';
-import type { Appointment, AppointmentFormData } from '@/types/calendar';
+import { AppointmentPopoverContent } from '@/components/calendario/AppointmentPopoverContent';
+import { RescheduleModal } from '@/components/calendario/RescheduleModal';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import type { Appointment, AppointmentFormData, AppointmentState } from '@/types/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { mockPacientesData, mockPersonalData, mockMotivosCita, mockAppointmentsData } from '@/lib/data';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 
@@ -48,20 +53,30 @@ const messages = {
 };
 
 export default function CalendarioPage() {
+  const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>(mockAppointmentsData);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPastDateWarningOpen, setIsPastDateWarningOpen] = useState(false);
   const [pendingSlotInfo, setPendingSlotInfo] = useState<{ start: Date; end: Date } | null>(null);
-  const [selectedSlotInfo, setSelectedSlotInfo] = useState<{ start: Date; end: Date } | null>(null);
   const [currentView, setCurrentView] = useState<keyof typeof Views>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const { toast } = useToast();
+  
+  // States for Popover
+  const [selectedEventForPopover, setSelectedEventForPopover] = useState<Appointment | null>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const popoverTriggerRef = useRef<HTMLDivElement>(null);
+  
+  // States for Reschedule Modal
+  const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
+
+  // States for Confirmation Dialog
+  const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
+  const [appointmentToAction, setAppointmentToAction] = useState<Appointment | null>(null);
 
   useEffect(() => {
     setCurrentDate(new Date());
-    // The state is now initialized directly from mockAppointmentsData
-    // We can use a useEffect to sync if it changes from other places, but for now this is fine.
     setAppointments([...mockAppointmentsData]);
   }, []);
 
@@ -70,7 +85,6 @@ export default function CalendarioPage() {
       setPendingSlotInfo({ start, end });
       setIsPastDateWarningOpen(true);
     } else {
-      setSelectedSlotInfo({ start, end });
       setEditingAppointment(null);
       setIsModalOpen(true);
     }
@@ -79,25 +93,74 @@ export default function CalendarioPage() {
   const handleAcknowledgePastDate = () => {
     setIsPastDateWarningOpen(false);
     if (pendingSlotInfo) {
-      setSelectedSlotInfo(pendingSlotInfo);
       setEditingAppointment(null);
       setIsModalOpen(true);
       setPendingSlotInfo(null);
     }
   };
 
-  const handleSelectEvent = useCallback((event: Appointment) => {
-    setEditingAppointment(event);
-    setSelectedSlotInfo(null);
-    setIsModalOpen(true);
+  const handleSelectEvent = useCallback((event: Appointment, e: React.SyntheticEvent) => {
+    const target = e.currentTarget as HTMLDivElement;
+    if (popoverTriggerRef.current) {
+        popoverTriggerRef.current.style.top = `${target.getBoundingClientRect().bottom + window.scrollY}px`;
+        popoverTriggerRef.current.style.left = `${target.getBoundingClientRect().left + window.scrollX}px`;
+    }
+    setSelectedEventForPopover(event);
+    setPopoverOpen(true);
   }, []);
+  
+  const handleUpdateState = (appointmentId: string, newState: AppointmentState) => {
+    const appointmentIndex = mockAppointmentsData.findIndex(app => app.id === appointmentId);
+    if(appointmentIndex > -1) {
+        mockAppointmentsData[appointmentIndex].estado = newState;
+    }
+    setAppointments([...mockAppointmentsData]);
+    toast({
+        title: "Estado Actualizado",
+        description: `La cita ha sido marcada como "${newState}".`
+    });
+    setPopoverOpen(false);
+  };
+
+  const handleOpenEditModalFromPopover = () => {
+    setEditingAppointment(selectedEventForPopover);
+    setIsModalOpen(true);
+    setPopoverOpen(false);
+  };
+
+  const handleOpenRescheduleModalFromPopover = () => {
+    setIsRescheduleModalOpen(true);
+    setPopoverOpen(false);
+  }
+
+  const handleDeleteFromPopover = () => {
+    setAppointmentToAction(selectedEventForPopover);
+    setIsConfirmDeleteDialogOpen(true);
+    setPopoverOpen(false);
+  }
+
+  const confirmDelete = () => {
+    if(!appointmentToAction) return;
+    const indexToDelete = mockAppointmentsData.findIndex(app => app.id === appointmentToAction.id);
+    if (indexToDelete > -1) {
+        mockAppointmentsData.splice(indexToDelete, 1);
+    }
+    setAppointments([...mockAppointmentsData]);
+
+    toast({
+      title: "Cita Eliminada",
+      description: `La cita "${appointmentToAction?.title || 'seleccionada'}" ha sido eliminada.`,
+      variant: 'destructive' 
+    });
+    setIsConfirmDeleteDialogOpen(false);
+    setAppointmentToAction(null);
+  }
+
 
   const handleSaveAppointment = (formData: AppointmentFormData) => {
-    
     const startDateTime = new Date(formData.fecha);
     const [startHours, startMinutes] = formData.horaInicio.split(':').map(Number);
     startDateTime.setHours(startHours, startMinutes, 0, 0);
-
     const endDateTime = addMinutes(startDateTime, formData.duracion);
     
     const paciente = mockPacientesData.find(p => p.id === formData.idPaciente);
@@ -130,14 +193,13 @@ export default function CalendarioPage() {
       eventColor: editingAppointment?.eventColor || 'hsl(var(--primary))'
     };
     
-    // Update mock data source
     const existingIndex = mockAppointmentsData.findIndex(app => app.id === appointmentToSave.id);
     if (existingIndex > -1) {
         mockAppointmentsData[existingIndex] = appointmentToSave;
     } else {
         mockAppointmentsData.push(appointmentToSave);
     }
-    setAppointments([...mockAppointmentsData]); // Update local state from the source of truth
+    setAppointments([...mockAppointmentsData]); 
 
     toast({
       title: editingAppointment ? "Cita Actualizada" : "Cita Creada",
@@ -147,105 +209,76 @@ export default function CalendarioPage() {
     
     setIsModalOpen(false);
     setEditingAppointment(null);
-    setSelectedSlotInfo(null);
   };
 
-  const handleDeleteAppointment = (appointmentId: string) => {
-    const appointmentToDelete = mockAppointmentsData.find(app => app.id === appointmentId);
-    
-    // Update mock data source by filtering
-    const indexToDelete = mockAppointmentsData.findIndex(app => app.id === appointmentId);
-    if (indexToDelete > -1) {
-        mockAppointmentsData.splice(indexToDelete, 1);
+  const handleSaveReschedule = (newDate: Date, newTime: string) => {
+    if (!selectedEventForPopover) return;
+  
+    const [hours, minutes] = newTime.split(':').map(Number);
+    const newStart = new Date(newDate);
+    newStart.setHours(hours, minutes, 0, 0);
+  
+    const duration = selectedEventForPopover.end.getTime() - selectedEventForPopover.start.getTime();
+    const newEnd = new Date(newStart.getTime() + duration);
+  
+    const appointmentIndex = mockAppointmentsData.findIndex(app => app.id === selectedEventForPopover.id);
+    if (appointmentIndex > -1) {
+      mockAppointmentsData[appointmentIndex].start = newStart;
+      mockAppointmentsData[appointmentIndex].end = newEnd;
     }
-    setAppointments([...mockAppointmentsData]); // Update local state from the source of truth
-
+    setAppointments([...mockAppointmentsData]);
+  
     toast({
-      title: "Cita Eliminada",
-      description: `La cita "${appointmentToDelete?.title || 'seleccionada'}" ha sido eliminada.`,
-      variant: 'destructive' 
+      title: "Cita Reprogramada",
+      description: `La cita ha sido movida al ${format(newStart, "d 'de' MMMM 'a las' HH:mm", { locale: es })}.`
     });
-    setIsModalOpen(false);
-    setEditingAppointment(null);
-    setSelectedSlotInfo(null);
+    setIsRescheduleModalOpen(false);
   };
   
   const eventPropGetter = useCallback(
     (event: Appointment) => {
-      const style: React.CSSProperties = {
-        padding: '2px 5px', 
-        borderRadius: '4px', 
-        border: 'none',
-      };
-      
+      const style: React.CSSProperties = { padding: '2px 5px', borderRadius: '4px', border: 'none' };
       let backgroundColor = event.eventColor || 'hsl(var(--primary))';
-      if (event.estado === 'Cancelada') {
-        backgroundColor = 'hsl(var(--destructive))';
-      } else if (event.estado === 'Pendiente') {
-        backgroundColor = 'hsl(var(--chart-5))';
+      
+      switch (event.estado) {
+        case 'Cancelada': backgroundColor = 'hsl(var(--destructive))'; break;
+        case 'Pendiente': backgroundColor = 'hsl(var(--chart-5))'; break;
+        case 'Atendido': backgroundColor = 'hsl(var(--chart-4))'; break;
+        case 'Confirmada': backgroundColor = 'hsl(var(--primary))'; break;
       }
-
       style.backgroundColor = backgroundColor;
 
       if (currentView === Views.AGENDA) {
-        style.padding = '0.625rem'; 
-        style.margin = '0px';
-        style.borderRadius = '0px';
-        style.color = 'hsl(var(--card-foreground))'; 
+        style.padding = '0.625rem'; style.margin = '0px'; style.borderRadius = '0px'; style.color = 'hsl(var(--card-foreground))';
       } else {
-          style.color = 'hsl(var(--primary-foreground))';
+        style.color = 'hsl(var(--primary-foreground))';
       }
 
-      return {
-        style,
-        className: 'cursor-pointer',
-      };
+      return { style, className: 'cursor-pointer' };
     },
     [currentView]
   );
-
+  
   const CustomToolbar = ({ date, view, views, label, onNavigate, onView }: any) => {
     const viewIcons: Record<string, React.ElementType> = {
-      [Views.MONTH]: LayoutGrid,
-      [Views.WEEK]: Rows3,
-      [Views.DAY]: CalendarDays,
-      [Views.AGENDA]: ListFilter,
+      [Views.MONTH]: LayoutGrid, [Views.WEEK]: Rows3, [Views.DAY]: CalendarDays, [Views.AGENDA]: ListFilter,
     };
-
     return (
       <div className="rbc-toolbar mb-4 p-3 border border-border rounded-lg bg-card shadow-md">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4">
             <div className="flex items-center gap-1">
-                <Button variant="outline" size="icon" onClick={() => onNavigate(Navigate.PREVIOUS)} aria-label="Anterior">
-                    <ChevronLeft className="h-5 w-5" />
-                </Button>
-                <Button variant="outline" onClick={() => onNavigate(Navigate.TODAY)} className="px-4 py-2 text-sm font-medium">
-                    Hoy
-                </Button>
-                <Button variant="outline" size="icon" onClick={() => onNavigate(Navigate.NEXT)} aria-label="Siguiente">
-                    <ChevronRight className="h-5 w-5" />
-                </Button>
+                <Button variant="outline" size="icon" onClick={() => onNavigate(Navigate.PREVIOUS)} aria-label="Anterior"><ChevronLeft className="h-5 w-5" /></Button>
+                <Button variant="outline" onClick={() => onNavigate(Navigate.TODAY)} className="px-4 py-2 text-sm font-medium">Hoy</Button>
+                <Button variant="outline" size="icon" onClick={() => onNavigate(Navigate.NEXT)} aria-label="Siguiente"><ChevronRight className="h-5 w-5" /></Button>
             </div>
-            <h2 className="rbc-toolbar-label text-xl font-semibold text-foreground flex-grow text-center my-2 sm:my-0 order-first sm:order-none capitalize">
-                {label}
-            </h2>
+            <h2 className="rbc-toolbar-label text-xl font-semibold text-foreground flex-grow text-center my-2 sm:my-0 order-first sm:order-none capitalize">{label}</h2>
             <div className="flex items-center gap-1">
                 {(views as string[]).map((viewName) => {
                   const IconComponent = viewIcons[viewName];
                   const viewLabel = messages[viewName as keyof typeof messages] || viewName.charAt(0).toUpperCase() + viewName.slice(1);
-                  return (
-                    <Button
-                        key={viewName}
-                        variant={view === viewName ? 'default' : 'outline'}
-                        onClick={() => onView(viewName)}
-                        size="sm"
-                        className="px-3 py-2 text-sm button" // Added 'button' class for media query styling
-                        aria-label={`Vista ${viewLabel}`}
-                    >
-                        {IconComponent && <IconComponent className="mr-2 h-4 w-4" />}
-                        {viewLabel}
-                    </Button>
-                  );
+                  return (<Button key={viewName} variant={view === viewName ? 'default' : 'outline'} onClick={() => onView(viewName)} size="sm" className="px-3 py-2 text-sm button" aria-label={`Vista ${viewLabel}`}>
+                        {IconComponent && <IconComponent className="mr-2 h-4 w-4" />} {viewLabel}
+                    </Button>);
                 })}
             </div>
         </div>
@@ -254,39 +287,27 @@ export default function CalendarioPage() {
   };
 
   const calendarFormats = useMemo(() => ({
-    dayFormat: (date: Date, culture?: string, localizerInstance?: any) => 
-      localizerInstance.format(date, 'EEE d/M', culture).toLowerCase(),
-    weekdayFormat: (date: Date, culture?: string, localizerInstance?: any) => 
-      localizerInstance.format(date, 'EEE', culture).toLowerCase(),
-    
+    dayFormat: (date: Date, culture?: string, localizerInstance?: any) => localizerInstance.format(date, 'EEE d/M', culture).toLowerCase(),
+    weekdayFormat: (date: Date, culture?: string, localizerInstance?: any) => localizerInstance.format(date, 'EEE', culture).toLowerCase(),
     dateFormat: 'd', 
-    timeGutterFormat: (date: Date, culture?: string, localizerInstance?: any) =>
-      localizerInstance.format(date, 'HH:mm', culture),
-    eventTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) =>
-      `${localizerInstance.format(start, 'HH:mm', culture)} - ${localizerInstance.format(end, 'HH:mm', culture)}`,
-    
-    agendaDateFormat: (date: Date, culture?: string, localizerInstance?: any) => 
-      localizerInstance.format(date, 'EEE, d MMM', culture), 
-    agendaTimeFormat: (date: Date, culture?: string, localizerInstance?: any) => 
-      localizerInstance.format(date, 'HH:mm', culture),
-    agendaTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) => 
-      `${localizerInstance.format(start, 'HH:mm', culture)} – ${localizerInstance.format(end, 'HH:mm', culture)}`,
-    
-    monthHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) => 
-      localizerInstance.format(date, 'MMMM yyyy', culture), 
-    dayRangeHeaderFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) => 
-      `${localizerInstance.format(start, 'd MMM', culture)} - ${localizerInstance.format(end, 'd MMM yyyy', culture)}`, 
-    dayHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) => 
-      localizerInstance.format(date, 'eeee, d MMMM yyyy', culture), 
+    timeGutterFormat: (date: Date, culture?: string, localizerInstance?: any) => localizerInstance.format(date, 'HH:mm', culture),
+    eventTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) => `${localizerInstance.format(start, 'HH:mm', culture)} - ${localizerInstance.format(end, 'HH:mm', culture)}`,
+    agendaDateFormat: (date: Date, culture?: string, localizerInstance?: any) => localizerInstance.format(date, 'EEE, d MMM', culture), 
+    agendaTimeFormat: (date: Date, culture?: string, localizerInstance?: any) => localizerInstance.format(date, 'HH:mm', culture),
+    agendaTimeRangeFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) => `${localizerInstance.format(start, 'HH:mm', culture)} – ${localizerInstance.format(end, 'HH:mm', culture)}`,
+    monthHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) => localizerInstance.format(date, 'MMMM yyyy', culture), 
+    dayRangeHeaderFormat: ({ start, end }: {start: Date, end: Date}, culture?: string, localizerInstance?: any) => `${localizerInstance.format(start, 'd MMM', culture)} - ${localizerInstance.format(end, 'd MMM yyyy', culture)}`, 
+    dayHeaderFormat: (date: Date, culture?: string, localizerInstance?: any) => localizerInstance.format(date, 'eeee, d MMMM yyyy', culture), 
   }), []);
 
 
   return (
-    <div className="flex flex-col relative"> {/* Removed h-full */}
+    <div className="flex flex-col relative">
       <h1 className="text-3xl font-bold text-foreground mb-6">Calendario de Citas</h1>
 
-      <div className="flex-grow relative">
+      <div className="flex-grow relative" style={{ height: 'calc(100vh - 180px)' }}> {/* Set explicit height for calendar container */}
         {currentDate ? (
+          <>
           <BigCalendar
             localizer={localizer}
             events={appointments}
@@ -300,9 +321,7 @@ export default function CalendarioPage() {
             messages={messages}
             culture="es"
             className="bg-card text-card-foreground p-0 border-none rounded-lg shadow-md"
-            components={{
-              toolbar: CustomToolbar,
-            }}
+            components={{ toolbar: CustomToolbar }}
             date={currentDate}
             onNavigate={(newDate) => setCurrentDate(newDate)}
             view={currentView}
@@ -313,67 +332,80 @@ export default function CalendarioPage() {
             formats={calendarFormats}
             dayLayoutAlgorithm="no-overlap"
             popup
-            style={{ height: '100%' }} 
+            style={{ height: '100%' }}
           />
+          <div ref={popoverTriggerRef} style={{ position: 'absolute', opacity: 0 }} />
+          </>
         ) : (
           <div className="flex flex-col space-y-3 p-4 bg-card rounded-lg shadow-md h-full">
             <Skeleton className="h-[50px] w-full rounded-lg" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-[250px]" />
-              <Skeleton className="h-4 w-[200px]" />
-            </div>
+            <div className="space-y-2"><Skeleton className="h-4 w-[250px]" /><Skeleton className="h-4 w-[200px]" /></div>
             <Skeleton className="flex-grow w-full rounded-lg" />
           </div>
         )}
       </div>
 
-      <Button
-        variant="default"
-        size="icon"
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20"
-        onClick={() => {
-          setSelectedSlotInfo(null);
-          setEditingAppointment(null);
-          setIsModalOpen(true);
-        }}
-        aria-label="Añadir nueva cita"
-      >
-        <Plus className="h-7 w-7" />
-        <span className="sr-only">Añadir Cita</span>
+      <Button variant="default" size="icon" className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20" onClick={() => { setIsModalOpen(true); setEditingAppointment(null);}} aria-label="Añadir nueva cita">
+        <Plus className="h-7 w-7" /><span className="sr-only">Añadir Cita</span>
       </Button>
 
       {isModalOpen && (
-        <AppointmentModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setSelectedSlotInfo(null);
-            setEditingAppointment(null);
-          }}
-          onSave={handleSaveAppointment}
-          onDelete={handleDeleteAppointment}
-          initialData={selectedSlotInfo || undefined}
-          existingAppointment={editingAppointment}
-        />
+        <AppointmentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveAppointment} existingAppointment={editingAppointment}/>
       )}
+
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+          <PopoverTrigger asChild>
+            <div ref={popoverTriggerRef} style={{ position: 'fixed', pointerEvents: 'none' }} />
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-0" align="start" side="bottom">
+              {selectedEventForPopover && (
+                  <AppointmentPopoverContent
+                      appointment={selectedEventForPopover}
+                      onUpdateState={(newState) => handleUpdateState(selectedEventForPopover.id, newState)}
+                      onEdit={handleOpenEditModalFromPopover}
+                      onReschedule={handleOpenRescheduleModalFromPopover}
+                      onDelete={handleDeleteFromPopover}
+                      onViewPatient={(patientId) => router.push(`/gestion-usuario/pacientes/${patientId}/filiacion`)}
+                  />
+              )}
+          </PopoverContent>
+      </Popover>
+
+       {isRescheduleModalOpen && selectedEventForPopover && (
+          <RescheduleModal
+              isOpen={isRescheduleModalOpen}
+              onClose={() => setIsRescheduleModalOpen(false)}
+              onSave={handleSaveReschedule}
+              appointment={selectedEventForPopover}
+          />
+      )}
+      
       <Dialog open={isPastDateWarningOpen} onOpenChange={setIsPastDateWarningOpen}>
-        <DialogContent className="sm:max-w-xl p-8 text-center">
-            <DialogHeader className="space-y-4">
+        <DialogContent className="sm:max-w-md p-6">
+            <DialogHeader className="space-y-4 text-center">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                     <Megaphone className="h-10 w-10 text-primary" />
                 </div>
-                <DialogTitle className="text-2xl font-semibold !text-center">Estás en una fecha pasada</DialogTitle>
+                <DialogTitle className="text-2xl font-semibold">Estás en una fecha pasada</DialogTitle>
             </DialogHeader>
-            <DialogDescription className="mt-2 text-base leading-relaxed">
-                La cita que se está programando corresponde a una fecha pasada, por lo que no se generará un recordatorio.
+            <DialogDescription className="mt-2 text-base text-center leading-relaxed">
+              La cita que se está programando corresponde a una fecha pasada, por lo que no se generará un recordatorio.
             </DialogDescription>
             <DialogFooter className="mt-6 sm:justify-center">
-                <Button onClick={handleAcknowledgePastDate}>
-                    Entendido
-                </Button>
+                <Button onClick={handleAcknowledgePastDate} className="w-auto">Entendido</Button>
             </DialogFooter>
         </DialogContent>
     </Dialog>
+
+    <ConfirmationDialog
+        isOpen={isConfirmDeleteDialogOpen}
+        onOpenChange={setIsConfirmDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        title="Confirmar Eliminación"
+        description={`¿Estás seguro de que deseas eliminar la cita para ${appointmentToAction?.paciente?.persona.nombre}?`}
+        confirmButtonText="Eliminar"
+        confirmButtonVariant="destructive"
+    />
     </div>
   );
 }

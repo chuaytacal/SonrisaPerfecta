@@ -1,4 +1,7 @@
+
 import type { MotivoCita, Procedimiento, Paciente, Personal } from '@/types';
+
+export type AppointmentState = 'Confirmada' | 'Pendiente' | 'Cancelada' | 'Atendido';
 
 export interface Appointment {
   id: string;
@@ -19,7 +22,7 @@ export interface Appointment {
   idMotivoCita: string;
 
   // Additional fields
-  estado?: 'Confirmada' | 'Pendiente' | 'Cancelada';
+  estado?: AppointmentState;
   notas?: string;
   eventColor?: string;
 }
@@ -34,6 +37,6 @@ export interface AppointmentFormData {
   duracion: number; // in minutes
 
   procedimientos: Procedimiento[];
-  estado: 'Confirmada' | 'Pendiente' | 'Cancelada';
+  estado: AppointmentState;
   notas: string;
 }

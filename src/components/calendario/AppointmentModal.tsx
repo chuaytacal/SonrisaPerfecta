@@ -29,6 +29,7 @@ import type { Procedimiento } from '@/types';
 import { cn } from '@/lib/utils';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { mockPacientesData, mockPersonalData, mockMotivosCita, mockProcedimientos } from '@/lib/data';
 
@@ -41,7 +42,7 @@ const appointmentFormSchema = z.object({
   horaInicio: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Hora inválida (HH:MM)."),
   duracion: z.number().min(5, "La duración debe ser al menos 5 minutos."),
   procedimientos: z.array(z.custom<Procedimiento>()).optional(),
-  estado: z.enum(['Confirmada', 'Pendiente', 'Cancelada']),
+  estado: z.enum(['Confirmada', 'Pendiente', 'Cancelada', 'Atendido']),
   notas: z.string().optional(),
 });
 
@@ -51,11 +52,10 @@ interface AppointmentModalProps {
   onClose: () => void;
   onSave: (appointmentData: AppointmentFormData) => void;
   onDelete?: (appointmentId: string) => void;
-  initialData?: { start: Date; end: Date };
   existingAppointment?: Appointment | null;
 }
 
-export function AppointmentModal({ isOpen, onClose, onSave, onDelete, initialData, existingAppointment }: AppointmentModalProps) {
+export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAppointment }: AppointmentModalProps) {
   const [procedimientosSeleccionados, setProcedimientosSeleccionados] = useState<Procedimiento[]>([]);
   
   const duracionOptions = useMemo(() => {
@@ -139,8 +139,8 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, initialDat
           idPaciente: '',
           idDoctor: '',
           idMotivoCita: '',
-          fecha: initialData?.start || new Date(),
-          horaInicio: initialData?.start ? format(initialData.start, 'HH:mm') : format(new Date(), 'HH:mm'),
+          fecha: new Date(),
+          horaInicio: format(new Date(), 'HH:mm'),
           duracion: 30,
           procedimientos: [],
           estado: 'Pendiente',
@@ -150,7 +150,7 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, initialDat
       }
       form.reset(defaultValues);
     }
-  }, [isOpen, existingAppointment, initialData, form]);
+  }, [isOpen, existingAppointment, form]);
 
   const handleSubmit = (data: AppointmentFormData) => {
     onSave({ ...data, procedimientos: procedimientosSeleccionados });
@@ -186,9 +186,9 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, initialDat
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)}>
             <ScrollArea className="max-h-[65vh]">
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8">
                 {/* Columna Izquierda */}
-                <div className="space-y-4 md:border-r md:pr-8">
+                <div className="space-y-4">
                   <FormField
                     control={form.control}
                     name="idPaciente"
@@ -264,99 +264,103 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, initialDat
                   </div>
                 </div>
 
-                {/* Columna Derecha */}
-                <div className="space-y-4">
-                   <FormField
+                {/* Separador y Columna Derecha */}
+                <div className="flex gap-x-8">
+                  <Separator orientation="vertical" className="hidden md:block"/>
+                  <div className="space-y-4 w-full">
+                     <FormField
+                        control={form.control}
+                        name="fecha"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Fecha</FormLabel>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant={"outline"}
+                                    className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                  >
+                                    {field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccione fecha</span>}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <CalendarPicker mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={es} />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    <FormField
                       control={form.control}
-                      name="fecha"
+                      name="horaInicio"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Fecha</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                                >
-                                  {field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccione fecha</span>}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <CalendarPicker mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={es} />
-                            </PopoverContent>
-                          </Popover>
+                          <FormLabel>Hora de Inicio</FormLabel>
+                          <FormControl>
+                            <Input type="time" {...field} />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  <FormField
-                    control={form.control}
-                    name="horaInicio"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Hora de Inicio</FormLabel>
-                        <FormControl>
-                          <Input type="time" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="duracion"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Duración</FormLabel>
-                        <Select onValueChange={(val) => field.onChange(Number(val))} value={String(field.value)}>
-                            <FormControl>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {duracionOptions.map(opt => (
-                                <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  {existingAppointment && (
-                     <FormField
-                        control={form.control}
-                        name="estado"
-                        render={({ field }) => (
+                    <FormField
+                      control={form.control}
+                      name="duracion"
+                      render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Estado</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value="Pendiente">Pendiente</SelectItem>
-                                <SelectItem value="Confirmada">Confirmada</SelectItem>
-                                <SelectItem value="Cancelada">Cancelada</SelectItem>
-                            </SelectContent>
-                            </Select>
+                          <FormLabel>Duración</FormLabel>
+                          <Select onValueChange={(val) => field.onChange(Number(val))} value={String(field.value)}>
+                              <FormControl>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {duracionOptions.map(opt => (
+                                  <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
                         </FormItem>
-                        )}
+                      )}
                     />
-                  )}
-                  <FormField
-                    control={form.control}
-                    name="notas"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nota de la Cita (Opcional)</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="Añadir notas adicionales..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                    {existingAppointment && (
+                       <FormField
+                          control={form.control}
+                          name="estado"
+                          render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Estado</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                              <SelectContent>
+                                  <SelectItem value="Pendiente">Pendiente</SelectItem>
+                                  <SelectItem value="Confirmada">Confirmada</SelectItem>
+                                  <SelectItem value="Atendido">Atendido</SelectItem>
+                                  <SelectItem value="Cancelada">Cancelada</SelectItem>
+                              </SelectContent>
+                              </Select>
+                          </FormItem>
+                          )}
+                      />
                     )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="notas"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nota de la Cita (Opcional)</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Añadir notas adicionales..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
               </div>
             </ScrollArea>
