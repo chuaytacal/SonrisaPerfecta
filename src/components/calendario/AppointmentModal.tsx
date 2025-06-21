@@ -325,23 +325,25 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, initialDat
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="estado"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Estado</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            <SelectItem value="Pendiente">Pendiente</SelectItem>
-                            <SelectItem value="Confirmada">Confirmada</SelectItem>
-                            <SelectItem value="Cancelada">Cancelada</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
+                  {existingAppointment && (
+                     <FormField
+                        control={form.control}
+                        name="estado"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Estado</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                <SelectItem value="Pendiente">Pendiente</SelectItem>
+                                <SelectItem value="Confirmada">Confirmada</SelectItem>
+                                <SelectItem value="Cancelada">Cancelada</SelectItem>
+                            </SelectContent>
+                            </Select>
+                        </FormItem>
+                        )}
+                    />
+                  )}
                   <FormField
                     control={form.control}
                     name="notas"

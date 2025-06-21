@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Mail, MessageSquare, Phone, ArrowLeft, Edit, Save, X, UserSquare, User } from 'lucide-react';
+import { Mail, MessageSquare, Phone, ArrowLeft, Edit, Save, X, UserSquare, User, ClipboardList, Megaphone } from 'lucide-react';
 import { mockPacientesData, mockPersonasData, mockAppointmentsData } from '@/lib/data';
 import type { Paciente as PacienteType, Persona, AntecedentesMedicosData, EtiquetaPaciente } from '@/types';
 import { format, differenceInYears, parse as parseDate } from 'date-fns';
@@ -498,7 +498,7 @@ export default function FiliacionPage() {
                           <TableRow key={cita.id}>
                             <TableCell>{cita.start ? format(cita.start, 'dd/MM/yyyy', { locale: es }) : 'N/A'}</TableCell>
                             <TableCell>{cita.start ? format(cita.start, 'HH:mm a', { locale: es }) : 'N/A'}</TableCell>
-                            <TableCell>{cita.doctor?.persona.nombre || 'N/A'}</TableCell>
+                            <TableCell>{cita.doctor ? `${cita.doctor.persona.nombre} ${cita.doctor.persona.apellidoPaterno}` : 'N/A'}</TableCell>
                             <TableCell>{cita.title}</TableCell>
                             <TableCell className="text-right"><Badge variant={cita.end && new Date(cita.end) < new Date() ? 'outline' : 'default' }>{cita.estado}</Badge></TableCell>
                           </TableRow>

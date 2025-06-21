@@ -10,12 +10,13 @@ import getDay from 'date-fns/getDay';
 import es from 'date-fns/locale/es';
 import { addMinutes } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Plus, ChevronLeft, ChevronRight, CalendarDays, ListFilter, LayoutGrid, Rows3 } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, CalendarDays, ListFilter, LayoutGrid, Rows3, Megaphone } from 'lucide-react';
 import { AppointmentModal } from '@/components/calendario/AppointmentModal';
 import type { Appointment, AppointmentFormData } from '@/types/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { mockPacientesData, mockPersonalData, mockMotivosCita, mockAppointmentsData } from '@/lib/data';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 
 const locales = {
@@ -49,6 +50,8 @@ const messages = {
 export default function CalendarioPage() {
   const [appointments, setAppointments] = useState<Appointment[]>(mockAppointmentsData);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPastDateWarningOpen, setIsPastDateWarningOpen] = useState(false);
+  const [pendingSlotInfo, setPendingSlotInfo] = useState<{ start: Date; end: Date } | null>(null);
   const [selectedSlotInfo, setSelectedSlotInfo] = useState<{ start: Date; end: Date } | null>(null);
   const [currentView, setCurrentView] = useState<keyof typeof Views>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
@@ -63,13 +66,25 @@ export default function CalendarioPage() {
   }, []);
 
   const handleSelectSlot = useCallback(({ start, end }: { start: Date; end: Date }) => {
-    setSelectedSlotInfo({
-      start,
-      end,
-     });
-    setEditingAppointment(null);
-    setIsModalOpen(true);
+    if (start < new Date()) {
+      setPendingSlotInfo({ start, end });
+      setIsPastDateWarningOpen(true);
+    } else {
+      setSelectedSlotInfo({ start, end });
+      setEditingAppointment(null);
+      setIsModalOpen(true);
+    }
   }, []);
+
+  const handleAcknowledgePastDate = () => {
+    setIsPastDateWarningOpen(false);
+    if (pendingSlotInfo) {
+      setSelectedSlotInfo(pendingSlotInfo);
+      setEditingAppointment(null);
+      setIsModalOpen(true);
+      setPendingSlotInfo(null);
+    }
+  };
 
   const handleSelectEvent = useCallback((event: Appointment) => {
     setEditingAppointment(event);
@@ -110,7 +125,7 @@ export default function CalendarioPage() {
       doctor,
       motivoCita,
       procedimientos: formData.procedimientos,
-      estado: formData.estado,
+      estado: editingAppointment ? formData.estado : 'Pendiente',
       notas: formData.notas,
       eventColor: editingAppointment?.eventColor || 'hsl(var(--primary))'
     };
@@ -341,6 +356,24 @@ export default function CalendarioPage() {
           existingAppointment={editingAppointment}
         />
       )}
+      <Dialog open={isPastDateWarningOpen} onOpenChange={setIsPastDateWarningOpen}>
+        <DialogContent className="sm:max-w-md p-8 text-center">
+            <DialogHeader className="space-y-4">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                    <Megaphone className="h-10 w-10 text-primary" />
+                </div>
+                <DialogTitle className="text-2xl font-semibold !text-center">Estás en una fecha pasada</DialogTitle>
+            </DialogHeader>
+            <DialogDescription className="mt-2 text-base leading-relaxed">
+                Esta cita se está creando en una fecha pasada por tanto no se enviará ningún email al paciente.
+            </DialogDescription>
+            <DialogFooter className="mt-6">
+                <Button onClick={handleAcknowledgePastDate} className="w-full">
+                    Entendido
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
     </div>
   );
 }
