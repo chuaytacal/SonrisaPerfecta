@@ -247,6 +247,9 @@ export function AddPacienteForm({
         estado: values.estado,
         etiquetas: (values.etiquetas as EtiquetaPaciente[]) || [],
         idApoderado: apoderadoPersona?.id,
+        // Preserve un-edited fields
+        notas: initialPacienteData?.notas,
+        antecedentesMedicos: initialPacienteData?.antecedentesMedicos,
     };
 
     await new Promise(resolve => setTimeout(resolve, 500));
