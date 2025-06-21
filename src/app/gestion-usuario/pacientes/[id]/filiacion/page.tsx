@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Mail, MessageSquare, Phone, ArrowLeft, Edit, PlusCircle, Users, CalendarDays as CalendarIconLucide, AlertTriangle, FileText, Tags, Save, X } from 'lucide-react';
+import { Mail, MessageSquare, Phone, ArrowLeft, Edit, PlusCircle, Users, CalendarDays as CalendarIconLucide, AlertTriangle, FileText, Tags, Save, X, UserSquare } from 'lucide-react';
 import { mockPacientesData, mockPersonasData } from '@/app/gestion-usuario/pacientes/page'; // Import shared mock data
 import type { Paciente as PacienteType, Persona, AntecedentesMedicosData, EtiquetaPaciente } from '@/types';
 import { format, differenceInYears, parse as parseDate } from 'date-fns';
@@ -100,6 +100,8 @@ export default function FiliacionPage() {
 
   const [paciente, setPaciente] = useState<PacienteType | null>(null);
   const [persona, setPersona] = useState<Persona | null>(null);
+  const [apoderado, setApoderado] = useState<Persona | null>(null);
+  const [isMinor, setIsMinor] = useState(false);
   const [age, setAge] = useState<string | number>('Calculando...');
   const [createdDate, setCreatedDate] = useState<string>('Calculando...');
   const [patientAppointments, setPatientAppointments] = useState<Appointment[]>([]);
@@ -132,6 +134,14 @@ export default function FiliacionPage() {
       setPaciente(foundPaciente);
       setPersona(foundPaciente.persona);
 
+      const calculatedAge = foundPaciente.persona.fechaNacimiento ? differenceInYears(new Date(), new Date(foundPaciente.persona.fechaNacimiento)) : NaN;
+      setIsMinor(!isNaN(calculatedAge) && calculatedAge < 18);
+
+      if (foundPaciente.idApoderado) {
+          const foundApoderado = mockPersonasData.find(p => p.id === foundPaciente.idApoderado);
+          setApoderado(foundApoderado || null);
+      }
+
       const initialFormStateFromData = {
         ...initialAntecedentesState,
         ...(foundPaciente.antecedentesMedicos || {}),
@@ -149,6 +159,7 @@ export default function FiliacionPage() {
     } else {
       setPaciente(null);
       setPersona(null);
+      setApoderado(null);
       setDisplayedNotas("Sin notas registradas.");
       setDisplayedEtiquetas([]);
       setDisplayedAlergias([]);
@@ -238,38 +249,35 @@ export default function FiliacionPage() {
   };
 
 
-  const handleSavePacienteDetails = (updatedPacienteFromForm: PacienteType) => {
+  const handleSavePacienteDetails = (updatedPacienteFromForm: PacienteType, updatedApoderado?: Persona) => {
+    // Update Apoderado
+    if (updatedApoderado) {
+        const apoderadoIndex = mockPersonasData.findIndex(p => p.id === updatedApoderado.id);
+        if(apoderadoIndex > -1) {
+            mockPersonasData[apoderadoIndex] = updatedApoderado;
+            setApoderado(updatedApoderado);
+        }
+    }
+
+    // Update Paciente and their Persona
     const pacienteIndex = mockPacientesData.findIndex(p => p.id === updatedPacienteFromForm.id);
     if (pacienteIndex > -1) {
-      const existingPatientData = mockPacientesData[pacienteIndex];
+        const personaIndex = mockPersonasData.findIndex(p => p.id === updatedPacienteFromForm.idPersona);
+        if(personaIndex > -1) {
+            mockPersonasData[personaIndex] = updatedPacienteFromForm.persona;
+        }
+        
+        mockPacientesData[pacienteIndex] = updatedPacienteFromForm;
       
-      // Merge new persona data, preserve existing notas, etiquetas, antecedentes
-      const fullyUpdatedPatient: PacienteType = {
-        ...existingPatientData, // Start with existing data to preserve fields not in form
-        idPersona: updatedPacienteFromForm.persona.id, // Ensure persona ID is correct
-        persona: { ...existingPatientData.persona, ...updatedPacienteFromForm.persona }, // Merge persona
-        fechaIngreso: updatedPacienteFromForm.fechaIngreso || existingPatientData.fechaIngreso,
-        estado: updatedPacienteFromForm.estado || existingPatientData.estado,
-        // Ensure form changes to etiquetas and notas are reflected if AddPacienteForm handles them
-        // If AddPacienteForm doesn't handle notas/etiquetas, they are preserved from existingPatientData
-        notas: updatedPacienteFromForm.notas !== undefined ? updatedPacienteFromForm.notas : existingPatientData.notas,
-        etiquetas: updatedPacienteFromForm.etiquetas ? updatedPacienteFromForm.etiquetas : existingPatientData.etiquetas,
-        // Antecedentes are not typically edited in AddPacienteForm, so preserve them.
-        // If they were, ensure they are merged correctly.
-        antecedentesMedicos: updatedPacienteFromForm.antecedentesMedicos || existingPatientData.antecedentesMedicos,
-      };
-
-      mockPacientesData[pacienteIndex] = fullyUpdatedPatient;
+        setPaciente(updatedPacienteFromForm); 
+        setPersona(updatedPacienteFromForm.persona);
       
-      setPaciente(fullyUpdatedPatient); 
-      setPersona(fullyUpdatedPatient.persona);
-      
-      // Update displayed states for EtiquetasNotasSalud based on the *potentially* updated patient
-      setDisplayedNotas(fullyUpdatedPatient.notas || "Sin notas registradas.");
-      setDisplayedEtiquetas(fullyUpdatedPatient.etiquetas || []);
-      setDisplayedAlergias(deriveAlergiasFromAntecedentes(fullyUpdatedPatient.antecedentesMedicos));
-      setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(fullyUpdatedPatient.antecedentesMedicos));
+        setDisplayedNotas(updatedPacienteFromForm.notas || "Sin notas registradas.");
+        setDisplayedEtiquetas(updatedPacienteFromForm.etiquetas || []);
+        setDisplayedAlergias(deriveAlergiasFromAntecedentes(updatedPacienteFromForm.antecedentesMedicos));
+        setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(updatedPacienteFromForm.antecedentesMedicos));
     }
+
     setIsAddPacienteFormOpen(false);
     toast({
       title: "Paciente Actualizado",
@@ -452,6 +460,25 @@ export default function FiliacionPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {isMinor && apoderado && (
+              <Card className="mt-6">
+                  <CardHeader>
+                    <CardTitle className="flex items-center"><UserSquare className="mr-2 h-5 w-5 text-primary" />Información del Apoderado</CardTitle>
+                    <CardDescription>Detalles personales y de contacto del apoderado.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4 text-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                      <div><Label className="text-xs text-muted-foreground">Nombres</Label><p className="font-medium">{apoderado.nombre}</p></div>
+                      <div><Label className="text-xs text-muted-foreground">Apellidos</Label><p className="font-medium">{`${apoderado.apellidoPaterno} ${apoderado.apellidoMaterno}`}</p></div>
+                      <div><Label className="text-xs text-muted-foreground">Tipo Documento</Label><p className="font-medium">{apoderado.tipoDocumento}</p></div>
+                      <div><Label className="text-xs text-muted-foreground">N° Documento</Label><p className="font-medium">{apoderado.numeroDocumento}</p></div>
+                      <div><Label className="text-xs text-muted-foreground">Teléfono Celular</Label><p className="font-medium">{apoderado.telefono}</p></div>
+                    </div>
+                  </CardContent>
+              </Card>
+            )}
+
           </TabsContent>
           <TabsContent value="antecedentesMedicos"><Card><CardHeader><CardTitle>Cuestionario de Salud (Antecedentes)</CardTitle><CardDescription>Respuestas del paciente al cuestionario de salud.</CardDescription></CardHeader><CardContent>{renderAntecedentesMedicos()}</CardContent></Card></TabsContent>
           <TabsContent value="historialCitas">
@@ -485,6 +512,7 @@ export default function FiliacionPage() {
             open={isAddPacienteFormOpen}
             onOpenChange={setIsAddPacienteFormOpen}
             initialPacienteData={paciente} // Pass the full paciente object
+            initialApoderadoData={apoderado}
             onPacienteSaved={handleSavePacienteDetails}
         />
       )}

@@ -105,7 +105,8 @@ interface AddPacienteFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onPacienteSaved: (paciente: Paciente, apoderado?: Persona) => void; 
-  initialPacienteData?: Paciente | null; 
+  initialPacienteData?: Paciente | null;
+  initialApoderadoData?: Persona | null;
   selectedPersonaToPreload?: Persona | null; 
   isCreatingNewPersonaFlow?: boolean; 
 }
@@ -115,6 +116,7 @@ export function AddPacienteForm({
     onOpenChange,
     onPacienteSaved,
     initialPacienteData,
+    initialApoderadoData,
     selectedPersonaToPreload,
     isCreatingNewPersonaFlow
 }: AddPacienteFormProps) {
@@ -179,7 +181,16 @@ export function AddPacienteForm({
             estado: initialPacienteData.estado,
             etiquetas: initialPacienteData.etiquetas || [],
         };
-        // Note: Loading existing apoderado data is not implemented in this flow.
+        if(initialApoderadoData) {
+            defaultVals.apoderado_tipoDocumento = initialApoderadoData.tipoDocumento;
+            defaultVals.apoderado_numeroDocumento = initialApoderadoData.numeroDocumento;
+            defaultVals.apoderado_nombre = initialApoderadoData.nombre;
+            defaultVals.apoderado_apellidoPaterno = initialApoderadoData.apellidoPaterno;
+            defaultVals.apoderado_apellidoMaterno = initialApoderadoData.apellidoMaterno;
+            defaultVals.apoderado_sexo = initialApoderadoData.sexo;
+            defaultVals.apoderado_telefono = initialApoderadoData.telefono;
+        }
+
       } else if (selectedPersonaToPreload && !isCreatingNewPersonaFlow) { 
         defaultVals = {
             ...selectedPersonaToPreload,
@@ -191,7 +202,7 @@ export function AddPacienteForm({
       } 
       form.reset(defaultVals);
     }
-  }, [initialPacienteData, selectedPersonaToPreload, isCreatingNewPersonaFlow, isEditMode, open, form]);
+  }, [initialPacienteData, initialApoderadoData, selectedPersonaToPreload, isCreatingNewPersonaFlow, isEditMode, open, form]);
 
 
   async function onSubmit(values: PacienteFormValues) {
@@ -200,17 +211,17 @@ export function AddPacienteForm({
 
     if (age < 18) {
         apoderadoPersona = {
-            id: `persona-${crypto.randomUUID()}`,
+            id: (isEditMode && initialPacienteData?.idApoderado) || `persona-apoderado-${crypto.randomUUID()}`,
             tipoDocumento: values.apoderado_tipoDocumento!,
             numeroDocumento: values.apoderado_numeroDocumento!,
             nombre: values.apoderado_nombre!,
             apellidoPaterno: values.apoderado_apellidoPaterno!,
             apellidoMaterno: values.apoderado_apellidoMaterno!,
-            fechaNacimiento: values.apoderado_fechaNacimiento || new Date(), // Guardian's birth date isn't collected, default to now.
+            fechaNacimiento: values.apoderado_fechaNacimiento || new Date(),
             sexo: values.apoderado_sexo!,
-            direccion: values.apoderado_direccion || "", // Guardian's address isn't collected
+            direccion: values.apoderado_direccion || "", 
             telefono: values.apoderado_telefono!,
-            email: "", // Guardian's email isn't collected
+            email: initialApoderadoData?.email || "", 
         };
     }
 

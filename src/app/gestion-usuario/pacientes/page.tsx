@@ -36,7 +36,8 @@ export const mockPersonasData: Persona[] = [
   { id: "persona-2", tipoDocumento: "DNI", numeroDocumento: "18273645", nombre: "Phoebe", apellidoPaterno: "Venturi", apellidoMaterno: "Ross", fechaNacimiento: new Date("1990-08-22"), sexo: "F", direccion: "Calle Falsa 456", telefono: "981234670", email: "phoebe.venturi@example.com" },
   { id: "persona-3", tipoDocumento: "DNI", numeroDocumento: "49205873", nombre: "Caroline", apellidoPaterno: "Pandolfi", apellidoMaterno: "Geller", fechaNacimiento: new Date("1988-11-30"), sexo: "F", direccion: "Jr. Desconocido 789", telefono: "967891234", email: "caroline.pandolfi@example.com" },
   { id: "persona-p1", tipoDocumento: "DNI", numeroDocumento: "76543210", nombre: "Mario", apellidoPaterno: "Bros", apellidoMaterno: "Nintendo", fechaNacimiento: new Date("1983-07-09"), sexo: "M", direccion: "Mushroom Kingdom", telefono: "912345678", email: "mario@example.com" },
-  { id: "persona-p2", tipoDocumento: "EXTRANJERIA", numeroDocumento: "X1234567", nombre: "Luigi", apellidoPaterno: "Bros", apellidoMaterno: "Nintendo", fechaNacimiento: new Date("1983-07-09"), sexo: "M", direccion: "Mushroom Kingdom", telefono: "987654321", email: "luigi@example.com" },
+  { id: "persona-p2", tipoDocumento: "EXTRANJERIA", numeroDocumento: "X1234567", nombre: "Luigi", apellidoPaterno: "Bros", apellidoMaterno: "Nintendo", fechaNacimiento: new Date("2015-04-10"), sexo: "M", direccion: "Mushroom Kingdom", telefono: "987654321", email: "luigi@example.com" },
+  { id: "persona-g1", tipoDocumento: "DNI", numeroDocumento: "29876543", nombre: "Peach", apellidoPaterno: "Toadstool", apellidoMaterno: "Mushroom", fechaNacimiento: new Date("1985-11-18"), sexo: "F", direccion: "Mushroom Castle", telefono: "999888777", email: "peach@example.com" },
 ];
 
 const initialAntecedentesExample: AntecedentesMedicosData = {
@@ -72,6 +73,7 @@ export const mockPacientesData: Paciente[] = [
     etiquetas: ["Menor de Edad"],
     notas: "Acompañado por su madre. Buena higiene bucal.",
     antecedentesMedicos: { ...initialAntecedentesExample, q3_alergico: "No", q3_cuales: "", q5_enfermedades: [] },
+    idApoderado: "persona-g1",
   },
   {
     id: "paciente-3",
@@ -91,6 +93,7 @@ export default function PacientesPage() {
   const [pacienteList, setPacienteList] = React.useState<Paciente[]>(mockPacientesData);
   const [isAddPacienteFormOpen, setIsAddPacienteFormOpen] = React.useState(false);
   const [editingPaciente, setEditingPaciente] = React.useState<Paciente | null>(null);
+  const [editingApoderado, setEditingApoderado] = React.useState<Persona | null>(null);
   const [selectedPersonaToPreload, setSelectedPersonaToPreload] = React.useState<Persona | null>(null);
   const [isCreatingNewPersonaFlow, setIsCreatingNewPersonaFlow] = React.useState(false);
   const [isSelectPersonaModalOpen, setIsSelectPersonaModalOpen] = React.useState(false);
@@ -107,39 +110,52 @@ export default function PacientesPage() {
   const [sortBy, setSortBy] = React.useState<string>("persona.nombre_asc");
 
   const handleSavePaciente = (savedPaciente: Paciente, apoderado?: Persona) => {
-    // Save apoderado if exists
+    // Save/Update apoderado if exists
     if (apoderado) {
-      const apoderadoExists = mockPersonasData.find(p => p.id === apoderado.id);
-      if (!apoderadoExists) {
-        mockPersonasData.push(apoderado);
+      const apoderadoIndex = mockPersonasData.findIndex(p => p.id === apoderado.id);
+      if (apoderadoIndex > -1) {
+        mockPersonasData[apoderadoIndex] = apoderado; // Update existing
+      } else {
+        mockPersonasData.push(apoderado); // Add new
       }
     }
 
     setPacienteList(prevList => {
       const existingIndex = prevList.findIndex(p => p.id === savedPaciente.id);
       if (existingIndex > -1) {
+        // Update existing paciente's persona data in mockPersonasData
+        const personaIndex = mockPersonasData.findIndex(p => p.id === savedPaciente.idPersona);
+        if(personaIndex > -1) {
+            mockPersonasData[personaIndex] = savedPaciente.persona;
+        }
+        // Update paciente in the list
         const updatedList = [...prevList];
         updatedList[existingIndex] = savedPaciente;
         return updatedList;
       }
+      
+      // Add new paciente and persona
       const personaExists = mockPersonasData.find(p => p.id === savedPaciente.idPersona);
       if (!personaExists) {
         mockPersonasData.push(savedPaciente.persona); 
       }
       return [savedPaciente, ...prevList];
     });
+
     toast({
       title: editingPaciente ? "Paciente Actualizado" : "Paciente Registrado",
       description: `${savedPaciente.persona.nombre} ${savedPaciente.persona.apellidoPaterno} ha sido ${editingPaciente ? 'actualizado' : 'registrado'}.`,
     });
     setIsAddPacienteFormOpen(false);
     setEditingPaciente(null);
+    setEditingApoderado(null);
     setSelectedPersonaToPreload(null);
     setIsCreatingNewPersonaFlow(false);
   };
   
   const handleOpenAddPacienteFlow = () => {
     setEditingPaciente(null); 
+    setEditingApoderado(null);
     setSelectedPersonaToPreload(null);
     setIsCreatingNewPersonaFlow(false);
     setIsSelectPersonaModalOpen(true);
@@ -161,7 +177,16 @@ export default function PacientesPage() {
   
   const openEditModal = (paciente: Paciente) => {
     setEditingPaciente(paciente);
-    setSelectedPersonaToPreload(paciente.persona); 
+    setSelectedPersonaToPreload(paciente.persona);
+    
+    // Find and set apoderado data if it exists
+    if (paciente.idApoderado) {
+      const apoderado = mockPersonasData.find(p => p.id === paciente.idApoderado);
+      setEditingApoderado(apoderado || null);
+    } else {
+      setEditingApoderado(null);
+    }
+    
     setIsCreatingNewPersonaFlow(false); 
     setIsAddPacienteFormOpen(true);
   };
@@ -437,10 +462,12 @@ const columns: ColumnDef<Paciente>[] = [
                 setEditingPaciente(null);
                 setSelectedPersonaToPreload(null);
                 setIsCreatingNewPersonaFlow(false);
+                setEditingApoderado(null);
             }
             setIsAddPacienteFormOpen(isOpen);
         }}
         initialPacienteData={editingPaciente} 
+        initialApoderadoData={editingApoderado}
         selectedPersonaToPreload={selectedPersonaToPreload}
         isCreatingNewPersonaFlow={isCreatingNewPersonaFlow}
         onPacienteSaved={handleSavePaciente} 
