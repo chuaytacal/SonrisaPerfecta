@@ -55,6 +55,7 @@ export interface Paciente {
   etiquetas: EtiquetaPaciente[];
   notas?: string;
   antecedentesMedicos?: AntecedentesMedicosData;
+  idApoderado?: string;
 }
 
 

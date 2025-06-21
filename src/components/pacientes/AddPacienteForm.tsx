@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox"; 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
 import * as z from "zod";
@@ -39,9 +39,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { format } from "date-fns"
+import { format, differenceInYears } from "date-fns"
 import { es } from "date-fns/locale";
-import { CalendarIcon, Tag } from "lucide-react";
+import { CalendarIcon, Tag, UserSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -72,15 +72,39 @@ const pacienteFormSchema = z.object({
   // Paciente specific fields
   fechaIngreso: z.date({ required_error: "La fecha de ingreso es requerida."}), 
   estado: z.enum(["Activo", "Inactivo"], { required_error: "Seleccione un estado." }),
-  etiquetas: z.array(z.string()).optional(), // Array of selected tag strings
+  etiquetas: z.array(z.string()).optional(),
+
+  // Apoderado fields (optional)
+  apoderado_tipoDocumento: z.enum(["DNI", "EXTRANJERIA", "PASAPORTE"]).optional(),
+  apoderado_numeroDocumento: z.string().optional(),
+  apoderado_nombre: z.string().optional(),
+  apoderado_apellidoPaterno: z.string().optional(),
+  apoderado_apellidoMaterno: z.string().optional(),
+  apoderado_fechaNacimiento: z.date().optional(),
+  apoderado_sexo: z.enum(["M", "F"]).optional(),
+  apoderado_direccion: z.string().optional(),
+  apoderado_telefono: z.string().optional(),
+}).superRefine((data, ctx) => {
+    if (!data.fechaNacimiento) return;
+    const age = differenceInYears(new Date(), data.fechaNacimiento);
+    if (age < 18) {
+      if (!data.apoderado_tipoDocumento) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["apoderado_tipoDocumento"] });
+      if (!data.apoderado_numeroDocumento || data.apoderado_numeroDocumento.length < 1) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["apoderado_numeroDocumento"] });
+      if (!data.apoderado_nombre || data.apoderado_nombre.length < 2) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["apoderado_nombre"] });
+      if (!data.apoderado_apellidoPaterno || data.apoderado_apellidoPaterno.length < 2) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["apoderado_apellidoPaterno"] });
+      if (!data.apoderado_apellidoMaterno || data.apoderado_apellidoMaterno.length < 2) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["apoderado_apellidoMaterno"] });
+      if (!data.apoderado_telefono || !/^9\d{8}$/.test(data.apoderado_telefono)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Teléfono inválido", path: ["apoderado_telefono"] });
+      if (!data.apoderado_sexo) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["apoderado_sexo"] });
+    }
 });
+
 
 type PacienteFormValues = z.infer<typeof pacienteFormSchema>;
 
 interface AddPacienteFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onPacienteSaved: (paciente: Paciente) => void; 
+  onPacienteSaved: (paciente: Paciente, apoderado?: Persona) => void; 
   initialPacienteData?: Paciente | null; 
   selectedPersonaToPreload?: Persona | null; 
   isCreatingNewPersonaFlow?: boolean; 
@@ -95,6 +119,7 @@ export function AddPacienteForm({
     isCreatingNewPersonaFlow
 }: AddPacienteFormProps) {
   const isEditMode = !!initialPacienteData; 
+  const [isMinor, setIsMinor] = useState(false);
 
   const form = useForm<PacienteFormValues>({
     resolver: zodResolver(pacienteFormSchema),
@@ -104,22 +129,45 @@ export function AddPacienteForm({
       nombre: "",
       apellidoPaterno: "",
       apellidoMaterno: "",
-      fechaNacimiento: new Date(),
       sexo: "M",
       direccion: "",
       telefono: "",
-      fechaIngreso: new Date(),
       estado: "Activo",
       etiquetas: [],
+      apoderado_tipoDocumento: "DNI"
     },
   });
+
+  const fechaNacimiento = form.watch("fechaNacimiento");
+
+  useEffect(() => {
+    if (fechaNacimiento) {
+      const age = differenceInYears(new Date(), fechaNacimiento);
+      const minor = age < 18;
+      setIsMinor(minor);
+      if (!minor) {
+        // Clear apoderado fields if patient becomes an adult
+        form.setValue("apoderado_tipoDocumento", undefined);
+        form.setValue("apoderado_numeroDocumento", undefined);
+        form.setValue("apoderado_nombre", undefined);
+        form.setValue("apoderado_apellidoPaterno", undefined);
+        form.setValue("apoderado_apellidoMaterno", undefined);
+        form.setValue("apoderado_sexo", undefined);
+        form.setValue("apoderado_telefono", undefined);
+      }
+    } else {
+      setIsMinor(false);
+    }
+  }, [fechaNacimiento, form]);
+
 
   useEffect(() => {
     if (open) {
       let defaultVals: Partial<PacienteFormValues> = {
         tipoDocumento: "DNI", numeroDocumento: "", nombre: "", apellidoPaterno: "", apellidoMaterno: "",
-        fechaNacimiento: new Date(), sexo: "M", direccion: "", telefono: "",
+        sexo: "M", direccion: "", telefono: "",
         fechaIngreso: new Date(), estado: "Activo", etiquetas: [],
+        apoderado_tipoDocumento: "DNI"
       };
 
       if (isEditMode && initialPacienteData) { 
@@ -131,6 +179,7 @@ export function AddPacienteForm({
             estado: initialPacienteData.estado,
             etiquetas: initialPacienteData.etiquetas || [],
         };
+        // Note: Loading existing apoderado data is not implemented in this flow.
       } else if (selectedPersonaToPreload && !isCreatingNewPersonaFlow) { 
         defaultVals = {
             ...selectedPersonaToPreload,
@@ -139,19 +188,31 @@ export function AddPacienteForm({
             estado: "Activo",
             etiquetas: [],
         };
-      } else if (isCreatingNewPersonaFlow) { 
-         // Default values are already fine for creating a new persona
-      }
+      } 
       form.reset(defaultVals);
     }
   }, [initialPacienteData, selectedPersonaToPreload, isCreatingNewPersonaFlow, isEditMode, open, form]);
 
 
   async function onSubmit(values: PacienteFormValues) {
-    const emailToSave = (isEditMode && initialPacienteData?.persona.email) || 
-                        (selectedPersonaToPreload?.email) ||
-                        (initialPacienteData?.persona.email) || 
-                        ""; 
+    let apoderadoPersona: Persona | undefined = undefined;
+    const age = differenceInYears(new Date(), values.fechaNacimiento);
+
+    if (age < 18) {
+        apoderadoPersona = {
+            id: `persona-${crypto.randomUUID()}`,
+            tipoDocumento: values.apoderado_tipoDocumento!,
+            numeroDocumento: values.apoderado_numeroDocumento!,
+            nombre: values.apoderado_nombre!,
+            apellidoPaterno: values.apoderado_apellidoPaterno!,
+            apellidoMaterno: values.apoderado_apellidoMaterno!,
+            fechaNacimiento: values.apoderado_fechaNacimiento || new Date(), // Guardian's birth date isn't collected, default to now.
+            sexo: values.apoderado_sexo!,
+            direccion: values.apoderado_direccion || "", // Guardian's address isn't collected
+            telefono: values.apoderado_telefono!,
+            email: "", // Guardian's email isn't collected
+        };
+    }
 
     const personaData: Persona = { 
         id: (isEditMode && initialPacienteData?.idPersona) || (selectedPersonaToPreload?.id) || `persona-${crypto.randomUUID()}`, 
@@ -164,7 +225,7 @@ export function AddPacienteForm({
         sexo: values.sexo,
         direccion: values.direccion,
         telefono: values.telefono,
-        email: emailToSave, 
+        email: (isEditMode && initialPacienteData?.persona.email) || (selectedPersonaToPreload?.email) || "", 
     };
 
     const pacienteOutput: Paciente = {
@@ -174,10 +235,11 @@ export function AddPacienteForm({
         fechaIngreso: format(values.fechaIngreso, "dd/MM/yyyy"),
         estado: values.estado,
         etiquetas: (values.etiquetas as EtiquetaPaciente[]) || [],
+        idApoderado: apoderadoPersona?.id,
     };
 
     await new Promise(resolve => setTimeout(resolve, 500));
-    onPacienteSaved(pacienteOutput); 
+    onPacienteSaved(pacienteOutput, apoderadoPersona); 
   }
 
   const tipoDocumentoOptions: TipoDocumento[] = ["DNI", "EXTRANJERIA", "PASAPORTE"];
@@ -199,7 +261,7 @@ export function AddPacienteForm({
         <ScrollArea className="max-h-[75vh] md:max-h-[calc(85vh-150px)]">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-6 pb-6 pt-2">
-              <h3 className="text-md font-semibold text-muted-foreground border-b pb-1">Datos Personales</h3>
+              <h3 className="text-md font-semibold text-muted-foreground border-b pb-1">Datos del Paciente</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                     control={form.control}
@@ -333,13 +395,13 @@ export function AddPacienteForm({
                 )}
               />
               
-              <h3 className="text-md font-semibold text-muted-foreground border-b pb-1 pt-4">Datos del Paciente</h3>
+              <h3 className="text-md font-semibold text-muted-foreground border-b pb-1 pt-4">Datos de Rol (Paciente)</h3>
               <FormField
                 control={form.control}
                 name="fechaIngreso" 
                 render={({ field }) => (
                     <FormItem className="flex flex-col">
-                        <FormLabel className="mb-1.5">Fecha de Ingreso (Paciente)</FormLabel>
+                        <FormLabel className="mb-1.5">Fecha de Ingreso</FormLabel>
                         <Popover>
                             <PopoverTrigger asChild>
                             <FormControl>
@@ -416,7 +478,7 @@ export function AddPacienteForm({
                 name="estado"
                 render={({ field }) => (
                   <FormItem className="space-y-2">
-                    <FormLabel>Estado (Paciente)</FormLabel>
+                    <FormLabel>Estado</FormLabel>
                     <FormControl>
                       <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4">
                         <FormItem className="flex items-center space-x-2 space-y-0">
@@ -433,6 +495,85 @@ export function AddPacienteForm({
                   </FormItem>
                 )}
               />
+
+              {isMinor && (
+                <>
+                  <h3 className="text-md font-semibold text-muted-foreground border-b pb-1 pt-4 flex items-center">
+                    <UserSquare className="mr-2 h-5 w-5"/>
+                    Datos del Apoderado
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="apoderado_tipoDocumento"
+                      render={({ field }) => (
+                        <FormItem><FormLabel>Tipo de Documento</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccione..." /></SelectTrigger></FormControl>
+                            <SelectContent>{tipoDocumentoOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
+                          </Select><FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField control={form.control} name="apoderado_numeroDocumento"
+                      render={({ field }) => (
+                        <FormItem><FormLabel>Número de Documento</FormLabel>
+                          <FormControl><Input placeholder="12345678" {...field} value={field.value ?? ""} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField control={form.control} name="apoderado_nombre"
+                    render={({ field }) => (
+                      <FormItem><FormLabel>Nombres del Apoderado</FormLabel>
+                        <FormControl><Input placeholder="Ej: Juan" {...field} value={field.value ?? ""} /></FormControl><FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="apoderado_apellidoPaterno"
+                      render={({ field }) => (
+                        <FormItem><FormLabel>Apellido Paterno</FormLabel>
+                          <FormControl><Input placeholder="Ej: Perez" {...field} value={field.value ?? ""} /></FormControl><FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField control={form.control} name="apoderado_apellidoMaterno"
+                      render={({ field }) => (
+                        <FormItem><FormLabel>Apellido Materno</FormLabel>
+                          <FormControl><Input placeholder="Ej: Gonzales" {...field} value={field.value ?? ""} /></FormControl><FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <FormField control={form.control} name="apoderado_telefono"
+                        render={({ field }) => (
+                          <FormItem><FormLabel>Teléfono del Apoderado</FormLabel>
+                            <FormControl><Input placeholder="987654321" {...field} value={field.value ?? ""} /></FormControl><FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    <FormField control={form.control} name="apoderado_sexo"
+                        render={({ field }) => (
+                          <FormItem className="space-y-2 pt-2"><FormLabel>Sexo</FormLabel>
+                            <FormControl>
+                              <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4">
+                                {sexoOptions.map(opt => (
+                                  <FormItem key={`apoderado-sexo-${opt.value}`} className="flex items-center space-x-2 space-y-0">
+                                    <FormControl><RadioGroupItem value={opt.value} id={`apoderado-sexo-${opt.value}`} /></FormControl>
+                                    <FormLabel htmlFor={`apoderado-sexo-${opt.value}`} className="font-normal">{opt.label}</FormLabel>
+                                  </FormItem>
+                                ))}
+                              </RadioGroup>
+                            </FormControl><FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                  </div>
+                </>
+              )}
+
+
               <DialogFooter className="pt-6 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto" disabled={form.formState.isSubmitting}>Cancelar</Button>
                 <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
@@ -456,4 +597,3 @@ export function AddPacienteForm({
     </Dialog>
   );
 }
-

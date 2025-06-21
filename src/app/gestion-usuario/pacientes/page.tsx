@@ -106,7 +106,15 @@ export default function PacientesPage() {
   });
   const [sortBy, setSortBy] = React.useState<string>("persona.nombre_asc");
 
-  const handleSavePaciente = (savedPaciente: Paciente) => {
+  const handleSavePaciente = (savedPaciente: Paciente, apoderado?: Persona) => {
+    // Save apoderado if exists
+    if (apoderado) {
+      const apoderadoExists = mockPersonasData.find(p => p.id === apoderado.id);
+      if (!apoderadoExists) {
+        mockPersonasData.push(apoderado);
+      }
+    }
+
     setPacienteList(prevList => {
       const existingIndex = prevList.findIndex(p => p.id === savedPaciente.id);
       if (existingIndex > -1) {
@@ -425,12 +433,12 @@ const columns: ColumnDef<Paciente>[] = [
       <AddPacienteForm 
         open={isAddPacienteFormOpen}
         onOpenChange={(isOpen) => {
-            setIsAddPacienteFormOpen(isOpen);
             if (!isOpen) {
                 setEditingPaciente(null);
                 setSelectedPersonaToPreload(null);
                 setIsCreatingNewPersonaFlow(false);
             }
+            setIsAddPacienteFormOpen(isOpen);
         }}
         initialPacienteData={editingPaciente} 
         selectedPersonaToPreload={selectedPersonaToPreload}
@@ -452,4 +460,3 @@ const columns: ColumnDef<Paciente>[] = [
     </div>
   );
 }
-
