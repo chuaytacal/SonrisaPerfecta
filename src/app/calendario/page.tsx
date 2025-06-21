@@ -357,7 +357,7 @@ export default function CalendarioPage() {
         />
       )}
       <Dialog open={isPastDateWarningOpen} onOpenChange={setIsPastDateWarningOpen}>
-        <DialogContent className="sm:max-w-lg p-8 text-center">
+        <DialogContent className="sm:max-w-xl p-8 text-center">
             <DialogHeader className="space-y-4">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                     <Megaphone className="h-10 w-10 text-primary" />
@@ -365,10 +365,10 @@ export default function CalendarioPage() {
                 <DialogTitle className="text-2xl font-semibold !text-center">Estás en una fecha pasada</DialogTitle>
             </DialogHeader>
             <DialogDescription className="mt-2 text-base leading-relaxed">
-                Esta cita se está creando en una fecha pasada por tanto no se enviará ningún email al paciente.
+                La cita que se está programando corresponde a una fecha pasada, por lo que no se generará un recordatorio.
             </DialogDescription>
-            <DialogFooter className="mt-6">
-                <Button onClick={handleAcknowledgePastDate} className="w-full">
+            <DialogFooter className="mt-6 sm:justify-center">
+                <Button onClick={handleAcknowledgePastDate}>
                     Entendido
                 </Button>
             </DialogFooter>
