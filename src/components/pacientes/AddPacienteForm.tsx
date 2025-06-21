@@ -138,6 +138,10 @@ interface AddPacienteFormProps {
   isCreatingNewPersonaFlow?: boolean; 
 }
 
+const predefinedEtiquetas: EtiquetaPaciente[] = [
+    "Alergia a Penicilina", "Diabético", "Menor de Edad", "Fumador", "Hipertenso", "Covid+", "Postquirúrgico", "Anciano", "Nuevo Tag Ejemplo"
+];
+
 export function AddPacienteForm({
     open,
     onOpenChange,
@@ -318,9 +322,9 @@ export function AddPacienteForm({
         fechaIngreso: format(values.fechaIngreso, "dd/MM/yyyy"),
         estado: values.estado,
         etiquetas: (values.etiquetas as EtiquetaPaciente[]) || [],
-        idApoderado: apoderadoPersona?.id,
         notas: initialPacienteData?.notas,
         antecedentesMedicos: initialPacienteData?.antecedentesMedicos,
+        idApoderado: apoderadoPersona?.id,
     };
 
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -722,6 +726,3 @@ export function AddPacienteForm({
     </Dialog>
   );
 }
-
-
-    
