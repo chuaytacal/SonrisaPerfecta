@@ -40,3 +40,11 @@ export interface AppointmentFormData {
   estado: AppointmentState;
   notas: string;
 }
+
+export interface RescheduleData {
+  newDate: Date;
+  newTime: string;
+  newDoctorId: string;
+}
+
+    

@@ -27,7 +27,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import type { Appointment, AppointmentFormData } from '@/types/calendar';
 import type { Procedimiento } from '@/types';
 import { cn } from '@/lib/utils';
-import { Combobox, ComboboxOption } from '@/components/ui/combobox';
+import { Combobox } from '@/components/ui/combobox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -53,9 +53,10 @@ interface AppointmentModalProps {
   onSave: (appointmentData: AppointmentFormData) => void;
   onDelete?: (appointmentId: string) => void;
   existingAppointment?: Appointment | null;
+  selectedSlot?: { start: Date; end: Date } | null;
 }
 
-export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAppointment }: AppointmentModalProps) {
+export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAppointment, selectedSlot }: AppointmentModalProps) {
   const [procedimientosSeleccionados, setProcedimientosSeleccionados] = useState<Procedimiento[]>([]);
   
   const duracionOptions = useMemo(() => {
@@ -97,13 +98,13 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAp
     },
   });
 
-  const pacienteOptions = useMemo((): ComboboxOption[] => 
+  const pacienteOptions = useMemo(() => 
     mockPacientesData.map(p => ({
       value: p.id,
       label: `${p.persona.nombre} ${p.persona.apellidoPaterno}`
     })), []);
 
-  const doctorOptions = useMemo((): ComboboxOption[] =>
+  const doctorOptions = useMemo(() =>
     mockPersonalData
       .filter(p => p.estado === 'Activo')
       .map(p => ({
@@ -111,7 +112,7 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAp
         label: `${p.persona.nombre} ${p.persona.apellidoPaterno} (${p.especialidad})`
       })), []);
 
-  const procedimientoOptions = useMemo((): ComboboxOption[] =>
+  const procedimientoOptions = useMemo(() =>
     mockProcedimientos.map(p => ({
       value: p.id,
       label: `${p.denominacion} - S/ ${p.precioBase.toFixed(2)}`
@@ -134,7 +135,21 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAp
           notas: existingAppointment.notas || '',
         };
         setProcedimientosSeleccionados(existingAppointment.procedimientos || []);
-      } else {
+      } else if (selectedSlot) {
+        defaultValues = {
+          idPaciente: '',
+          idDoctor: '',
+          idMotivoCita: '',
+          fecha: selectedSlot.start,
+          horaInicio: format(selectedSlot.start, 'HH:mm'),
+          duracion: 30,
+          procedimientos: [],
+          estado: 'Pendiente',
+          notas: '',
+        };
+        setProcedimientosSeleccionados([]);
+      }
+      else {
         defaultValues = {
           idPaciente: '',
           idDoctor: '',
@@ -150,7 +165,7 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAp
       }
       form.reset(defaultValues);
     }
-  }, [isOpen, existingAppointment, form]);
+  }, [isOpen, existingAppointment, selectedSlot, form]);
 
   const handleSubmit = (data: AppointmentFormData) => {
     onSave({ ...data, procedimientos: procedimientosSeleccionados });
@@ -392,3 +407,5 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAp
     </Dialog>
   );
 }
+
+    

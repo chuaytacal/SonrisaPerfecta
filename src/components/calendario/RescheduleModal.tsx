@@ -1,25 +1,36 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
-import type { Appointment } from '@/types/calendar';
-import { format } from 'date-fns';
+import type { Appointment, RescheduleData } from '@/types/calendar';
 import { es } from 'date-fns/locale';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Combobox } from '@/components/ui/combobox';
+import { mockPersonalData } from '@/lib/data';
+import { Separator } from '../ui/separator';
 
 interface RescheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (newDate: Date, newTime: string) => void;
+  onNext: (data: RescheduleData) => void;
   appointment: Appointment;
 }
 
-export function RescheduleModal({ isOpen, onClose, onSave, appointment }: RescheduleModalProps) {
-  const [step, setStep] = useState<'date' | 'time'>('date');
+export function RescheduleModal({ isOpen, onClose, onNext, appointment }: RescheduleModalProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(appointment.start);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string>(appointment.idDoctor);
+
+  const doctorOptions = useMemo(() =>
+    mockPersonalData
+      .filter(p => p.estado === 'Activo')
+      .map(p => ({
+        value: p.id,
+        label: `${p.persona.nombre} ${p.persona.apellidoPaterno} (${p.especialidad})`
+      })), []);
 
   const availableTimes = useMemo(() => {
     // In a real app, this would check doctor's availability
@@ -31,72 +42,88 @@ export function RescheduleModal({ isOpen, onClose, onSave, appointment }: Resche
     return times;
   }, [selectedDate]);
 
-  const handleSave = () => {
-    if (selectedDate && selectedTime) {
-      onSave(selectedDate, selectedTime);
-      handleClose();
+  const handleNext = () => {
+    if (selectedDate && selectedTime && selectedDoctorId) {
+      onNext({
+        newDate: selectedDate,
+        newTime: selectedTime,
+        newDoctorId: selectedDoctorId,
+      });
     }
   };
 
-  const handleClose = () => {
-    setStep('date');
-    setSelectedTime(null);
-    onClose();
-  };
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedDate(appointment.start);
+      setSelectedTime(null);
+      setSelectedDoctorId(appointment.idDoctor);
+    }
+  }, [isOpen, appointment]);
+
+  const isNextDisabled = !selectedDate || !selectedTime || !selectedDoctorId;
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl p-0">
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle>Reprogramar Cita</DialogTitle>
           <DialogDescription>
-            {step === 'date'
-              ? 'Seleccione la nueva fecha para la cita.'
-              : `Seleccione la nueva hora para el ${format(selectedDate!, "d 'de' MMMM", { locale: es })}.`}
+            Seleccione una nueva fecha, hora y doctor para la cita.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-4">
-          {step === 'date' ? (
-            <div className="flex justify-center">
-                <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    initialFocus
-                    locale={es}
-                    disabled={(date) => date < new Date()}
-                />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 px-6 py-4 border-y">
+            {/* Left side: Calendar and Doctor */}
+            <div className='space-y-4'>
+                <div className="flex justify-center rounded-md border">
+                    <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        initialFocus
+                        locale={es}
+                        disabled={(date) => date < new Date()}
+                    />
+                </div>
+                 <div>
+                    <label className="text-sm font-medium">Doctor</label>
+                    <Combobox
+                        options={doctorOptions}
+                        value={selectedDoctorId}
+                        onChange={setSelectedDoctorId}
+                        placeholder="Buscar doctor..."
+                    />
+                </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto pr-2">
-              {availableTimes.map((time) => (
-                <Button
-                  key={time}
-                  variant={selectedTime === time ? 'default' : 'outline'}
-                  onClick={() => setSelectedTime(time)}
-                >
-                  {time}
-                </Button>
-              ))}
+
+            {/* Right side: Time slots */}
+            <div>
+                 <p className='text-sm text-center font-medium mb-2'>Seleccione una hora</p>
+                 <ScrollArea className="h-80 pr-3">
+                    <div className="grid grid-cols-3 gap-2">
+                        {availableTimes.map((time) => (
+                            <Button
+                            key={time}
+                            variant={selectedTime === time ? 'default' : 'outline'}
+                            onClick={() => setSelectedTime(time)}
+                            >
+                            {time}
+                            </Button>
+                        ))}
+                    </div>
+                 </ScrollArea>
             </div>
-          )}
         </div>
         
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-          {step === 'date' ? (
-            <Button onClick={() => setStep('time')} disabled={!selectedDate}>
+        <DialogFooter className="p-6 pt-4">
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleNext} disabled={isNextDisabled}>
               Siguiente
-            </Button>
-          ) : (
-            <>
-            <Button variant="ghost" onClick={() => setStep('date')}>Atrás</Button>
-            <Button onClick={handleSave} disabled={!selectedTime}>Guardar</Button>
-            </>
-          )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
+    

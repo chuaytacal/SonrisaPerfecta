@@ -144,7 +144,7 @@
     border-top: none;
 }
 .rbc-off-range-bg { /* Days not in the current month */
-  @apply bg-muted/30;
+  @apply bg-transparent;
 }
 .rbc-today {
   @apply bg-secondary !important; 
@@ -380,3 +380,6 @@
   overflow-y: auto; 
 }
 
+
+
+    

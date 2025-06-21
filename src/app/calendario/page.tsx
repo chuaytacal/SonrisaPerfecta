@@ -15,13 +15,15 @@ import { Plus, ChevronLeft, ChevronRight, CalendarDays, ListFilter, LayoutGrid, 
 import { AppointmentModal } from '@/components/calendario/AppointmentModal';
 import { AppointmentPopoverContent } from '@/components/calendario/AppointmentPopoverContent';
 import { RescheduleModal } from '@/components/calendario/RescheduleModal';
+import { RescheduleConfirmationModal } from '@/components/calendario/RescheduleConfirmationModal';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
-import type { Appointment, AppointmentFormData, AppointmentState } from '@/types/calendar';
+import type { Appointment, AppointmentFormData, AppointmentState, RescheduleData } from '@/types/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { mockPacientesData, mockPersonalData, mockMotivosCita, mockAppointmentsData } from '@/lib/data';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import type { Personal } from '@/types';
 
 
 const locales = {
@@ -58,20 +60,20 @@ export default function CalendarioPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPastDateWarningOpen, setIsPastDateWarningOpen] = useState(false);
   const [pendingSlotInfo, setPendingSlotInfo] = useState<{ start: Date; end: Date } | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<{ start: Date; end: Date } | null>(null);
   const [currentView, setCurrentView] = useState<keyof typeof Views>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const { toast } = useToast();
   
-  // States for Popover
   const [selectedEventForPopover, setSelectedEventForPopover] = useState<Appointment | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const popoverTriggerRef = useRef<HTMLDivElement>(null);
   
-  // States for Reschedule Modal
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
+  const [isRescheduleConfirmOpen, setIsRescheduleConfirmOpen] = useState(false);
+  const [rescheduleData, setRescheduleData] = useState<RescheduleData | null>(null);
 
-  // States for Confirmation Dialog
   const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
   const [appointmentToAction, setAppointmentToAction] = useState<Appointment | null>(null);
 
@@ -86,6 +88,7 @@ export default function CalendarioPage() {
       setIsPastDateWarningOpen(true);
     } else {
       setEditingAppointment(null);
+      setSelectedSlot({ start, end });
       setIsModalOpen(true);
     }
   }, []);
@@ -94,6 +97,7 @@ export default function CalendarioPage() {
     setIsPastDateWarningOpen(false);
     if (pendingSlotInfo) {
       setEditingAppointment(null);
+      setSelectedSlot(pendingSlotInfo);
       setIsModalOpen(true);
       setPendingSlotInfo(null);
     }
@@ -209,11 +213,19 @@ export default function CalendarioPage() {
     
     setIsModalOpen(false);
     setEditingAppointment(null);
+    setSelectedSlot(null);
+  };
+  
+  const handleProceedToRescheduleConfirm = (data: RescheduleData) => {
+    setRescheduleData(data);
+    setIsRescheduleModalOpen(false);
+    setIsRescheduleConfirmOpen(true);
   };
 
-  const handleSaveReschedule = (newDate: Date, newTime: string) => {
-    if (!selectedEventForPopover) return;
+  const handleConfirmReschedule = () => {
+    if (!rescheduleData || !selectedEventForPopover) return;
   
+    const { newDate, newTime, newDoctorId } = rescheduleData;
     const [hours, minutes] = newTime.split(':').map(Number);
     const newStart = new Date(newDate);
     newStart.setHours(hours, minutes, 0, 0);
@@ -223,17 +235,27 @@ export default function CalendarioPage() {
   
     const appointmentIndex = mockAppointmentsData.findIndex(app => app.id === selectedEventForPopover.id);
     if (appointmentIndex > -1) {
-      mockAppointmentsData[appointmentIndex].start = newStart;
-      mockAppointmentsData[appointmentIndex].end = newEnd;
+      const updatedAppointment = {
+        ...mockAppointmentsData[appointmentIndex],
+        start: newStart,
+        end: newEnd,
+        idDoctor: newDoctorId,
+        doctor: mockPersonalData.find(d => d.id === newDoctorId),
+      };
+      mockAppointmentsData[appointmentIndex] = updatedAppointment;
     }
     setAppointments([...mockAppointmentsData]);
   
     toast({
       title: "Cita Reprogramada",
-      description: `La cita ha sido movida al ${format(newStart, "d 'de' MMMM 'a las' HH:mm", { locale: es })}.`
+      description: `La cita ha sido movida con éxito.`
     });
-    setIsRescheduleModalOpen(false);
+    
+    setIsRescheduleConfirmOpen(false);
+    setRescheduleData(null);
+    setSelectedEventForPopover(null);
   };
+
   
   const eventPropGetter = useCallback(
     (event: Appointment) => {
@@ -345,12 +367,12 @@ export default function CalendarioPage() {
         )}
       </div>
 
-      <Button variant="default" size="icon" className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20" onClick={() => { setIsModalOpen(true); setEditingAppointment(null);}} aria-label="Añadir nueva cita">
+      <Button variant="default" size="icon" className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20" onClick={() => { setEditingAppointment(null); setSelectedSlot(null); setIsModalOpen(true);}} aria-label="Añadir nueva cita">
         <Plus className="h-7 w-7" /><span className="sr-only">Añadir Cita</span>
       </Button>
 
       {isModalOpen && (
-        <AppointmentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveAppointment} existingAppointment={editingAppointment}/>
+        <AppointmentModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setSelectedSlot(null); }} onSave={handleSaveAppointment} existingAppointment={editingAppointment} selectedSlot={selectedSlot}/>
       )}
 
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
@@ -375,13 +397,31 @@ export default function CalendarioPage() {
           <RescheduleModal
               isOpen={isRescheduleModalOpen}
               onClose={() => setIsRescheduleModalOpen(false)}
-              onSave={handleSaveReschedule}
+              onNext={handleProceedToRescheduleConfirm}
               appointment={selectedEventForPopover}
+          />
+      )}
+
+      {isRescheduleConfirmOpen && selectedEventForPopover && rescheduleData && (
+         <RescheduleConfirmationModal
+              isOpen={isRescheduleConfirmOpen}
+              onOpenChange={setIsRescheduleConfirmOpen}
+              onConfirm={handleConfirmReschedule}
+              onDelete={() => {
+                setIsRescheduleConfirmOpen(false);
+                setAppointmentToAction(selectedEventForPopover);
+                setIsConfirmDeleteDialogOpen(true);
+              }}
+              originalAppointment={selectedEventForPopover}
+              newAppointmentDetails={{
+                ...rescheduleData,
+                doctor: mockPersonalData.find(d => d.id === rescheduleData.newDoctorId) as Personal,
+              }}
           />
       )}
       
       <Dialog open={isPastDateWarningOpen} onOpenChange={setIsPastDateWarningOpen}>
-        <DialogContent className="sm:max-w-md p-6">
+        <DialogContent className="sm:max-w-lg p-6">
             <DialogHeader className="space-y-4 text-center">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                     <Megaphone className="h-10 w-10 text-primary" />
@@ -409,3 +449,5 @@ export default function CalendarioPage() {
     </div>
   );
 }
+
+    
