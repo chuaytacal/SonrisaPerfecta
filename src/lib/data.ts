@@ -1,15 +1,17 @@
 import type { MotivoCita, Procedimiento, Persona, Paciente, Personal, AntecedentesMedicosData } from '@/types';
+import type { Appointment } from '@/types/calendar';
+import { addDays, setHours, setMinutes } from 'date-fns';
 
 // Mock data for Personas (can be shared or fetched)
 export const mockPersonasData: Persona[] = [ 
-  { id: "persona-1", tipoDocumento: "DNI", numeroDocumento: "73124568", nombre: "Joe", apellidoPaterno: "Schilder", apellidoMaterno: "Mann", fechaNacimiento: new Date("1985-05-15"), sexo: "M", direccion: "Av. Siempre Viva 123", telefono: "+51 943 567 821", email: "joe.schilder@example.com" },
-  { id: "persona-2", tipoDocumento: "DNI", numeroDocumento: "18273645", nombre: "Phoebe", apellidoPaterno: "Venturi", apellidoMaterno: "Ross", fechaNacimiento: new Date("1990-08-22"), sexo: "F", direccion: "Calle Falsa 456", telefono: "+51 981 234 670", email: "phoebe.venturi@example.com" },
-  { id: "persona-3", tipoDocumento: "DNI", numeroDocumento: "49205873", nombre: "Caroline", apellidoPaterno: "Pandolfi", apellidoMaterno: "Geller", fechaNacimiento: new Date("1988-11-30"), sexo: "F", direccion: "Jr. Desconocido 789", telefono: "+51 967 891 234", email: "caroline.pandolfi@example.com" },
-  { id: "persona-4", tipoDocumento: "DNI", numeroDocumento: "50938472", nombre: "Ricardo", apellidoPaterno: "Marchetti", apellidoMaterno: "Tribbiani", fechaNacimiento: new Date("1992-03-10"), sexo: "M", direccion: "Pje. Oculto 101", telefono: "+51 935 648 290", email: "ricardo.marchetti@example.com" },
-  { id: "persona-5", tipoDocumento: "EXTRANJERIA", numeroDocumento: "X6349275", nombre: "Dorothy", apellidoPaterno: "Hussain", apellidoMaterno: "Bing", fechaNacimiento: new Date("1980-07-01"), sexo: "F", direccion: "Av. Central 202", telefono: "+51 927 401 356", email: "dorothy.hussain@example.com" },
-  { id: "persona-6", tipoDocumento: "PASAPORTE", numeroDocumento: "P2107384", nombre: "Eleanor", apellidoPaterno: "Mann", apellidoMaterno: "Buffay", fechaNacimiento: new Date("1995-01-20"), sexo: "F", direccion: "Calle Sol 303", telefono: "+51 984 123 758", email: "eleanor.mann@example.com" },
-  { id: "persona-7", tipoDocumento: "DNI", numeroDocumento: "85017429", nombre: "Nina", apellidoPaterno: "Francini", apellidoMaterno: "Green", fechaNacimiento: new Date("1989-09-05"), sexo: "F", direccion: "Av. Luna 404", telefono: "+51 975 320 461", email: "nina.francini@example.com" },
-  { id: "persona-8", tipoDocumento: "DNI", numeroDocumento: "76309152", nombre: "Caroline", apellidoPaterno: "Mallet", apellidoMaterno: "Peralta", fechaNacimiento: new Date("1993-12-12"), sexo: "F", direccion: "Jr. Estrella 505", telefono: "+51 928 547 103", email: "caroline.mallet@example.com" },
+  { id: "persona-1", tipoDocumento: "DNI", numeroDocumento: "73124568", nombre: "Joe", apellidoPaterno: "Schilder", apellidoMaterno: "Mann", fechaNacimiento: new Date("1985-05-15"), sexo: "M", direccion: "Av. Siempre Viva 123", telefono: "943567821", email: "joe.schilder@example.com" },
+  { id: "persona-2", tipoDocumento: "DNI", numeroDocumento: "18273645", nombre: "Phoebe", apellidoPaterno: "Venturi", apellidoMaterno: "Ross", fechaNacimiento: new Date("1990-08-22"), sexo: "F", direccion: "Calle Falsa 456", telefono: "981234670", email: "phoebe.venturi@example.com" },
+  { id: "persona-3", tipoDocumento: "DNI", numeroDocumento: "49205873", nombre: "Caroline", apellidoPaterno: "Pandolfi", apellidoMaterno: "Geller", fechaNacimiento: new Date("1988-11-30"), sexo: "F", direccion: "Jr. Desconocido 789", telefono: "967891234", email: "caroline.pandolfi@example.com" },
+  { id: "persona-4", tipoDocumento: "DNI", numeroDocumento: "50938472", nombre: "Ricardo", apellidoPaterno: "Marchetti", apellidoMaterno: "Tribbiani", fechaNacimiento: new Date("1992-03-10"), sexo: "M", direccion: "Pje. Oculto 101", telefono: "935648290", email: "ricardo.marchetti@example.com" },
+  { id: "persona-5", tipoDocumento: "EXTRANJERIA", numeroDocumento: "X6349275", nombre: "Dorothy", apellidoPaterno: "Hussain", apellidoMaterno: "Bing", fechaNacimiento: new Date("1980-07-01"), sexo: "F", direccion: "Av. Central 202", telefono: "927401356", email: "dorothy.hussain@example.com" },
+  { id: "persona-6", tipoDocumento: "PASAPORTE", numeroDocumento: "P2107384", nombre: "Eleanor", apellidoPaterno: "Mann", apellidoMaterno: "Buffay", fechaNacimiento: new Date("1995-01-20"), sexo: "F", direccion: "Calle Sol 303", telefono: "984123758", email: "eleanor.mann@example.com" },
+  { id: "persona-7", tipoDocumento: "DNI", numeroDocumento: "85017429", nombre: "Nina", apellidoPaterno: "Francini", apellidoMaterno: "Green", fechaNacimiento: new Date("1989-09-05"), sexo: "F", direccion: "Av. Luna 404", telefono: "975320461", email: "nina.francini@example.com" },
+  { id: "persona-8", tipoDocumento: "DNI", numeroDocumento: "76309152", nombre: "Caroline", apellidoPaterno: "Mallet", apellidoMaterno: "Peralta", fechaNacimiento: new Date("1993-12-12"), sexo: "F", direccion: "Jr. Estrella 505", telefono: "928547103", email: "caroline.mallet@example.com" },
   { id: "persona-p1", tipoDocumento: "DNI", numeroDocumento: "76543210", nombre: "Mario", apellidoPaterno: "Bros", apellidoMaterno: "Nintendo", fechaNacimiento: new Date("1983-07-09"), sexo: "M", direccion: "Mushroom Kingdom", telefono: "912345678", email: "mario@example.com" },
   { id: "persona-p2", tipoDocumento: "EXTRANJERIA", numeroDocumento: "X1234567", nombre: "Luigi", apellidoPaterno: "Bros", apellidoMaterno: "Nintendo", fechaNacimiento: new Date("2015-04-10"), sexo: "M", direccion: "Mushroom Kingdom", telefono: "987654321", email: "luigi@example.com" },
   { id: "persona-g1", tipoDocumento: "DNI", numeroDocumento: "29876543", nombre: "Peach", apellidoPaterno: "Toadstool", apellidoMaterno: "Mushroom", fechaNacimiento: new Date("1985-11-18"), sexo: "F", direccion: "Mushroom Castle", telefono: "999888777", email: "peach@example.com" },
@@ -114,3 +116,51 @@ export const mockProcedimientos: Procedimiento[] = [
   { id: 'proc-8', denominacion: 'Ortodoncia cuota inicial', descripcion: 'Pago inicial para tratamiento de ortodoncia.', precioBase: 800 },
   { id: 'proc-9', denominacion: 'Ortodoncia cuota mensual', descripcion: 'Pago mensual para tratamiento de ortodoncia.', precioBase: 200 },
 ];
+
+// Moved from `calendario/page.tsx`
+const generateInitialAppointments = (): Appointment[] => {
+  const today = new Date();
+  const tomorrow = addDays(today, 1);
+  
+  const paciente1 = mockPacientesData[0];
+  const doctor1 = mockPersonalData[1];
+  const motivo1 = mockMotivosCita[0];
+
+  const paciente2 = mockPacientesData[1];
+  const doctor2 = mockPersonalData[2];
+  const motivo2 = mockMotivosCita[2];
+  
+  return [
+    {
+      id: crypto.randomUUID(),
+      title: `${motivo1.nombre} - ${paciente1.persona.nombre}`,
+      start: setMinutes(setHours(today, 10), 0),
+      end: setMinutes(setHours(today, 11), 0),
+      idPaciente: paciente1.id,
+      idDoctor: doctor1.id,
+      paciente: paciente1,
+      doctor: doctor1,
+      idMotivoCita: motivo1.id,
+      motivoCita: motivo1,
+      estado: 'Confirmada',
+      eventColor: 'hsl(var(--chart-1))',
+    },
+    {
+      id: crypto.randomUUID(),
+      title: `${motivo2.nombre} - ${paciente2.persona.nombre}`,
+      start: setMinutes(setHours(tomorrow, 14), 0),
+      end: setMinutes(setHours(tomorrow, 15), 30),
+      idPaciente: paciente2.id,
+      idDoctor: doctor2.id,
+      paciente: paciente2,
+      doctor: doctor2,
+      idMotivoCita: motivo2.id,
+      motivoCita: motivo2,
+      estado: 'Pendiente',
+      eventColor: 'hsl(var(--chart-2))',
+    }
+  ];
+};
+
+// Export a mutable array to simulate a database
+export let mockAppointmentsData: Appointment[] = generateInitialAppointments();

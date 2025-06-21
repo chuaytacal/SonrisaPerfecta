@@ -31,7 +31,7 @@ import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { mockPacientesData, mockPersonalData, mockMotivosCita, mockProcedimientos } from '@/lib/data';
-import { Checkbox } from '../ui/checkbox';
+import { Separator } from '../ui/separator';
 
 
 const appointmentFormSchema = z.object({
@@ -174,7 +174,7 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, initialDat
             <ScrollArea className="max-h-[65vh]">
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                 {/* Columna Izquierda */}
-                <div className="space-y-4">
+                <div className="space-y-4 md:border-r md:pr-8">
                   <FormField
                     control={form.control}
                     name="idPaciente"
@@ -191,12 +191,6 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, initialDat
                       </FormItem>
                     )}
                   />
-                   <div className="flex items-center space-x-2">
-                      <Checkbox id="create-new-patient" />
-                      <label htmlFor="create-new-patient" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                          Crear nuevo paciente
-                      </label>
-                  </div>
                   <FormField
                     control={form.control}
                     name="idDoctor"

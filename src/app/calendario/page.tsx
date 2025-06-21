@@ -8,14 +8,14 @@ import parse from 'date-fns/parse';
 import startOfWeek from 'date-fns/startOfWeek';
 import getDay from 'date-fns/getDay';
 import es from 'date-fns/locale/es';
-import { addDays, setHours, setMinutes, addMinutes } from 'date-fns';
+import { addMinutes } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Plus, ChevronLeft, ChevronRight, CalendarDays, ListFilter, LayoutGrid, Rows3, Trash2 } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, CalendarDays, ListFilter, LayoutGrid, Rows3 } from 'lucide-react';
 import { AppointmentModal } from '@/components/calendario/AppointmentModal';
 import type { Appointment, AppointmentFormData } from '@/types/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { mockPacientesData, mockPersonalData, mockMotivosCita } from '@/lib/data';
+import { mockPacientesData, mockPersonalData, mockMotivosCita, mockAppointmentsData } from '@/lib/data';
 
 
 const locales = {
@@ -46,53 +46,8 @@ const messages = {
   showMore: (total: number) => `+ Ver más (${total})`,
 };
 
-export const generateInitialAppointments = (): Appointment[] => {
-  const today = new Date();
-  const tomorrow = addDays(today, 1);
-  
-  const paciente1 = mockPacientesData[0];
-  const doctor1 = mockPersonalData[1];
-  const motivo1 = mockMotivosCita[0];
-
-  const paciente2 = mockPacientesData[1];
-  const doctor2 = mockPersonalData[2];
-  const motivo2 = mockMotivosCita[2];
-  
-  return [
-    {
-      id: crypto.randomUUID(),
-      title: `${motivo1.nombre} - ${paciente1.persona.nombre}`,
-      start: setMinutes(setHours(today, 10), 0),
-      end: setMinutes(setHours(today, 11), 0),
-      idPaciente: paciente1.id,
-      idDoctor: doctor1.id,
-      paciente: paciente1,
-      doctor: doctor1,
-      idMotivoCita: motivo1.id,
-      motivoCita: motivo1,
-      estado: 'Confirmada',
-      eventColor: 'hsl(var(--chart-1))',
-    },
-    {
-      id: crypto.randomUUID(),
-      title: `${motivo2.nombre} - ${paciente2.persona.nombre}`,
-      start: setMinutes(setHours(tomorrow, 14), 0),
-      end: setMinutes(setHours(tomorrow, 15), 30),
-      idPaciente: paciente2.id,
-      idDoctor: doctor2.id,
-      paciente: paciente2,
-      doctor: doctor2,
-      idMotivoCita: motivo2.id,
-      motivoCita: motivo2,
-      estado: 'Pendiente',
-      eventColor: 'hsl(var(--chart-2))',
-    }
-  ];
-};
-
-
 export default function CalendarioPage() {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>(mockAppointmentsData);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSlotInfo, setSelectedSlotInfo] = useState<{ start: Date; end: Date } | null>(null);
   const [currentView, setCurrentView] = useState<keyof typeof Views>(Views.MONTH);
@@ -102,7 +57,9 @@ export default function CalendarioPage() {
 
   useEffect(() => {
     setCurrentDate(new Date());
-    setAppointments(generateInitialAppointments());
+    // The state is now initialized directly from mockAppointmentsData
+    // We can use a useEffect to sync if it changes from other places, but for now this is fine.
+    setAppointments([...mockAppointmentsData]);
   }, []);
 
   const handleSelectSlot = useCallback(({ start, end }: { start: Date; end: Date }) => {
@@ -157,17 +114,16 @@ export default function CalendarioPage() {
       notas: formData.notas,
       eventColor: editingAppointment?.eventColor || 'hsl(var(--primary))'
     };
-
-    setAppointments(prev => {
-      const existingIndex = prev.findIndex(app => app.id === appointmentToSave.id);
-      if (existingIndex > -1) {
-        const updatedAppointments = [...prev];
-        updatedAppointments[existingIndex] = appointmentToSave;
-        return updatedAppointments;
-      }
-      return [...prev, appointmentToSave];
-    });
     
+    // Update mock data source
+    const existingIndex = mockAppointmentsData.findIndex(app => app.id === appointmentToSave.id);
+    if (existingIndex > -1) {
+        mockAppointmentsData[existingIndex] = appointmentToSave;
+    } else {
+        mockAppointmentsData.push(appointmentToSave);
+    }
+    setAppointments([...mockAppointmentsData]); // Update local state from the source of truth
+
     toast({
       title: editingAppointment ? "Cita Actualizada" : "Cita Creada",
       description: `La cita para "${paciente.persona.nombre}" ha sido ${editingAppointment ? 'actualizada' : 'programada'}.`,
@@ -180,8 +136,15 @@ export default function CalendarioPage() {
   };
 
   const handleDeleteAppointment = (appointmentId: string) => {
-    const appointmentToDelete = appointments.find(app => app.id === appointmentId);
-    setAppointments(prev => prev.filter(app => app.id !== appointmentId));
+    const appointmentToDelete = mockAppointmentsData.find(app => app.id === appointmentId);
+    
+    // Update mock data source by filtering
+    const indexToDelete = mockAppointmentsData.findIndex(app => app.id === appointmentId);
+    if (indexToDelete > -1) {
+        mockAppointmentsData.splice(indexToDelete, 1);
+    }
+    setAppointments([...mockAppointmentsData]); // Update local state from the source of truth
+
     toast({
       title: "Cita Eliminada",
       description: `La cita "${appointmentToDelete?.title || 'seleccionada'}" ha sido eliminada.`,
