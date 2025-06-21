@@ -31,7 +31,6 @@ import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { mockPacientesData, mockPersonalData, mockMotivosCita, mockProcedimientos } from '@/lib/data';
-import { Separator } from '../ui/separator';
 
 
 const appointmentFormSchema = z.object({
@@ -56,18 +55,33 @@ interface AppointmentModalProps {
   existingAppointment?: Appointment | null;
 }
 
-const duracionOptions = [
-  { label: '15 minutos', value: 15 },
-  { label: '30 minutos', value: 30 },
-  { label: '45 minutos', value: 45 },
-  { label: '1 hora', value: 60 },
-  { label: '1 hora y 30 minutos', value: 90 },
-  { label: '2 horas', value: 120 },
-];
-
 export function AppointmentModal({ isOpen, onClose, onSave, onDelete, initialData, existingAppointment }: AppointmentModalProps) {
   const [procedimientosSeleccionados, setProcedimientosSeleccionados] = useState<Procedimiento[]>([]);
   
+  const duracionOptions = useMemo(() => {
+    const options: { label: string; value: number }[] = [];
+    options.push({ label: '15 minutos', value: 15 });
+
+    for (let i = 1; i <= 47; i++) {
+      const totalMinutes = i * 30;
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+
+      let label = '';
+      if (hours > 0) {
+        label += `${hours} hora${hours > 1 ? 's' : ''}`;
+      }
+      if (minutes > 0) {
+        if (hours > 0) {
+          label += ' y ';
+        }
+        label += `${minutes} minutos`;
+      }
+      options.push({ label, value: totalMinutes });
+    }
+    return options;
+  }, []);
+
   const form = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentFormSchema),
     defaultValues: {
