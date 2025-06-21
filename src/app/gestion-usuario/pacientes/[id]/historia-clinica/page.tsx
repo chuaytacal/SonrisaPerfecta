@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { mockPacientesData } from '@/app/gestion-usuario/pacientes/page';
+import { mockPacientesData } from '@/lib/data';
 import type { Paciente as PacienteType, Persona, EtiquetaPaciente } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
