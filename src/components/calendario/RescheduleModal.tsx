@@ -11,7 +11,6 @@ import { startOfDay } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Combobox } from '@/components/ui/combobox';
 import { mockPersonalData } from '@/lib/data';
-import { Separator } from '../ui/separator';
 import { Globe } from 'lucide-react';
 
 interface RescheduleModalProps {
@@ -124,7 +123,7 @@ export function RescheduleModal({ isOpen, onClose, onNext, appointment }: Resche
             </div>
         </div>
         
-        <DialogFooter className="p-6 pt-4">
+        <DialogFooter className="p-6 pt-4 justify-center">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={handleNext} disabled={isNextDisabled}>
               Siguiente

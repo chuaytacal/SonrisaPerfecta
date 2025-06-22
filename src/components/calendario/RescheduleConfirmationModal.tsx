@@ -79,7 +79,7 @@ export function RescheduleConfirmationModal({
                 </div>
                  <div className="!mt-auto pt-4 flex items-center space-x-2">
                     <Switch id="delete-original-switch" checked={shouldDelete} onCheckedChange={onShouldDeleteChange} />
-                    <Label htmlFor="delete-original-switch" className="text-sm text-destructive font-medium">Cancelar cita original</Label>
+                    <Label htmlFor="delete-original-switch" className="text-sm font-medium text-foreground">Cancelar cita original</Label>
                 </div>
             </div>
 
@@ -98,7 +98,7 @@ export function RescheduleConfirmationModal({
             </div>
         </div>
         
-        <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end pt-4 gap-2">
+        <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-center pt-4 gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
             <Button onClick={onConfirm} variant={shouldDelete ? 'destructive' : 'default'}>
               {shouldDelete ? 'Confirmar Cancelación' : 'Guardar Cambios'}

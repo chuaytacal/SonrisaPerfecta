@@ -225,61 +225,81 @@ export default function CalendarioPage() {
   };
 
   const handleConfirmReschedule = () => {
+    if (!selectedEventForPopover) return;
+  
     if (shouldDeleteOnReschedule) {
-        if (!selectedEventForPopover) return;
-        const indexToDelete = mockAppointmentsData.findIndex(app => app.id === selectedEventForPopover.id);
-        if (indexToDelete > -1) mockAppointmentsData.splice(indexToDelete, 1);
-        setAppointments([...mockAppointmentsData]);
-        toast({ title: "Cita Cancelada", description: "La cita original ha sido eliminada.", variant: 'destructive'});
+      const indexToDelete = mockAppointmentsData.findIndex(app => app.id === selectedEventForPopover.id);
+      if (indexToDelete > -1) {
+        mockAppointmentsData.splice(indexToDelete, 1);
+      }
+      toast({ title: "Cita Cancelada", description: "La cita original ha sido eliminada.", variant: 'destructive'});
     } else {
-        if (!rescheduleData || !selectedEventForPopover) return;
+      if (!rescheduleData) return;
+      
+      const appointmentIndex = mockAppointmentsData.findIndex(app => app.id === selectedEventForPopover.id);
+      
+      if (appointmentIndex > -1) {
+        // Update original appointment state to 'Reprogramada'
+        mockAppointmentsData[appointmentIndex].estado = 'Reprogramada';
+        
+        // Create the new appointment
         const { newDate, newTime, newDoctorId } = rescheduleData;
         const [hours, minutes] = newTime.split(':').map(Number);
         const newStart = new Date(newDate);
         newStart.setHours(hours, minutes, 0, 0);
+        
         const duration = selectedEventForPopover.end.getTime() - selectedEventForPopover.start.getTime();
         const newEnd = new Date(newStart.getTime() + duration);
-        const appointmentIndex = mockAppointmentsData.findIndex(app => app.id === selectedEventForPopover.id);
-        if (appointmentIndex > -1) {
-            mockAppointmentsData[appointmentIndex] = {
-                ...mockAppointmentsData[appointmentIndex],
-                start: newStart,
-                end: newEnd,
-                idDoctor: newDoctorId,
-                doctor: mockPersonalData.find(d => d.id === newDoctorId),
-                estado: 'Pendiente', // Set status to Pendiente after reschedule
-            };
-        }
-        setAppointments([...mockAppointmentsData]);
-        toast({ title: "Cita Reprogramada", description: `La cita ha sido movida con éxito.`});
-    }
+        
+        const newAppointment: Appointment = {
+          ...selectedEventForPopover,
+          id: crypto.randomUUID(), // New unique ID
+          start: newStart,
+          end: newEnd,
+          idDoctor: newDoctorId,
+          doctor: mockPersonalData.find(d => d.id === newDoctorId),
+          estado: 'Pendiente', // The new appointment is 'Pendiente'
+        };
+        mockAppointmentsData.push(newAppointment);
 
+        toast({ title: "Cita Reprogramada", description: "La nueva cita ha sido agendada." });
+      }
+    }
+  
+    setAppointments([...mockAppointmentsData]);
     setIsRescheduleConfirmOpen(false);
     setRescheduleData(null);
     setSelectedEventForPopover(null);
     setShouldDeleteOnReschedule(false);
   };
-
   
   const eventPropGetter = useCallback(
     (event: Appointment) => {
       const style: React.CSSProperties = { padding: '2px 5px', borderRadius: '4px', border: 'none' };
       let backgroundColor = event.eventColor || 'hsl(var(--primary))';
-      
+      let color = 'hsl(var(--primary-foreground))';
+
       switch (event.estado) {
-        case 'Cancelada': backgroundColor = 'hsl(var(--destructive))'; break;
-        case 'Pendiente': backgroundColor = 'hsl(var(--chart-5))'; break;
-        case 'Atendido': backgroundColor = 'hsl(var(--chart-4))'; break;
-        case 'Confirmada': backgroundColor = 'hsl(var(--primary))'; break;
-        case 'Reprogramada': backgroundColor = 'hsl(var(--muted))'; break;
+        case 'Cancelada':
+          backgroundColor = 'hsl(var(--destructive))';
+          break;
+        case 'Pendiente':
+          backgroundColor = '#f59e0b'; // Amber-500
+          break;
+        case 'Atendido':
+          backgroundColor = '#16a34a'; // Green-600
+          break;
+        case 'Confirmada':
+          backgroundColor = '#5625b3'; // Purple
+          break;
+        case 'Reprogramada':
+          backgroundColor = 'hsl(var(--muted))';
+          color = 'hsl(var(--muted-foreground))';
+          style.textDecoration = 'line-through';
+          break;
       }
       style.backgroundColor = backgroundColor;
-      
-      if(event.estado === 'Reprogramada') {
-        style.color = 'hsl(var(--muted-foreground))';
-      } else {
-        style.color = 'hsl(var(--primary-foreground))';
-      }
+      style.color = color;
 
       if (currentView === Views.AGENDA) {
         style.padding = '0.625rem'; style.margin = '0px'; style.borderRadius = '0px'; style.color = 'hsl(var(--card-foreground))';
