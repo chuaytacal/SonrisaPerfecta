@@ -52,6 +52,11 @@ export default function PacientesPage() {
   });
   const [sortBy, setSortBy] = React.useState<string>("persona.nombre_asc");
 
+  const personasNoPacientes = React.useMemo(() => {
+    const pacientePersonaIds = new Set(mockPacientesData.map(p => p.idPersona));
+    return mockPersonasData.filter(persona => !pacientePersonaIds.has(persona.id));
+  }, [pacienteList]);
+
   const handleSavePaciente = (savedPaciente: Paciente, apoderado?: Persona) => {
     // 1. Update/Add Apoderado Persona in the "DB"
     if (apoderado) {
@@ -392,7 +397,7 @@ const columns: ColumnDef<Paciente>[] = [
         onClose={() => setIsSelectPersonaModalOpen(false)}
         onSelectPersona={handleSelectPersona}
         onCreateNewPersona={handleCreateNewPersona}
-        existingPersonas={mockPersonasData} 
+        existingPersonas={personasNoPacientes} 
         modalDescription="Busca una persona por DNI o nombre completo para asignarle el rol de paciente, o crea una nueva persona."
         createButtonLabel="Crear Persona y Asignar como Paciente"
       />

@@ -50,6 +50,11 @@ export default function PersonalPage() {
   });
   const [sortBy, setSortBy] = React.useState<string>("nombre_asc");
 
+  const personasNoPersonal = React.useMemo(() => {
+    const personalPersonaIds = new Set(mockPersonalData.map(p => p.idPersona));
+    return mockPersonasData.filter(persona => !personalPersonaIds.has(persona.id));
+  }, [personalList]);
+
   const handleSavePersonal = (savedPersonal: Personal) => {
     setPersonalList(prevList => {
       const existingIndex = prevList.findIndex(p => p.id === savedPersonal.id);
@@ -350,7 +355,9 @@ const columns: ColumnDef<Personal>[] = [
         onClose={() => setIsSelectPersonaModalOpen(false)}
         onSelectPersona={handleSelectPersona}
         onCreateNewPersona={handleCreateNewPersona}
-        existingPersonas={mockPersonasData} // Pass mock data here
+        existingPersonas={personasNoPersonal}
+        modalDescription="Busca una persona por DNI o nombre completo para asignarle un rol en el personal, o crea una nueva persona."
+        createButtonLabel="Crear Persona y Asignar como Personal"
       />
 
       <AddPersonalForm
