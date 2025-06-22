@@ -98,10 +98,10 @@ export function RescheduleConfirmationModal({
                   </div>
               </div>
           </div>
-          <DialogFooter className="p-6 pt-4 border-t flex-col-reverse sm:flex-row sm:justify-center gap-2">
+          <DialogFooter className="p-6 pt-4 border-t justify-center">
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              <Button onClick={onConfirm} variant={shouldDelete ? 'destructive' : 'default'}>
-                {shouldDelete ? 'Confirmar Cancelación' : 'Guardar Cambios'}
+              <Button onClick={onConfirm}>
+                Guardar Cambios
               </Button>
           </DialogFooter>
         </ScrollArea>

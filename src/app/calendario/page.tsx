@@ -228,47 +228,48 @@ export default function CalendarioPage() {
   };
 
   const handleConfirmReschedule = () => {
-    if (!selectedEventForPopover) return;
-  
-    if (shouldDeleteOnReschedule) {
-      const indexToDelete = mockAppointmentsData.findIndex(app => app.id === selectedEventForPopover.id);
-      if (indexToDelete > -1) {
-        mockAppointmentsData.splice(indexToDelete, 1);
-      }
-      toast({ title: "Cita Cancelada", description: "La cita original ha sido eliminada.", variant: 'destructive'});
-    } else {
-      if (!rescheduleData) return;
-      
-      const appointmentIndex = mockAppointmentsData.findIndex(app => app.id === selectedEventForPopover.id);
-      
-      if (appointmentIndex > -1) {
-        // Update original appointment state to 'Reprogramada'
-        mockAppointmentsData[appointmentIndex].estado = 'Reprogramada';
-        
-        // Create the new appointment
-        const { newDate, newTime, newDoctorId } = rescheduleData;
-        const [hours, minutes] = newTime.split(':').map(Number);
-        const newStart = new Date(newDate);
-        newStart.setHours(hours, minutes, 0, 0);
-        
-        const duration = selectedEventForPopover.end.getTime() - selectedEventForPopover.start.getTime();
-        const newEnd = new Date(newStart.getTime() + duration);
-        
-        const newAppointment: Appointment = {
-          ...selectedEventForPopover,
-          id: crypto.randomUUID(), // New unique ID
-          start: newStart,
-          end: newEnd,
-          idDoctor: newDoctorId,
-          doctor: mockPersonalData.find(d => d.id === newDoctorId),
-          estado: 'Pendiente', // The new appointment is 'Pendiente'
-        };
-        mockAppointmentsData.push(newAppointment);
+    if (!selectedEventForPopover || !rescheduleData) return;
 
-        toast({ title: "Cita Reprogramada", description: "La nueva cita ha sido agendada." });
-      }
+    // 1. Create the new appointment. This happens in both cases.
+    const { newDate, newTime, newDoctorId } = rescheduleData;
+    const [hours, minutes] = newTime.split(':').map(Number);
+    const newStart = new Date(newDate);
+    newStart.setHours(hours, minutes, 0, 0);
+
+    const duration = selectedEventForPopover.end.getTime() - selectedEventForPopover.start.getTime();
+    const newEnd = new Date(newStart.getTime() + duration);
+    
+    const newAppointment: Appointment = {
+      ...selectedEventForPopover,
+      id: crypto.randomUUID(), // New unique ID
+      start: newStart,
+      end: newEnd,
+      idDoctor: newDoctorId,
+      doctor: mockPersonalData.find(d => d.id === newDoctorId),
+      estado: 'Pendiente', // The new appointment is always 'Pendiente'
+    };
+    
+    // 2. Handle the original appointment based on the switch.
+    if (shouldDeleteOnReschedule) {
+        // Find and remove the original appointment
+        const indexToDelete = mockAppointmentsData.findIndex(app => app.id === selectedEventForPopover.id);
+        if (indexToDelete > -1) {
+            mockAppointmentsData.splice(indexToDelete, 1);
+        }
+        toast({ title: "Cita Reprogramada", description: "La cita original ha sido cancelada y la nueva agendada." });
+    } else {
+        // Mark the original appointment as 'Reprogramada'
+        const appointmentIndex = mockAppointmentsData.findIndex(app => app.id === selectedEventForPopover.id);
+        if (appointmentIndex > -1) {
+            mockAppointmentsData[appointmentIndex].estado = 'Reprogramada';
+        }
+        toast({ title: "Cita Reprogramada", description: "La nueva cita ha sido agendada y la original marcada como reprogramada." });
     }
   
+    // Add the new appointment to the list
+    mockAppointmentsData.push(newAppointment);
+
+    // 3. Update state and close modals
     setAppointments([...mockAppointmentsData]);
     setIsRescheduleConfirmOpen(false);
     setRescheduleData(null);
