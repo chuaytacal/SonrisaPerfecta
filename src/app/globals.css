@@ -127,8 +127,7 @@
    @apply flex-1 border-b-2 border-border pb-2 text-muted-foreground;
 }
 .rbc-month-row { /* Represents a week */
-  @apply flex flex-row flex-grow overflow-hidden relative; 
-  min-height: 100px; 
+  @apply flex flex-row flex-grow overflow-hidden relative;
 }
 .rbc-row-bg { /* Backgrounds of days in a week row */
   @apply flex flex-row flex-1 w-full h-full absolute top-0 left-0 z-0;
@@ -144,7 +143,7 @@
     border-top: none;
 }
 .rbc-off-range-bg { /* Days not in the current month */
-  @apply bg-transparent;
+  @apply bg-muted;
 }
 .rbc-today {
   @apply bg-secondary !important; 
