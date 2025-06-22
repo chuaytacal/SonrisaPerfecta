@@ -407,7 +407,7 @@ export default function CalendarioPage() {
           <PopoverTrigger asChild>
             <div ref={popoverTriggerRef} style={{ position: 'fixed', pointerEvents: 'none', opacity: 0 }} />
           </PopoverTrigger>
-          <PopoverContent className="w-80 p-0" align="start" side="bottom">
+          <PopoverContent className="w-75 p-0" align="start" side="bottom">
               {selectedEventForPopover && (
                   <AppointmentPopoverContent
                       appointment={selectedEventForPopover}

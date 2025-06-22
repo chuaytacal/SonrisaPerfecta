@@ -29,8 +29,7 @@ import {
   FilePlus,
   BarChart3,
   List,
-  Tag, // Added Tag icon import
-  // ChevronDown is part of AccordionTrigger from ui/accordion.tsx
+  Tag,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import React, { useState, useEffect } from 'react';
@@ -94,34 +93,24 @@ export default function AppSidebar() {
 
   const isDesktopCollapsed = !sidebarCtx.isMobile && !sidebarCtx.open;
 
-  const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(() => {
-    const activeItems: string[] = [];
-    if (!(!sidebarCtx.isMobile && !sidebarCtx.open)) {
-        function findActive(items: any[], currentPath: string) {
-          for (const item of items) {
-            if (item.basePathForActive && currentPath.startsWith(item.basePathForActive)) {
-              activeItems.push(item.label);
-              if (item.subItems) { // Only check subItems
-                findActive(item.subItems, currentPath);
-              }
-            }
-          }
-        }
-        findActive(sidebarNavItems, pathname);
-    }
-    return activeItems;
-  });
+  // Initialize with an empty array to prevent server-side errors.
+  const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
 
+  // Calculate open accordion items inside useEffect to ensure it only runs on the client.
   useEffect(() => {
     if (isDesktopCollapsed) {
       setOpenAccordionItems([]);
     } else {
         const activeItems: string[] = [];
-        function findActive(items: any[], currentPath: string) {
+        function findActive(items: any[], currentPath: string | null) {
+          // Guard against null pathname on server or during initial client render
+          if (!currentPath) {
+            return;
+          }
           for (const item of items) {
             if (item.basePathForActive && currentPath.startsWith(item.basePathForActive)) {
               activeItems.push(item.label);
-              if (item.subItems) { // Only check subItems
+              if (item.subItems) {
                 findActive(item.subItems, currentPath);
               }
             }
@@ -137,7 +126,8 @@ export default function AppSidebar() {
     return items.map((item) => {
       const Icon = item.icon;
       const isActive = item.href && pathname === item.href;
-      const isParentActive = item.basePathForActive && pathname.startsWith(item.basePathForActive);
+      // Add a guard for pathname to prevent errors on server
+      const isParentActive = item.basePathForActive && pathname && pathname.startsWith(item.basePathForActive);
 
       if (item.subItems) { // Items like "Gestión Usuario" will enter here
         const subItems = item.subItems;
