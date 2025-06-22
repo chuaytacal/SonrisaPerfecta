@@ -9,7 +9,7 @@ import parse from 'date-fns/parse';
 import startOfWeek from 'date-fns/startOfWeek';
 import getDay from 'date-fns/getDay';
 import es from 'date-fns/locale/es';
-import { addMinutes } from 'date-fns';
+import { addMinutes, startOfDay } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Plus, ChevronLeft, ChevronRight, CalendarDays, ListFilter, LayoutGrid, Rows3, Megaphone } from 'lucide-react';
 import { AppointmentModal } from '@/components/calendario/AppointmentModal';
@@ -356,7 +356,7 @@ export default function CalendarioPage() {
 
 
   return (
-    <div className="flex flex-col relative h-full">
+    <div className="flex flex-col relative h-auto">
       <h1 className="text-3xl font-bold text-foreground mb-6">Calendario de Citas</h1>
 
       <div className="flex-grow relative">

@@ -23,7 +23,7 @@ export interface Appointment {
   idMotivoCita: string;
 
   // Additional fields
-  estado?: AppointmentState;
+  estado: AppointmentState;
   notas?: string;
   eventColor?: string;
 }

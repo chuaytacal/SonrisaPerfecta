@@ -63,7 +63,7 @@ export function AppointmentPopoverContent({
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted">
+            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted text-foreground hover:text-foreground">
               <MoreVertical className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>

@@ -42,7 +42,7 @@ const appointmentFormSchema = z.object({
   horaInicio: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Hora inválida (HH:MM)."),
   duracion: z.number().min(5, "La duración debe ser al menos 5 minutos."),
   procedimientos: z.array(z.custom<Procedimiento>()).optional(),
-  estado: z.enum(['Confirmada', 'Pendiente', 'Cancelada', 'Atendido']),
+  estado: z.enum(['Confirmada', 'Pendiente', 'Cancelada', 'Atendido', 'Reprogramada']),
   notas: z.string().optional(),
 });
 
@@ -279,103 +279,101 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAp
                   </div>
                 </div>
 
-                {/* Separador y Columna Derecha */}
-                <div className="flex gap-x-8">
-                  <Separator orientation="vertical" className="hidden md:block"/>
-                  <div className="space-y-4 w-full">
+                {/* Columna Derecha */}
+                <div className="space-y-4 w-full">
+                   <FormField
+                      control={form.control}
+                      name="fecha"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fecha</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                >
+                                  {field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccione fecha</span>}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <CalendarPicker mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={es} />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  <FormField
+                    control={form.control}
+                    name="horaInicio"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Hora de Inicio</FormLabel>
+                        <FormControl>
+                          <Input type="time" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="duracion"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Duración</FormLabel>
+                        <Select onValueChange={(val) => field.onChange(Number(val))} value={String(field.value)}>
+                            <FormControl>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {duracionOptions.map(opt => (
+                                <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  {existingAppointment && (
                      <FormField
                         control={form.control}
-                        name="fecha"
+                        name="estado"
                         render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Fecha</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant={"outline"}
-                                    className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                                  >
-                                    {field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccione fecha</span>}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <CalendarPicker mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={es} />
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                          </FormItem>
+                        <FormItem>
+                            <FormLabel>Estado</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                <SelectItem value="Pendiente">Pendiente</SelectItem>
+                                <SelectItem value="Confirmada">Confirmada</SelectItem>
+                                <SelectItem value="Atendido">Atendido</SelectItem>
+                                <SelectItem value="Cancelada">Cancelada</SelectItem>
+                                <SelectItem value="Reprogramada">Reprogramada</SelectItem>
+                            </SelectContent>
+                            </Select>
+                        </FormItem>
                         )}
-                      />
-                    <FormField
-                      control={form.control}
-                      name="horaInicio"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Hora de Inicio</FormLabel>
-                          <FormControl>
-                            <Input type="time" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="duracion"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Duración</FormLabel>
-                          <Select onValueChange={(val) => field.onChange(Number(val))} value={String(field.value)}>
-                              <FormControl>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {duracionOptions.map(opt => (
-                                  <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    {existingAppointment && (
-                       <FormField
-                          control={form.control}
-                          name="estado"
-                          render={({ field }) => (
-                          <FormItem>
-                              <FormLabel>Estado</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                              <SelectContent>
-                                  <SelectItem value="Pendiente">Pendiente</SelectItem>
-                                  <SelectItem value="Confirmada">Confirmada</SelectItem>
-                                  <SelectItem value="Atendido">Atendido</SelectItem>
-                                  <SelectItem value="Cancelada">Cancelada</SelectItem>
-                              </SelectContent>
-                              </Select>
-                          </FormItem>
-                          )}
-                      />
+                  )}
+                  <FormField
+                    control={form.control}
+                    name="notas"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nota de la Cita (Opcional)</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Añadir notas adicionales..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                    <FormField
-                      control={form.control}
-                      name="notas"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nota de la Cita (Opcional)</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Añadir notas adicionales..." {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  />
                 </div>
               </div>
             </ScrollArea>
