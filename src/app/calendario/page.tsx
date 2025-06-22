@@ -107,8 +107,11 @@ export default function CalendarioPage() {
   const handleSelectEvent = useCallback((event: Appointment, e: React.SyntheticEvent) => {
     const target = e.currentTarget as HTMLDivElement;
     if (popoverTriggerRef.current) {
-        popoverTriggerRef.current.style.top = `${target.getBoundingClientRect().bottom + window.scrollY}px`;
-        popoverTriggerRef.current.style.left = `${target.getBoundingClientRect().left + window.scrollX}px`;
+        const rect = target.getBoundingClientRect();
+        popoverTriggerRef.current.style.top = `${rect.top}px`;
+        popoverTriggerRef.current.style.left = `${rect.left}px`;
+        popoverTriggerRef.current.style.width = `${rect.width}px`;
+        popoverTriggerRef.current.style.height = `${rect.height}px`;
     }
     setSelectedEventForPopover(event);
     setPopoverOpen(true);
@@ -358,7 +361,6 @@ export default function CalendarioPage() {
 
       <div className="flex-grow relative">
         {currentDate ? (
-          <>
           <BigCalendar
             localizer={localizer}
             events={appointments}
@@ -384,8 +386,6 @@ export default function CalendarioPage() {
             dayLayoutAlgorithm="no-overlap"
             popup
           />
-          <div ref={popoverTriggerRef} style={{ position: 'absolute', opacity: 0 }} />
-          </>
         ) : (
           <div className="flex flex-col space-y-3 p-4 bg-card rounded-lg shadow-md h-full">
             <Skeleton className="h-[50px] w-full rounded-lg" />
@@ -405,9 +405,9 @@ export default function CalendarioPage() {
 
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
           <PopoverTrigger asChild>
-            <div ref={popoverTriggerRef} style={{ position: 'fixed', pointerEvents: 'none' }} />
+            <div ref={popoverTriggerRef} style={{ position: 'fixed', pointerEvents: 'none', opacity: 0 }} />
           </PopoverTrigger>
-          <PopoverContent className="w-64 p-0" align="start" side="bottom">
+          <PopoverContent className="w-80 p-0" align="start" side="bottom">
               {selectedEventForPopover && (
                   <AppointmentPopoverContent
                       appointment={selectedEventForPopover}

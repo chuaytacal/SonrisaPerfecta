@@ -44,9 +44,9 @@ export function AppointmentPopoverContent({
   if (!appointment) return null;
 
   const stateActions = [
-    { state: 'Confirmada', label: 'Confirmado', icon: CheckCircle2, className: 'text-purple-600 hover:text-purple-700' },
-    { state: 'Atendido', label: 'Atendido', icon: ClipboardCheck, className: 'text-green-600 hover:text-green-700' },
-    { state: 'Cancelada', label: 'Cancelado', icon: Ban, className: 'text-red-600 hover:text-red-700' },
+    { state: 'Confirmada', label: 'Confirmado', icon: CheckCircle2, className: 'text-purple-600' },
+    { state: 'Cancelada', label: 'Cancelado', icon: Ban, className: 'text-red-600' },
+    { state: 'Atendido', label: 'Atendido', icon: ClipboardCheck, className: 'text-green-600' },
   ] as const;
 
   return (
@@ -55,7 +55,7 @@ export function AppointmentPopoverContent({
       <div className="flex items-center justify-between p-2 border-b">
         <div className="flex items-center gap-1">
            {stateActions.map(({ state, label, icon: Icon, className }) => (
-                <Button key={state} variant="ghost" size="sm" className={`flex-col h-auto px-2 py-1 ${className} hover:bg-muted`} onClick={() => onUpdateState(state)} disabled={appointment.estado === state}>
+                <Button key={state} variant="ghost" size="sm" className={`flex-col h-auto px-2 py-1 hover:bg-muted ${className}`} onClick={() => onUpdateState(state)} disabled={appointment.estado === state}>
                     <Icon className="h-5 w-5 mb-1" />
                     <span className="text-xs">{label}</span>
                 </Button>
@@ -89,16 +89,16 @@ export function AppointmentPopoverContent({
 
       {/* Action List */}
       <div className="flex flex-col p-1">
-        <Button variant="ghost" className="justify-start px-2 hover:bg-muted" onClick={() => window.open(`https://wa.me/${appointment.paciente?.persona.telefono}`, '_blank')}>
+        <Button variant="ghost" className="justify-start px-2 text-foreground hover:bg-muted hover:text-foreground" onClick={() => window.open(`https://wa.me/${appointment.paciente?.persona.telefono}`, '_blank')}>
           <MessageSquare className="mr-2 h-4 w-4" /> Enviar recordatorio
         </Button>
-        <Button variant="ghost" className="justify-start px-2 hover:bg-muted" onClick={() => onViewPatient(appointment.idPaciente)}>
+        <Button variant="ghost" className="justify-start px-2 text-foreground hover:bg-muted hover:text-foreground" onClick={() => onViewPatient(appointment.idPaciente)}>
           <User className="mr-2 h-4 w-4" /> Datos del paciente
         </Button>
-        <Button variant="ghost" className="justify-start px-2 hover:bg-muted" onClick={onReschedule}>
+        <Button variant="ghost" className="justify-start px-2 text-foreground hover:bg-muted hover:text-foreground" onClick={onReschedule}>
           <Calendar className="mr-2 h-4 w-4" /> Reprogramar cita
         </Button>
-        <Button variant="ghost" className="justify-start px-2 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={onDelete}>
+        <Button variant="ghost" className="justify-start px-2 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={onDelete}>
           <Trash2 className="mr-2 h-4 w-4" /> Eliminar cita
         </Button>
       </div>
