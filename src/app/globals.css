@@ -95,7 +95,6 @@
 /* General Calendar Container */
 .rbc-calendar {
   @apply bg-card text-card-foreground rounded-lg shadow-md;
-  height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -118,7 +117,7 @@
 
 /* Month View Specifics */
 .rbc-month-view {
-  @apply border-0 flex-grow flex flex-col;
+  @apply border-0 flex flex-col;
 }
 .rbc-month-header { /* Container for day names (Lun, Mar...) */
   @apply flex flex-row flex-none;
@@ -127,7 +126,8 @@
    @apply flex-1 border-b-2 border-border pb-2 text-muted-foreground;
 }
 .rbc-month-row { /* Represents a week */
-  @apply flex flex-row flex-grow overflow-hidden relative;
+  @apply flex flex-row overflow-hidden relative;
+  min-height: 120px; /* Ensure rows have a minimum height */
 }
 .rbc-row-bg { /* Backgrounds of days in a week row */
   @apply flex flex-row flex-1 w-full h-full absolute top-0 left-0 z-0;
@@ -373,7 +373,7 @@
 /* Ensure calendar content area grows */
 .rbc-month-view,
 .rbc-time-view .rbc-time-content {
-  min-height: 400px; 
+  min-height: auto; 
 }
 .rbc-time-view .rbc-time-content {
   overflow-y: auto; 

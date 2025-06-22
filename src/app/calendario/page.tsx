@@ -327,7 +327,7 @@ export default function CalendarioPage() {
     <div className="flex flex-col relative">
       <h1 className="text-3xl font-bold text-foreground mb-6">Calendario de Citas</h1>
 
-      <div className="flex-grow relative" style={{ height: 'calc(100vh - 180px)' }}> {/* Set explicit height for calendar container */}
+      <div className="flex-grow relative">
         {currentDate ? (
           <>
           <BigCalendar
@@ -354,7 +354,6 @@ export default function CalendarioPage() {
             formats={calendarFormats}
             dayLayoutAlgorithm="no-overlap"
             popup
-            style={{ height: '100%' }}
           />
           <div ref={popoverTriggerRef} style={{ position: 'absolute', opacity: 0 }} />
           </>
