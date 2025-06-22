@@ -20,6 +20,7 @@ import { Calendar, Clock, User, ArrowRight, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface RescheduleConfirmationModalProps {
   isOpen: boolean;
@@ -58,52 +59,52 @@ export function RescheduleConfirmationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl p-0">
+        <DialogHeader className="p-6 pb-4 border-b">
           <DialogTitle>Confirmar Reprogramación</DialogTitle>
           <DialogDescription>
             Revise los cambios y confirme la reprogramación de la cita para <span className="font-semibold">{originalAppointment.paciente?.persona.nombre} {originalAppointment.paciente?.persona.apellidoPaterno}</span>.
           </DialogDescription>
         </DialogHeader>
+        <ScrollArea className="max-h-[70vh]">
+          <div className="my-4 px-6 grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-stretch gap-4">
+              {/* Cita Original */}
+              <div className="flex flex-col space-y-3 rounded-lg border p-4">
+                  <h3 className="font-semibold text-lg text-center">Cita Original</h3>
+                  <Separator />
+                  <div className="space-y-3 text-left">
+                    <Badge variant="outline">Reprogramada</Badge>
+                    <DetailRow icon={Calendar} label="Fecha" value={format(originalAppointment.start, "EEEE, d 'de' MMMM", { locale: es })} isStrikethrough />
+                    <DetailRow icon={Clock} label="Hora" value={format(originalAppointment.start, "HH:mm a")} isStrikethrough />
+                    <DetailRow icon={User} label="Doctor" value={`${originalAppointment.doctor?.persona.nombre} ${originalAppointment.doctor?.persona.apellidoPaterno}`} isStrikethrough />
+                  </div>
+                   <div className="!mt-auto pt-4 flex items-center space-x-2">
+                      <Switch id="delete-original-switch" checked={shouldDelete} onCheckedChange={onShouldDeleteChange} />
+                      <Label htmlFor="delete-original-switch" className="text-sm font-medium text-foreground">Cancelar cita original</Label>
+                  </div>
+              </div>
 
-        <div className="my-4 grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-stretch gap-4">
-            {/* Cita Original */}
-            <div className="flex flex-col space-y-3 rounded-lg border p-4">
-                <h3 className="font-semibold text-lg text-center">Cita Original</h3>
-                <Separator />
-                <div className="space-y-3 text-left">
-                  <Badge variant="outline">Reprogramada</Badge>
-                  <DetailRow icon={Calendar} label="Fecha" value={format(originalAppointment.start, "EEEE, d 'de' MMMM", { locale: es })} isStrikethrough />
-                  <DetailRow icon={Clock} label="Hora" value={format(originalAppointment.start, "HH:mm a")} isStrikethrough />
-                  <DetailRow icon={User} label="Doctor" value={`${originalAppointment.doctor?.persona.nombre} ${originalAppointment.doctor?.persona.apellidoPaterno}`} isStrikethrough />
-                </div>
-                 <div className="!mt-auto pt-4 flex items-center space-x-2">
-                    <Switch id="delete-original-switch" checked={shouldDelete} onCheckedChange={onShouldDeleteChange} />
-                    <Label htmlFor="delete-original-switch" className="text-sm font-medium text-foreground">Cancelar cita original</Label>
-                </div>
-            </div>
+              <ArrowRight className="h-6 w-6 text-muted-foreground hidden sm:block self-center"/>
 
-            <ArrowRight className="h-6 w-6 text-muted-foreground hidden sm:block self-center"/>
-
-            {/* Cita Nueva */}
-            <div className="flex flex-col space-y-3 rounded-lg border bg-secondary/50 p-4">
-                <h3 className="font-semibold text-lg text-primary text-center">Cita Nueva</h3>
-                <Separator />
-                <div className="space-y-3 text-left">
-                  <Badge>Pendiente</Badge>
-                  <DetailRow icon={Calendar} label="Fecha" value={format(newDate, "EEEE, d 'de' MMMM", { locale: es })} />
-                  <DetailRow icon={Clock} label="Hora" value={newTime} />
-                  <DetailRow icon={User} label="Doctor" value={`${newDoctor.persona.nombre} ${newDoctor.persona.apellidoPaterno}`} />
-                </div>
-            </div>
-        </div>
-        
-        <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-center pt-4 gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button onClick={onConfirm} variant={shouldDelete ? 'destructive' : 'default'}>
-              {shouldDelete ? 'Confirmar Cancelación' : 'Guardar Cambios'}
-            </Button>
-        </DialogFooter>
+              {/* Cita Nueva */}
+              <div className="flex flex-col space-y-3 rounded-lg border bg-secondary/50 p-4">
+                  <h3 className="font-semibold text-lg text-primary text-center">Cita Nueva</h3>
+                  <Separator />
+                  <div className="space-y-3 text-left">
+                    <Badge>Pendiente</Badge>
+                    <DetailRow icon={Calendar} label="Fecha" value={format(newDate, "EEEE, d 'de' MMMM", { locale: es })} />
+                    <DetailRow icon={Clock} label="Hora" value={newTime} />
+                    <DetailRow icon={User} label="Doctor" value={`${newDoctor.persona.nombre} ${newDoctor.persona.apellidoPaterno}`} />
+                  </div>
+              </div>
+          </div>
+          <DialogFooter className="p-6 pt-4 border-t flex-col-reverse sm:flex-row sm:justify-center gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+              <Button onClick={onConfirm} variant={shouldDelete ? 'destructive' : 'default'}>
+                {shouldDelete ? 'Confirmar Cancelación' : 'Guardar Cambios'}
+              </Button>
+          </DialogFooter>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

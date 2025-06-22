@@ -66,69 +66,69 @@ export function RescheduleModal({ isOpen, onClose, onNext, appointment }: Resche
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl p-0">
-        <DialogHeader className="p-6 pb-4">
+        <DialogHeader className="p-6 pb-4 border-b">
           <DialogTitle>Reprogramar Cita</DialogTitle>
           <DialogDescription>
             Seleccione una nueva fecha, hora y doctor para la cita.
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 px-6 py-4 border-y">
-            {/* Left side: Calendar and Timezone */}
-            <div className='flex flex-col space-y-4'>
-                <div className="flex justify-center rounded-md border">
-                    <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        initialFocus
-                        locale={es}
-                        disabled={(date) => date < startOfDay(new Date())}
-                    />
-                </div>
-                 <div className='flex items-center justify-center text-sm text-muted-foreground p-2 bg-muted/50 rounded-md'>
-                    <Globe className='h-4 w-4 mr-2'/>
-                    <span className='font-medium'>Zona Horaria:</span>
-                    <span className='ml-1'>GMT-05:00 America/Lima</span>
-                 </div>
-            </div>
+        <ScrollArea className="max-h-[70vh]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 px-6 py-4">
+              {/* Left side: Calendar and Timezone */}
+              <div className='flex flex-col space-y-4'>
+                  <div className="flex justify-center rounded-md border">
+                      <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={setSelectedDate}
+                          initialFocus
+                          locale={es}
+                          disabled={(date) => date < startOfDay(new Date())}
+                      />
+                  </div>
+                   <div className='flex items-center justify-center text-sm text-muted-foreground p-2 bg-muted/50 rounded-md'>
+                      <Globe className='h-4 w-4 mr-2'/>
+                      <span className='font-medium'>Zona Horaria:</span>
+                      <span className='ml-1'>GMT-05:00 America/Lima</span>
+                   </div>
+              </div>
 
-            {/* Right side: Doctor and Time slots */}
-            <div className='flex flex-col space-y-4'>
-                 <div>
-                    <label className="text-sm font-medium">Doctor</label>
-                    <Combobox
-                        options={doctorOptions}
-                        value={selectedDoctorId}
-                        onChange={setSelectedDoctorId}
-                        placeholder="Buscar doctor..."
-                    />
-                </div>
-                 <div>
-                    <p className='text-sm text-center font-medium mb-2'>Seleccione una hora</p>
-                    <ScrollArea className="h-72 pr-3">
-                        <div className="grid grid-cols-3 gap-2">
-                            {availableTimes.map((time) => (
-                                <Button
-                                key={time}
-                                variant={selectedTime === time ? 'default' : 'outline'}
-                                onClick={() => setSelectedTime(time)}
-                                >
-                                {time}
-                                </Button>
-                            ))}
-                        </div>
-                    </ScrollArea>
-                 </div>
-            </div>
-        </div>
-        
-        <DialogFooter className="p-6 pt-4 justify-center">
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleNext} disabled={isNextDisabled}>
-              Siguiente
-          </Button>
-        </DialogFooter>
+              {/* Right side: Doctor and Time slots */}
+              <div className='flex flex-col space-y-4'>
+                   <div>
+                      <label className="text-sm font-medium">Doctor</label>
+                      <Combobox
+                          options={doctorOptions}
+                          value={selectedDoctorId}
+                          onChange={setSelectedDoctorId}
+                          placeholder="Buscar doctor..."
+                      />
+                  </div>
+                   <div>
+                      <p className='text-sm text-center font-medium mb-2'>Seleccione una hora</p>
+                      <ScrollArea className="h-72 pr-3">
+                          <div className="grid grid-cols-3 gap-2">
+                              {availableTimes.map((time) => (
+                                  <Button
+                                  key={time}
+                                  variant={selectedTime === time ? 'default' : 'outline'}
+                                  onClick={() => setSelectedTime(time)}
+                                  >
+                                  {time}
+                                  </Button>
+                              ))}
+                          </div>
+                      </ScrollArea>
+                   </div>
+              </div>
+          </div>
+          <DialogFooter className="p-6 pt-4 border-t justify-center">
+            <Button variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button onClick={handleNext} disabled={isNextDisabled}>
+                Siguiente
+            </Button>
+          </DialogFooter>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

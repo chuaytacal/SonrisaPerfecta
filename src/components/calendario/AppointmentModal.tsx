@@ -29,7 +29,6 @@ import type { Procedimiento } from '@/types';
 import { cn } from '@/lib/utils';
 import { Combobox } from '@/components/ui/combobox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { mockPacientesData, mockPersonalData, mockMotivosCita, mockProcedimientos } from '@/lib/data';
 
@@ -201,7 +200,7 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAp
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)}>
             <ScrollArea className="max-h-[65vh]">
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8">
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                 {/* Columna Izquierda */}
                 <div className="space-y-4">
                   <FormField
@@ -405,5 +404,3 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAp
     </Dialog>
   );
 }
-
-    

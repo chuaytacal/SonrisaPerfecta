@@ -44,36 +44,36 @@ export function AppointmentPopoverContent({
   if (!appointment) return null;
 
   const stateActions = [
-    { state: 'Confirmada', label: 'Confirmado', icon: CheckCircle2, className: 'text-purple-600' },
-    { state: 'Cancelada', label: 'Cancelado', icon: Ban, className: 'text-red-600' },
-    { state: 'Atendido', label: 'Atendido', icon: ClipboardCheck, className: 'text-green-600' },
+    { state: 'Confirmada', label: 'Confirmado', icon: CheckCircle2, className: 'text-purple-600', hoverClassName: 'hover:text-purple-600' },
+    { state: 'Cancelada', label: 'Cancelado', icon: Ban, className: 'text-red-600', hoverClassName: 'hover:text-red-600' },
+    { state: 'Atendido', label: 'Atendido', icon: ClipboardCheck, className: 'text-green-600', hoverClassName: 'hover:text-green-600' },
   ] as const;
 
   return (
     <div className="flex flex-col">
       {/* State Management Section */}
-      <div className="flex items-center justify-between p-2 border-b">
+      <div className="p-2 border-b">
         <div className="flex items-center gap-1">
-           {stateActions.map(({ state, label, icon: Icon, className }) => (
-                <Button key={state} variant="ghost" size="sm" className={`flex-col h-auto px-2 py-1 hover:bg-muted ${className}`} onClick={() => onUpdateState(state)} disabled={appointment.estado === state}>
+           {stateActions.map(({ state, label, icon: Icon, className, hoverClassName }) => (
+                <Button key={state} variant="ghost" size="sm" className={`flex-col h-auto px-2 py-1 hover:bg-muted ${className} ${hoverClassName}`} onClick={() => onUpdateState(state)} disabled={appointment.estado === state}>
                     <Icon className="h-5 w-5 mb-1" />
                     <span className="text-xs">{label}</span>
                 </Button>
             ))}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted text-foreground hover:text-foreground">
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem key="Pendiente" onClick={() => onUpdateState('Pendiente')} disabled={appointment.estado === 'Pendiente'}>
+                    <Clock className="mr-2 h-4 w-4" />
+                    <span>Pendiente</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted text-foreground hover:text-foreground">
-              <MoreVertical className="h-5 w-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem key="Pendiente" onClick={() => onUpdateState('Pendiente')} disabled={appointment.estado === 'Pendiente'}>
-                <Clock className="mr-2 h-4 w-4" />
-                <span>Pendiente</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
       
       {/* Appointment Summary */}
