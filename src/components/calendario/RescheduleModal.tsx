@@ -7,10 +7,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Calendar } from '@/components/ui/calendar';
 import type { Appointment, RescheduleData } from '@/types/calendar';
 import { es } from 'date-fns/locale';
+import { startOfDay } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Combobox } from '@/components/ui/combobox';
 import { mockPersonalData } from '@/lib/data';
 import { Separator } from '../ui/separator';
+import { Globe } from 'lucide-react';
 
 interface RescheduleModalProps {
   isOpen: boolean;
@@ -73,8 +75,8 @@ export function RescheduleModal({ isOpen, onClose, onNext, appointment }: Resche
         </DialogHeader>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 px-6 py-4 border-y">
-            {/* Left side: Calendar and Doctor */}
-            <div className='space-y-4'>
+            {/* Left side: Calendar and Timezone */}
+            <div className='flex flex-col space-y-4'>
                 <div className="flex justify-center rounded-md border">
                     <Calendar
                         mode="single"
@@ -82,9 +84,18 @@ export function RescheduleModal({ isOpen, onClose, onNext, appointment }: Resche
                         onSelect={setSelectedDate}
                         initialFocus
                         locale={es}
-                        disabled={(date) => date < new Date()}
+                        disabled={(date) => date < startOfDay(new Date())}
                     />
                 </div>
+                 <div className='flex items-center justify-center text-sm text-muted-foreground p-2 bg-muted/50 rounded-md'>
+                    <Globe className='h-4 w-4 mr-2'/>
+                    <span className='font-medium'>Zona Horaria:</span>
+                    <span className='ml-1'>GMT-05:00 America/Lima</span>
+                 </div>
+            </div>
+
+            {/* Right side: Doctor and Time slots */}
+            <div className='flex flex-col space-y-4'>
                  <div>
                     <label className="text-sm font-medium">Doctor</label>
                     <Combobox
@@ -94,24 +105,22 @@ export function RescheduleModal({ isOpen, onClose, onNext, appointment }: Resche
                         placeholder="Buscar doctor..."
                     />
                 </div>
-            </div>
-
-            {/* Right side: Time slots */}
-            <div>
-                 <p className='text-sm text-center font-medium mb-2'>Seleccione una hora</p>
-                 <ScrollArea className="h-80 pr-3">
-                    <div className="grid grid-cols-3 gap-2">
-                        {availableTimes.map((time) => (
-                            <Button
-                            key={time}
-                            variant={selectedTime === time ? 'default' : 'outline'}
-                            onClick={() => setSelectedTime(time)}
-                            >
-                            {time}
-                            </Button>
-                        ))}
-                    </div>
-                 </ScrollArea>
+                 <div>
+                    <p className='text-sm text-center font-medium mb-2'>Seleccione una hora</p>
+                    <ScrollArea className="h-72 pr-3">
+                        <div className="grid grid-cols-3 gap-2">
+                            {availableTimes.map((time) => (
+                                <Button
+                                key={time}
+                                variant={selectedTime === time ? 'default' : 'outline'}
+                                onClick={() => setSelectedTime(time)}
+                                >
+                                {time}
+                                </Button>
+                            ))}
+                        </div>
+                    </ScrollArea>
+                 </div>
             </div>
         </div>
         
@@ -125,5 +134,3 @@ export function RescheduleModal({ isOpen, onClose, onNext, appointment }: Resche
     </Dialog>
   );
 }
-
-    

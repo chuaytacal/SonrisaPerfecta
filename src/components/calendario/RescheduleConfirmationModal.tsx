@@ -17,24 +17,28 @@ import type { Personal } from '@/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar, Clock, User, ArrowRight, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface RescheduleConfirmationModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
-  onDelete: () => void;
   originalAppointment: Appointment;
   newAppointmentDetails: RescheduleData & { doctor: Personal };
+  shouldDelete: boolean;
+  onShouldDeleteChange: (checked: boolean) => void;
 }
 
-const DetailRow = ({ icon, label, value }: { icon: React.ElementType, label: string, value: string }) => {
+const DetailRow = ({ icon, label, value, isStrikethrough = false }: { icon: React.ElementType, label: string, value: string, isStrikethrough?: boolean }) => {
     const Icon = icon;
     return (
         <div className="flex items-start text-sm">
             <Icon className="h-4 w-4 mr-3 mt-0.5 text-muted-foreground" />
-            <div className="flex flex-col">
+            <div className="flex flex-col items-start">
                 <span className="text-muted-foreground">{label}</span>
-                <span className="font-medium">{value}</span>
+                <span className={`font-medium ${isStrikethrough ? 'line-through' : ''}`}>{value}</span>
             </div>
         </div>
     );
@@ -44,9 +48,10 @@ export function RescheduleConfirmationModal({
   isOpen,
   onOpenChange,
   onConfirm,
-  onDelete,
   originalAppointment,
   newAppointmentDetails,
+  shouldDelete,
+  onShouldDeleteChange,
 }: RescheduleConfirmationModalProps) {
 
   const { newDate, newTime, doctor: newDoctor } = newAppointmentDetails;
@@ -61,41 +66,45 @@ export function RescheduleConfirmationModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="my-4 grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-4 text-center">
+        <div className="my-4 grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-stretch gap-4">
             {/* Cita Original */}
-            <div className="space-y-3 rounded-lg border p-4">
-                <h3 className="font-semibold text-lg">Cita Original</h3>
+            <div className="flex flex-col space-y-3 rounded-lg border p-4">
+                <h3 className="font-semibold text-lg text-center">Cita Original</h3>
                 <Separator />
-                <DetailRow icon={Calendar} label="Fecha" value={format(originalAppointment.start, "EEEE, d 'de' MMMM", { locale: es })} />
-                <DetailRow icon={Clock} label="Hora" value={format(originalAppointment.start, "HH:mm a")} />
-                <DetailRow icon={User} label="Doctor" value={`${originalAppointment.doctor?.persona.nombre} ${originalAppointment.doctor?.persona.apellidoPaterno}`} />
+                <div className="space-y-3 text-left">
+                  <Badge variant="outline">Reprogramada</Badge>
+                  <DetailRow icon={Calendar} label="Fecha" value={format(originalAppointment.start, "EEEE, d 'de' MMMM", { locale: es })} isStrikethrough />
+                  <DetailRow icon={Clock} label="Hora" value={format(originalAppointment.start, "HH:mm a")} isStrikethrough />
+                  <DetailRow icon={User} label="Doctor" value={`${originalAppointment.doctor?.persona.nombre} ${originalAppointment.doctor?.persona.apellidoPaterno}`} isStrikethrough />
+                </div>
+                 <div className="!mt-auto pt-4 flex items-center space-x-2">
+                    <Switch id="delete-original-switch" checked={shouldDelete} onCheckedChange={onShouldDeleteChange} />
+                    <Label htmlFor="delete-original-switch" className="text-sm text-destructive font-medium">Cancelar cita original</Label>
+                </div>
             </div>
 
-            <ArrowRight className="h-6 w-6 text-muted-foreground hidden sm:block"/>
+            <ArrowRight className="h-6 w-6 text-muted-foreground hidden sm:block self-center"/>
 
             {/* Cita Nueva */}
-            <div className="space-y-3 rounded-lg border bg-secondary/50 p-4">
-                <h3 className="font-semibold text-lg text-primary">Cita Nueva</h3>
+            <div className="flex flex-col space-y-3 rounded-lg border bg-secondary/50 p-4">
+                <h3 className="font-semibold text-lg text-primary text-center">Cita Nueva</h3>
                 <Separator />
-                <DetailRow icon={Calendar} label="Fecha" value={format(newDate, "EEEE, d 'de' MMMM", { locale: es })} />
-                <DetailRow icon={Clock} label="Hora" value={newTime} />
-                <DetailRow icon={User} label="Doctor" value={`${newDoctor.persona.nombre} ${newDoctor.persona.apellidoPaterno}`} />
+                <div className="space-y-3 text-left">
+                  <Badge>Pendiente</Badge>
+                  <DetailRow icon={Calendar} label="Fecha" value={format(newDate, "EEEE, d 'de' MMMM", { locale: es })} />
+                  <DetailRow icon={Clock} label="Hora" value={newTime} />
+                  <DetailRow icon={User} label="Doctor" value={`${newDoctor.persona.nombre} ${newDoctor.persona.apellidoPaterno}`} />
+                </div>
             </div>
         </div>
         
-        <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between pt-4">
-          <Button variant="ghost" className="text-destructive hover:text-destructive w-full sm:w-auto justify-start sm:justify-center" onClick={onDelete}>
-            <Trash2 className="mr-2 h-4 w-4" /> Eliminar Cita Original
-          </Button>
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+        <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end pt-4 gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button onClick={onConfirm}>Guardar Cambios</Button>
-          </div>
+            <Button onClick={onConfirm} variant={shouldDelete ? 'destructive' : 'default'}>
+              {shouldDelete ? 'Confirmar Cancelación' : 'Guardar Cambios'}
+            </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-
-    

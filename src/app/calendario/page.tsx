@@ -73,6 +73,7 @@ export default function CalendarioPage() {
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [isRescheduleConfirmOpen, setIsRescheduleConfirmOpen] = useState(false);
   const [rescheduleData, setRescheduleData] = useState<RescheduleData | null>(null);
+  const [shouldDeleteOnReschedule, setShouldDeleteOnReschedule] = useState(false);
 
   const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
   const [appointmentToAction, setAppointmentToAction] = useState<Appointment | null>(null);
@@ -133,6 +134,7 @@ export default function CalendarioPage() {
   };
 
   const handleOpenRescheduleModalFromPopover = () => {
+    setShouldDeleteOnReschedule(false); // Reset switch state
     setIsRescheduleModalOpen(true);
     setPopoverOpen(false);
   }
@@ -223,37 +225,39 @@ export default function CalendarioPage() {
   };
 
   const handleConfirmReschedule = () => {
-    if (!rescheduleData || !selectedEventForPopover) return;
-  
-    const { newDate, newTime, newDoctorId } = rescheduleData;
-    const [hours, minutes] = newTime.split(':').map(Number);
-    const newStart = new Date(newDate);
-    newStart.setHours(hours, minutes, 0, 0);
-  
-    const duration = selectedEventForPopover.end.getTime() - selectedEventForPopover.start.getTime();
-    const newEnd = new Date(newStart.getTime() + duration);
-  
-    const appointmentIndex = mockAppointmentsData.findIndex(app => app.id === selectedEventForPopover.id);
-    if (appointmentIndex > -1) {
-      const updatedAppointment = {
-        ...mockAppointmentsData[appointmentIndex],
-        start: newStart,
-        end: newEnd,
-        idDoctor: newDoctorId,
-        doctor: mockPersonalData.find(d => d.id === newDoctorId),
-      };
-      mockAppointmentsData[appointmentIndex] = updatedAppointment;
+    if (shouldDeleteOnReschedule) {
+        if (!selectedEventForPopover) return;
+        const indexToDelete = mockAppointmentsData.findIndex(app => app.id === selectedEventForPopover.id);
+        if (indexToDelete > -1) mockAppointmentsData.splice(indexToDelete, 1);
+        setAppointments([...mockAppointmentsData]);
+        toast({ title: "Cita Cancelada", description: "La cita original ha sido eliminada.", variant: 'destructive'});
+    } else {
+        if (!rescheduleData || !selectedEventForPopover) return;
+        const { newDate, newTime, newDoctorId } = rescheduleData;
+        const [hours, minutes] = newTime.split(':').map(Number);
+        const newStart = new Date(newDate);
+        newStart.setHours(hours, minutes, 0, 0);
+        const duration = selectedEventForPopover.end.getTime() - selectedEventForPopover.start.getTime();
+        const newEnd = new Date(newStart.getTime() + duration);
+        const appointmentIndex = mockAppointmentsData.findIndex(app => app.id === selectedEventForPopover.id);
+        if (appointmentIndex > -1) {
+            mockAppointmentsData[appointmentIndex] = {
+                ...mockAppointmentsData[appointmentIndex],
+                start: newStart,
+                end: newEnd,
+                idDoctor: newDoctorId,
+                doctor: mockPersonalData.find(d => d.id === newDoctorId),
+                estado: 'Pendiente', // Set status to Pendiente after reschedule
+            };
+        }
+        setAppointments([...mockAppointmentsData]);
+        toast({ title: "Cita Reprogramada", description: `La cita ha sido movida con éxito.`});
     }
-    setAppointments([...mockAppointmentsData]);
-  
-    toast({
-      title: "Cita Reprogramada",
-      description: `La cita ha sido movida con éxito.`
-    });
-    
+
     setIsRescheduleConfirmOpen(false);
     setRescheduleData(null);
     setSelectedEventForPopover(null);
+    setShouldDeleteOnReschedule(false);
   };
 
   
@@ -267,13 +271,18 @@ export default function CalendarioPage() {
         case 'Pendiente': backgroundColor = 'hsl(var(--chart-5))'; break;
         case 'Atendido': backgroundColor = 'hsl(var(--chart-4))'; break;
         case 'Confirmada': backgroundColor = 'hsl(var(--primary))'; break;
+        case 'Reprogramada': backgroundColor = 'hsl(var(--muted))'; break;
       }
       style.backgroundColor = backgroundColor;
+      
+      if(event.estado === 'Reprogramada') {
+        style.color = 'hsl(var(--muted-foreground))';
+      } else {
+        style.color = 'hsl(var(--primary-foreground))';
+      }
 
       if (currentView === Views.AGENDA) {
         style.padding = '0.625rem'; style.margin = '0px'; style.borderRadius = '0px'; style.color = 'hsl(var(--card-foreground))';
-      } else {
-        style.color = 'hsl(var(--primary-foreground))';
       }
 
       return { style, className: 'cursor-pointer' };
@@ -324,7 +333,7 @@ export default function CalendarioPage() {
 
 
   return (
-    <div className="flex flex-col relative">
+    <div className="flex flex-col relative h-full">
       <h1 className="text-3xl font-bold text-foreground mb-6">Calendario de Citas</h1>
 
       <div className="flex-grow relative">
@@ -406,21 +415,18 @@ export default function CalendarioPage() {
               isOpen={isRescheduleConfirmOpen}
               onOpenChange={setIsRescheduleConfirmOpen}
               onConfirm={handleConfirmReschedule}
-              onDelete={() => {
-                setIsRescheduleConfirmOpen(false);
-                setAppointmentToAction(selectedEventForPopover);
-                setIsConfirmDeleteDialogOpen(true);
-              }}
               originalAppointment={selectedEventForPopover}
               newAppointmentDetails={{
                 ...rescheduleData,
                 doctor: mockPersonalData.find(d => d.id === rescheduleData.newDoctorId) as Personal,
               }}
+              shouldDelete={shouldDeleteOnReschedule}
+              onShouldDeleteChange={setShouldDeleteOnReschedule}
           />
       )}
       
-      <Dialog open={isPastDateWarningOpen} onOpenChange={setIsPastDateWarningOpen}>
-        <DialogContent className="sm:max-w-lg p-6">
+    <Dialog open={isPastDateWarningOpen} onOpenChange={setIsPastDateWarningOpen}>
+        <DialogContent className="sm:max-w-md p-6">
             <DialogHeader className="space-y-4 text-center">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                     <Megaphone className="h-10 w-10 text-primary" />

@@ -1,7 +1,8 @@
 
+
 import type { MotivoCita, Procedimiento, Paciente, Personal } from '@/types';
 
-export type AppointmentState = 'Confirmada' | 'Pendiente' | 'Cancelada' | 'Atendido';
+export type AppointmentState = 'Confirmada' | 'Pendiente' | 'Cancelada' | 'Atendido' | 'Reprogramada';
 
 export interface Appointment {
   id: string;
