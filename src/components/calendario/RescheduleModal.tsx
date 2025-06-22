@@ -65,7 +65,7 @@ export function RescheduleModal({ isOpen, onClose, onNext, appointment }: Resche
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl p-0">
+      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-3xl p-0">
         <DialogHeader className="p-6 pb-4 border-b">
           <DialogTitle>Reprogramar Cita</DialogTitle>
           <DialogDescription>

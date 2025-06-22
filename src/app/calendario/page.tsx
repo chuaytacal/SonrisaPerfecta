@@ -407,7 +407,7 @@ export default function CalendarioPage() {
           <PopoverTrigger asChild>
             <div ref={popoverTriggerRef} style={{ position: 'fixed', pointerEvents: 'none', opacity: 0 }} />
           </PopoverTrigger>
-          <PopoverContent className="w-75 p-0" align="start" side="bottom">
+          <PopoverContent className="w-72 sm:w-80 p-0" align="start" side="bottom">
               {selectedEventForPopover && (
                   <AppointmentPopoverContent
                       appointment={selectedEventForPopover}
@@ -446,7 +446,7 @@ export default function CalendarioPage() {
       )}
       
     <Dialog open={isPastDateWarningOpen} onOpenChange={setIsPastDateWarningOpen}>
-        <DialogContent className="sm:max-w-md p-6">
+        <DialogContent className="w-[95vw] sm:w-[90vw] max-w-lg p-6">
             <DialogHeader className="space-y-4 text-center">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                     <Megaphone className="h-10 w-10 text-primary" />

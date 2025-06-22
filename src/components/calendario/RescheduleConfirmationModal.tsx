@@ -59,7 +59,7 @@ export function RescheduleConfirmationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-0">
+      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-2xl p-0">
         <DialogHeader className="p-6 pb-4 border-b">
           <DialogTitle>Confirmar Reprogramación</DialogTitle>
           <DialogDescription>

@@ -190,216 +190,216 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAp
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl p-0">
-        <DialogHeader className="p-6 pb-4 border-b">
+      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-3xl p-0">
+        <DialogHeader className="p-6 pb-2 border-b">
           <DialogTitle>{existingAppointment ? 'Editar Cita' : 'Crear Nueva Cita'}</DialogTitle>
           <DialogDescription>
             {existingAppointment ? 'Modifique los detalles de la cita.' : 'Complete los campos para programar una nueva cita.'}
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)}>
-            <ScrollArea className="max-h-[65vh]">
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                {/* Columna Izquierda */}
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="idPaciente"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Paciente</FormLabel>
-                        <Combobox
-                          options={pacienteOptions}
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder="Buscar paciente..."
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="idDoctor"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Doctor</FormLabel>
-                        <Combobox
-                          options={doctorOptions}
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder="Buscar doctor..."
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="idMotivoCita"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Motivo</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccione un motivo" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {mockMotivosCita.map(motivo => (
-                              <SelectItem key={motivo.id} value={motivo.id}>{motivo.nombre}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormItem>
-                    <FormLabel>Agregar Servicio (Opcional)</FormLabel>
-                     <Combobox
-                        options={procedimientoOptions}
-                        onChange={handleAddProcedimiento}
-                        placeholder="Buscar servicio..."
-                      />
-                  </FormItem>
-                  <div className="space-y-2">
-                    {procedimientosSeleccionados.map(proc => (
-                      <Badge key={proc.id} variant="secondary" className="flex justify-between items-center text-sm py-1 px-2">
-                        <span>{proc.denominacion}</span>
-                        <button type="button" onClick={() => handleRemoveProcedimiento(proc.id)} className="ml-2 rounded-full hover:bg-muted-foreground/20 p-0.5">
-                          <XIcon className="h-3 w-3"/>
-                          <span className="sr-only">Quitar</span>
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Columna Derecha */}
-                <div className="space-y-4 w-full">
-                   <FormField
-                      control={form.control}
-                      name="fecha"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Fecha</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                                >
-                                  {field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccione fecha</span>}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <CalendarPicker mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={es} />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  <FormField
-                    control={form.control}
-                    name="horaInicio"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Hora de Inicio</FormLabel>
-                        <FormControl>
-                          <Input type="time" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="duracion"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Duración</FormLabel>
-                        <Select onValueChange={(val) => field.onChange(Number(val))} value={String(field.value)}>
-                            <FormControl>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {duracionOptions.map(opt => (
-                                <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  {existingAppointment && (
-                     <FormField
+        <ScrollArea className="max-h-[calc(85vh-100px)]">
+            <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)}>
+                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                    {/* Columna Izquierda */}
+                    <div className="space-y-4">
+                    <FormField
                         control={form.control}
-                        name="estado"
+                        name="idPaciente"
                         render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Estado</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value="Pendiente">Pendiente</SelectItem>
-                                <SelectItem value="Confirmada">Confirmada</SelectItem>
-                                <SelectItem value="Atendido">Atendido</SelectItem>
-                                <SelectItem value="Cancelada">Cancelada</SelectItem>
-                                <SelectItem value="Reprogramada">Reprogramada</SelectItem>
-                            </SelectContent>
-                            </Select>
+                            <FormLabel>Paciente</FormLabel>
+                            <Combobox
+                            options={pacienteOptions}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Buscar paciente..."
+                            />
+                            <FormMessage />
                         </FormItem>
                         )}
                     />
-                  )}
-                  <FormField
-                    control={form.control}
-                    name="notas"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nota de la Cita (Opcional)</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="Añadir notas adicionales..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                    <FormField
+                        control={form.control}
+                        name="idDoctor"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Doctor</FormLabel>
+                            <Combobox
+                            options={doctorOptions}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Buscar doctor..."
+                            />
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="idMotivoCita"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Motivo</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Seleccione un motivo" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {mockMotivosCita.map(motivo => (
+                                <SelectItem key={motivo.id} value={motivo.id}>{motivo.nombre}</SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormItem>
+                        <FormLabel>Agregar Servicio (Opcional)</FormLabel>
+                        <Combobox
+                            options={procedimientoOptions}
+                            onChange={handleAddProcedimiento}
+                            placeholder="Buscar servicio..."
+                        />
+                    </FormItem>
+                    <div className="space-y-2">
+                        {procedimientosSeleccionados.map(proc => (
+                        <Badge key={proc.id} variant="secondary" className="flex justify-between items-center text-sm py-1 px-2">
+                            <span>{proc.denominacion}</span>
+                            <button type="button" onClick={() => handleRemoveProcedimiento(proc.id)} className="ml-2 rounded-full hover:bg-muted-foreground/20 p-0.5">
+                            <XIcon className="h-3 w-3"/>
+                            <span className="sr-only">Quitar</span>
+                            </button>
+                        </Badge>
+                        ))}
+                    </div>
+                    </div>
+
+                    {/* Columna Derecha */}
+                    <div className="space-y-4 w-full">
+                    <FormField
+                        control={form.control}
+                        name="fecha"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Fecha</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                <FormControl>
+                                    <Button
+                                    variant={"outline"}
+                                    className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                    >
+                                    {field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccione fecha</span>}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <CalendarPicker mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={es} />
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    <FormField
+                        control={form.control}
+                        name="horaInicio"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Hora de Inicio</FormLabel>
+                            <FormControl>
+                            <Input type="time" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="duracion"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Duración</FormLabel>
+                            <Select onValueChange={(val) => field.onChange(Number(val))} value={String(field.value)}>
+                                <FormControl>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {duracionOptions.map(opt => (
+                                    <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    {existingAppointment && (
+                        <FormField
+                            control={form.control}
+                            name="estado"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Estado</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="Pendiente">Pendiente</SelectItem>
+                                    <SelectItem value="Confirmada">Confirmada</SelectItem>
+                                    <SelectItem value="Atendido">Atendido</SelectItem>
+                                    <SelectItem value="Cancelada">Cancelada</SelectItem>
+                                    <SelectItem value="Reprogramada">Reprogramada</SelectItem>
+                                </SelectContent>
+                                </Select>
+                            </FormItem>
+                            )}
+                        />
                     )}
-                  />
+                    <FormField
+                        control={form.control}
+                        name="notas"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Nota de la Cita (Opcional)</FormLabel>
+                            <FormControl>
+                            <Textarea placeholder="Añadir notas adicionales..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    </div>
                 </div>
-              </div>
-            </ScrollArea>
-            <DialogFooter className="p-6 pt-4 border-t flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3">
-              <div>
-                {existingAppointment && onDelete && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={handleDeleteClick}
-                    className="w-full sm:w-auto"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" /> Eliminar Cita
-                  </Button>
-                )}
-              </div>
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                <Button type="button" variant="outline" onClick={onClose}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting ? 'Guardando...' : 'Guardar'}
-                </Button>
-              </div>
-            </DialogFooter>
-          </form>
-        </Form>
+                <DialogFooter className="p-6 pt-4 border-t flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3">
+                <div>
+                    {existingAppointment && onDelete && (
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={handleDeleteClick}
+                        className="w-full sm:w-auto"
+                    >
+                        <Trash2 className="h-4 w-4 mr-2" /> Eliminar Cita
+                    </Button>
+                    )}
+                </div>
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={onClose}>
+                    Cancelar
+                    </Button>
+                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting ? 'Guardando...' : 'Guardar'}
+                    </Button>
+                </div>
+                </DialogFooter>
+            </form>
+            </Form>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
