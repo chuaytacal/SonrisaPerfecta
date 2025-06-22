@@ -24,12 +24,19 @@ export type DientesMap = {
   [idDiente: number]: HallazgosPorDiente;
 };
 
+export type HallazgoCaraCurrent = {
+  tipo: any ; 
+  abreviatura: any;
+  color: string;
+  nombre: string; 
+  detalle?: DetalleHallazgo;
+};
 export type CurrentMode = {
   position: number;
   color: string;
   detalle: number;
   direccion?: any;
-  cara?: Hallazgo;
+  cara?: HallazgoCaraCurrent;
 };
 
 export type ToothDisplays = {
@@ -388,6 +395,152 @@ export const SettingsLowerJaw = [
     rotated: 1,
     reflected: 0,
     typeTooth: 5,
+    selectMode: 0
+  }
+];
+
+export const SettingSupperJawPrimary = [
+  {
+    number: 55,  // Segundo molar temporal superior derecho
+    rotated: 0,
+    reflected: 0,
+    typeTooth: 1,  // Tipo de diente (puedes ajustar según tu sistema)
+    selectMode: 0
+  },
+  {
+    number: 54,  // Primer molar temporal superior derecho
+    rotated: 0,
+    reflected: 0,
+    typeTooth: 6,
+    selectMode: 0
+  },
+  {
+    number: 53,  // Canino temporal superior derecho
+    rotated: 0,
+    reflected: 0,
+    typeTooth: 4,
+    selectMode: 0
+  },
+  {
+    number: 52,  // Incisivo lateral temporal superior derecho
+    rotated: 0,
+    reflected: 0,
+    typeTooth: 4,
+    selectMode: 0
+  },
+  {
+    number: 51,  // Incisivo central temporal superior derecho
+    rotated: 0,
+    reflected: 0,
+    typeTooth: 4,
+    selectMode: 0
+  },
+  {
+    number: 61,  // Incisivo central temporal superior izquierdo
+    rotated: 0,
+    reflected: 0,
+    typeTooth: 4,
+    selectMode: 0
+  },
+  {
+    number: 62,  // Incisivo lateral temporal superior izquierdo
+    rotated: 0,
+    reflected: 0,
+    typeTooth: 4,
+    selectMode: 0
+  },
+  {
+    number: 63,  // Canino temporal superior izquierdo
+    rotated: 0,
+    reflected: 0,
+    typeTooth: 4,
+    selectMode: 0
+  },
+  {
+    number: 64,  // Primer molar temporal superior izquierdo
+    rotated: 0,
+    reflected: 0,
+    typeTooth: 6,
+    selectMode: 0
+  },
+  {
+    number: 65,  // Segundo molar temporal superior izquierdo
+    rotated: 0,
+    reflected: 0,
+    typeTooth: 1,
+    selectMode: 0
+  }
+];
+
+export const SettingsLowerJawPrimary = [
+  {
+    number: 85,  // Segundo molar temporal inferior izquierdo
+    rotated: 1,
+    reflected: 0,
+    typeTooth: 7,
+    selectMode: 0
+  },
+  {
+    number: 84,  // Primer molar temporal inferior izquierdo
+    rotated: 5,
+    reflected: 0,
+    typeTooth: 5,
+    selectMode: 0
+  },
+  {
+    number: 83,  // Canino temporal inferior izquierdo
+    rotated: 1,
+    reflected: 0,
+    typeTooth: 4,
+    selectMode: 0
+  },
+  {
+    number: 82,  // Incisivo lateral temporal inferior izquierdo
+    rotated: 1,
+    reflected: 0,
+    typeTooth: 4,
+    selectMode: 0
+  },
+  {
+    number: 81,  // Incisivo central temporal inferior izquierdo
+    rotated: 1,
+    reflected: 0,
+    typeTooth: 4,
+    selectMode: 0
+  },
+  {
+    number: 71,  // Incisivo central temporal inferior derecho
+    rotated: 1,
+    reflected: 0,
+    typeTooth: 4,
+    selectMode: 0
+  },
+  {
+    number: 72,  // Incisivo lateral temporal inferior derecho
+    rotated: 1,
+    reflected: 0,
+    typeTooth: 4,
+    selectMode: 0
+  },
+  {
+    number: 73,  // Canino temporal inferior derecho
+    rotated: 1,
+    reflected: 0,
+    typeTooth: 4,
+    selectMode: 0
+  },
+  {
+    number: 74,  // Primer molar temporal inferior derecho
+    rotated: 1,
+    reflected: 0,
+    typeTooth: 5,
+    selectMode: 0
+  },
+  {
+    number: 75,  // Segundo molar temporal inferior derecho
+    rotated: 1,
+    reflected: 0,
+    typeTooth: 7,
     selectMode: 0
   }
 ];

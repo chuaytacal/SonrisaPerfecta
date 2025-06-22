@@ -31,7 +31,7 @@ const ToothIconCustomSvg = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
   );
 
-const TeethComponent = dynamic(() => import('@/components/odontograma/Teeth').then(mod => mod.Teeth), {
+const OdontogramComponent = dynamic(() => import('@/components/odontograma/Odontogram').then(mod => mod.Odontogram), {
   ssr: false,
   loading: () => <p className="text-center py-10">Cargando Odontograma...</p>
 });
@@ -94,7 +94,7 @@ export default function OdontogramaPage() {
             <CardTitle>Odontograma</CardTitle>
           </CardHeader>
           <CardContent>
-            <TeethComponent />
+            <OdontogramComponent />
           </CardContent>
         </Card>
       </div>

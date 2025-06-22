@@ -1,17 +1,21 @@
-// src/components/odontograma/Teeth.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Stage, Layer, Group as KonvaGroup } from 'react-konva'; // Renamed Group to KonvaGroup to avoid conflict if any
-import { ChevronDown, ChevronUp, ArrowLeft, ArrowRight, Trash2 } from "lucide-react";
-import Tooth from './Tooth'; // Assuming ToothA was meant to be Tooth from ./Tooth.tsx
+import { ChevronDown, ChevronUp, ArrowLeft, ArrowRight,Trash2, X } from "lucide-react";
+import {ToothA, ToothB} from './Tooth';
 import { Badge } from '@/components/ui/badge';
-import { DientesMap, SettingSupperJaw, SettingsLowerJaw, Hallazgos, CurrentMode, Hallazgo as HallazgoType, ToothDisplays, OpenModeal, DetalleHallazgo } from './setting';
+import { DientesMap, SettingSupperJaw, SettingsLowerJaw,SettingSupperJawPrimary, SettingsLowerJawPrimary, Hallazgos, CurrentMode, Hallazgo as HallazgoType, ToothDisplays, OpenModeal, DetalleHallazgo } from './setting';
 import { InteractiveFace } from './ToothFace';
 import { Button } from '@/components/ui/button'; // For modal buttons
+type Props = {
+  scalaTeeth: { x: number; y: number; moveTeethX: number; moveTeethY: number };
+  scalaTooth: { scale: number; separation: number };
+  typeTooth: string;
+  onChangeDientes: (nuevo: DientesMap) => void; 
+};
 
-export function Teeth() {
-  const [isClient, setIsClient] = useState(false);
+export function Teeth({ scalaTeeth, scalaTooth, typeTooth,onChangeDientes  }: Props) {
   const [openDetails, setOpenDetails] = useState<Record<string, boolean>>({});
   const [activeView, setActiveView] = useState<'agregar' | 'eliminar'>('agregar');
   const [toModal, setToModal] = useState<OpenModeal>({
@@ -21,10 +25,11 @@ export function Teeth() {
     detalle: undefined, // Make sure this is aligned with OpenModeal type
     group: undefined,   // Make sure this is aligned with OpenModeal type
   });
+  const [colorHallazgo, setColorHallazgo] = useState<Record<any, string>>({});
   const [rangoSeleccion, setRangoSeleccion] = useState<Array<{ id: number; numTooth: number; jaw: 'superior' | 'inferior' }>>([]);
   const [selectedTooth, setSelectedTooth] = useState<number | null>(null); // For delete view
 
-  const [toothDisplays, setToothDisplays] = useState<Record<number, ToothDisplays>>({});
+  const [toothDisplays, setToothDisplays] = useState<Record<number, ToothDisplays[]>>({});
   const [currentMode, setCurrentMode] = useState<CurrentMode>({
     position: -1,
     color: '#0880D7', // Default to a neutral/blue color
@@ -34,10 +39,7 @@ export function Teeth() {
   });
   const [dientes, setDientes] = useState<DientesMap>({});
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
+  //otros
   const toggleDetails = useCallback((key: string) => {
     setOpenDetails((prev) => ({
       ...prev,
@@ -45,44 +47,7 @@ export function Teeth() {
     }));
   }, []);
 
-  const handleRemoveToothCode = useCallback((currentSelectedTooth: number | null, code: string) => {
-    if (currentSelectedTooth === null) return;
-
-    const hallazgoEnDiente = dientes[currentSelectedTooth]?.[code];
-    const grupo = hallazgoEnDiente?.grupo;
-
-    if (grupo && Array.isArray(grupo) && grupo.length > 0) {
-      setToModal({ selectedTooth: currentSelectedTooth, code, group: grupo, to: 'toConfirmDelGroup', detalle: undefined });
-    } else {
-      if (hallazgoEnDiente?.detalle) { // Check if 'detalle' existed which might imply a display
-        // If the display was specifically for this code, remove it
-        if(toothDisplays[currentSelectedTooth]?.abreviatura === hallazgoEnDiente.abreviatura || 
-           hallazgoEnDiente.detalle?.some(d => d.abreviatura === toothDisplays[currentSelectedTooth]?.abreviatura)) {
-            setToothDisplays((prev) => {
-                const nuevo = { ...prev };
-                delete nuevo[currentSelectedTooth];
-                return nuevo;
-            });
-        }
-      }
-
-      setDientes((prev) => {
-        const newState = { ...prev };
-        if (newState[currentSelectedTooth]) {
-          const newToothState = { ...newState[currentSelectedTooth] };
-          delete newToothState[code];
-          if (Object.keys(newToothState).length === 0) {
-            delete newState[currentSelectedTooth];
-          } else {
-            newState[currentSelectedTooth] = newToothState;
-          }
-        }
-        return newState;
-      });
-    }
-  }, [dientes, toothDisplays]);
-
-  const confirmarEliminacionGrupo = useCallback(() => {
+  const confirmGroupDeletion = useCallback(() => {
     if (!toModal || !toModal.group || !toModal.code) return;
     const { code, group } = toModal;
 
@@ -113,11 +78,84 @@ export function Teeth() {
     setToModal({ selectedTooth: null, code: '', to: '', detalle: undefined, group: undefined });
   }, [toModal, toothDisplays]);
 
-  const cancelarEliminacionGrupo = useCallback(() => {
-    setToModal({ selectedTooth: null, code: '', to: '', detalle: undefined, group: undefined });
-  }, []);
+ //Eliminar hallazgos
+ const handleRemoveToothCode = useCallback((currentSelectedTooth: number | null, code: string) => {
+  if (currentSelectedTooth === null) return;
 
-  const handleRemoveToothCodeDetalle = useCallback((currentSelectedTooth: number | null, code: string, idx: number) => {
+  const hallazgoEnDiente = dientes[currentSelectedTooth]?.[code];
+  const grupo = hallazgoEnDiente?.grupo;
+
+  if (grupo && Array.isArray(grupo) && grupo.length > 0) {
+    setToModal({ selectedTooth: currentSelectedTooth, code, group: grupo, to: 'toConfirmDelGroup', detalle: undefined });
+  } else {
+    const diente = hallazgoEnDiente || {};
+
+    // Obtener abreviaturas desde detalle
+    let abreviaturasAEliminar: string[] = [];
+
+    if (Array.isArray(diente.detalle)) {
+      abreviaturasAEliminar = diente.detalle.map((det) => det.abreviatura);
+    } else if (diente.abreviatura) {
+      abreviaturasAEliminar = [diente.abreviatura];
+    }
+
+    // Si tiene caras, obtener abreviaturas desde ahí
+    if (diente.cara) {
+      const abreviaturasDesdeCara: string[] = [];
+      Object.values(diente.cara).forEach((caraObj: any) => {
+        if (Array.isArray(caraObj.detalle)) {
+          caraObj.detalle.forEach((det: any) => {
+            if (det.abreviatura) abreviaturasDesdeCara.push(det.abreviatura);
+          });
+        }
+      });
+
+      setToothDisplays((prev) => {
+        const current = prev[currentSelectedTooth] || [];
+        const filtrados = current.filter(
+          (item) => !abreviaturasDesdeCara.includes(item.abreviatura)
+        );
+
+        return {
+          ...prev,
+          [currentSelectedTooth]: filtrados
+        };
+      });
+
+    } else {
+      setToothDisplays((prev) => {
+        const current = prev[currentSelectedTooth] || [];
+        const filtrados = current.filter(
+          (item) => !abreviaturasAEliminar.includes(item.abreviatura)
+        );
+
+        return {
+          ...prev,
+          [currentSelectedTooth]: filtrados
+        };
+      });
+    }
+
+    // Eliminar del estado de dientes
+    setDientes((prev) => {
+      const nuevo = { ...prev };
+      if (nuevo[currentSelectedTooth]) {
+        const nuevoDiente = { ...nuevo[currentSelectedTooth] };
+        delete nuevoDiente[code];
+
+        if (Object.keys(nuevoDiente).length === 0) {
+          delete nuevo[currentSelectedTooth];
+        } else {
+          nuevo[currentSelectedTooth] = nuevoDiente;
+        }
+      }
+      return nuevo;
+    });
+  }
+}, [dientes, toothDisplays]);
+
+
+  const handleRemoveToothCodeDetalle = useCallback((currentSelectedTooth: number | null, code: string, idx: number) => { // cambiar
     if (currentSelectedTooth === null) return;
 
     setDientes((prev) => {
@@ -174,6 +212,88 @@ export function Teeth() {
     });
   }, [dientes, toothDisplays]);
 
+  const handleRemoveFace = (toothNumber: any, code: any, caraName: any) => {
+    const clonedDientes = JSON.parse(JSON.stringify(dientes));
+    const detalle = clonedDientes[toothNumber]?.[code]?.cara?.[caraName]?.detalle;
+  
+    const abreviaturasAEliminar = Array.isArray(detalle)
+      ? detalle.map(d => d.abreviatura)
+      : [];
+  
+    setDientes(prevDientes => {
+      const newDientes = JSON.parse(JSON.stringify(prevDientes));
+  
+      if (newDientes[toothNumber]?.[code]?.cara?.[caraName]) {
+        delete newDientes[toothNumber][code].cara[caraName];
+  
+        if (Object.keys(newDientes[toothNumber][code].cara).length === 0) {
+          delete newDientes[toothNumber][code].cara;
+        }
+  
+        if (!newDientes[toothNumber][code].cara && !newDientes[toothNumber][code].detalle && !newDientes[toothNumber][code].grupo) {
+          delete newDientes[toothNumber][code];
+  
+          if (Object.keys(newDientes[toothNumber]).length === 0) {
+            delete newDientes[toothNumber];
+          }
+        }
+      }
+  
+      return newDientes;
+    });
+  
+    setToothDisplays(prev => {
+      const prevDisplays = prev[toothNumber] || [];
+      const updatedDisplays = prevDisplays.filter(
+        d => !abreviaturasAEliminar.includes(d.abreviatura)
+      );
+  
+      return {
+        ...prev,
+        [toothNumber]: updatedDisplays
+      };
+    });
+  };
+  
+  
+  const handleRemoveFaceDetalle = (toothNumber: number, code: string, caraName: string,index: number) => {
+    // 1. Actualizar `dientes` eliminando el `detalle[index]` de esa cara
+    setDientes(prevDientes => {
+      const newDientes = JSON.parse(JSON.stringify(prevDientes));
+  
+      const detalles = newDientes[toothNumber]?.[code]?.cara?.[caraName]?.detalle;
+  
+      if (Array.isArray(detalles)) {
+        detalles.splice(index, 1); // eliminar el elemento por índice
+  
+        // Si ya no hay detalles, se puede eliminar la propiedad `detalle`
+        if (detalles.length === 0) {
+          delete newDientes[toothNumber][code].cara[caraName].detalle;
+        }
+      }
+  
+      return newDientes;
+    });
+  
+    // 2. También actualizar `toothDisplays` para eliminar ese detalle por abreviatura
+    setToothDisplays(prev => {
+      const prevDisplays = prev[toothNumber] || [];
+  
+      // Tomar la abreviatura a eliminar (puedes acceder desde `dientes` original también)
+      const abreviaturaAEliminar = dientes[toothNumber]?.[code]?.cara?.[caraName]?.detalle?.[index]?.abreviatura;
+  
+      const filteredDisplays = prevDisplays.filter(
+        (d) => d.abreviatura !== abreviaturaAEliminar
+      );
+  
+      return {
+        ...prev,
+        [toothNumber]: filteredDisplays
+      };
+    });
+  };
+
+  //agregar hallazgos
   const handleToothClick = useCallback((toothNum: number, id: number, jaw: 'superior' | 'inferior') => {
     if (currentMode.position === -1 && activeView === 'agregar') return; // No finding selected
 
@@ -199,61 +319,83 @@ export function Teeth() {
             }
         }
       } else {
-        setDientes((prevDientes) => {
-          const dienteActual = prevDientes[toothNum] || {};
-          let nuevosDetallesParaHallazgo: DetalleHallazgo[] | undefined = dienteActual[tipo]?.detalle;
-
-          if (currentMode.detalle !== -1 && detalleDef && detalleDef[currentMode.detalle]) {
-            const detalleSeleccionado = detalleDef[currentMode.detalle];
-            if (!nuevosDetallesParaHallazgo) nuevosDetallesParaHallazgo = [];
-            const yaExiste = nuevosDetallesParaHallazgo.some(d => d.abreviatura === detalleSeleccionado.tipo);
-            if (!yaExiste) {
-              nuevosDetallesParaHallazgo.push({ abreviatura: detalleSeleccionado.tipo, nombre: detalleSeleccionado.denominacion });
+        if (tipo === 'RT' || tipo === 'RD' || tipo === 'LCD') {
+          setToModal({ selectedTooth: toothNum, code: tipo, to: 'toToothFace', detalle: detalleDef });
+        } else {
+          setDientes((prevDientes) => {
+            const dienteActual = prevDientes[toothNum] || {};
+            const hallazgoActual = dienteActual[tipo] || {};
+      
+            const seleccionado = currentMode.detalle;
+            const detalleSeleccionado = detalleDef?.[seleccionado];
+      
+            let nuevosDetalles: DetalleHallazgo[] = Array.isArray(hallazgoActual.detalle)
+              ? [...hallazgoActual.detalle]
+              : [];
+      
+            if (detalleSeleccionado) {
+              const yaExiste = nuevosDetalles.some(d => d.abreviatura === detalleSeleccionado.tipo);
+              if (!yaExiste) {
+                nuevosDetalles.push({
+                  abreviatura: detalleSeleccionado.tipo,
+                  nombre: detalleSeleccionado.denominacion
+                });
+              }
             }
-          }
-
-          const nuevoHallazgo: HallazgoType = {
-            tipo: tipo,
-            color: colorFinal,
-            nombre: denominacion,
-            abreviatura: abreviatura,
-            ...(nuevosDetallesParaHallazgo && nuevosDetallesParaHallazgo.length > 0 && { detalle: nuevosDetallesParaHallazgo }),
-            ...(currentMode.direccion && { direccion: currentMode.direccion }),
-            ...(currentMode.cara && { cara: [currentMode.cara] }) // Store cara as an array
-          };
-          
-          // Update toothDisplays
-          let displayAbreviatura = abreviatura;
-          if (currentMode.detalle !== -1 && detalleDef && detalleDef[currentMode.detalle]) {
-              displayAbreviatura = detalleDef[currentMode.detalle].tipo;
-          } else if (currentMode.cara) {
-              displayAbreviatura = currentMode.cara.abreviatura;
-          }
-
-          if (displayAbreviatura && displayAbreviatura !== '') {
-            setToothDisplays(prevDisplays => ({
-              ...prevDisplays,
-              [toothNum]: { abreviatura: displayAbreviatura, color: colorFinal },
-            }));
-          } else if (abreviatura && abreviatura !== '') { // Fallback to main abbreviation if no detail/cara
-             setToothDisplays(prevDisplays => ({
-              ...prevDisplays,
-              [toothNum]: { abreviatura: abreviatura, color: colorFinal },
-            }));
-          }
-
-
-          if (tipo === 'RT' || tipo === 'RD' || tipo === 'LCD') {
-            setToModal({ selectedTooth: toothNum, code: tipo, to: 'toToothFace', detalle: detalleDef, group: undefined });
-            // For these types, cara selection will finalize the state, so we might not want to set it fully yet
-            // Or, set a preliminary state and update/finalize after face selection
-            return { ...prevDientes, [toothNum]: { ...dienteActual, [tipo]: nuevoHallazgo } };
-          }
-          
-          return { ...prevDientes, [toothNum]: { ...dienteActual, [tipo]: nuevoHallazgo } };
-        });
-        setCurrentMode(prev => ({ ...prev, cara: undefined })); // Reset cara after applying
+      
+            // Armar nuevo hallazgo
+            const nuevoHallazgo: HallazgoType = {
+              tipo,
+              color: colorFinal,
+              nombre: denominacion,
+              abreviatura,
+              ...(nuevosDetalles.length > 0 && { detalle: nuevosDetalles }),
+              ...(currentMode.direccion && { direccion: currentMode.direccion }),
+              ...(currentMode.cara && { cara: [currentMode.cara] })
+            };
+      
+            // Actualizar toothDisplays
+            const abreviaturaDisplay = detalleSeleccionado
+              ? detalleSeleccionado.tipo
+              : currentMode.cara
+              ? currentMode.cara.abreviatura
+              : abreviatura;
+      
+            if (abreviaturaDisplay && abreviaturaDisplay !== '') {
+              const nuevoDisplay: ToothDisplays = {
+                abreviatura: abreviaturaDisplay,
+                color: colorFinal
+              };
+      
+              setToothDisplays(prev => {
+                const existentes = prev[toothNum] || [];
+      
+                const yaExiste = existentes.some(d => d.abreviatura === nuevoDisplay.abreviatura);
+                if (yaExiste) return prev;
+      
+                return {
+                  ...prev,
+                  [toothNum]: [...existentes, nuevoDisplay]
+                };
+              });
+            }
+      
+            return {
+              ...prevDientes,
+              [toothNum]: {
+                ...dienteActual,
+                [tipo]: nuevoHallazgo
+              }
+            };
+          });
+      
+          setCurrentMode(prev => ({
+            ...prev,
+            cara: undefined
+          }));
+        }
       }
+      
     } else if (activeView === 'eliminar') {
       setSelectedTooth(toothNum);
     }
@@ -273,18 +415,24 @@ export function Teeth() {
         const grupoAfectado: number[] = [];
 
         for (let i = inicioId; i <= finId; i++) {
-          const dienteInfo = dentalArch[i];
-          if (dienteInfo) {
-            // For D, F, PDS, TD, ensure we only mark the two selected teeth in the group
-            if (['D', 'F', 'PDS', 'TD'].includes(tipo)) {
-                if (i === rangoSeleccion[0].id || i === rangoSeleccion[1].id) {
-                    grupoAfectado.push(dienteInfo.number);
-                }
-            } else {
-                 grupoAfectado.push(dienteInfo.number);
+          const tooth = dentalArch[i];
+          if (!tooth) continue;
+        
+          const esTipoEspecial = ['D', 'F', 'PDS', 'TD'].includes(tipo);
+        
+          if (esTipoEspecial) {
+            const esSeleccionado = i === rangoSeleccion[0].id || i === rangoSeleccion[1].id;
+            if (esSeleccionado) {
+              grupoAfectado.push(tooth.number);
+            }
+          } else {
+            const yaTieneHallazgo = newState[tooth.number]?.[tipo];
+            if (!yaTieneHallazgo) {
+              grupoAfectado.push(tooth.number);
             }
           }
         }
+        
         
         if (grupoAfectado.length > 0) {
             grupoAfectado.forEach(numDiente => {
@@ -301,86 +449,118 @@ export function Teeth() {
                     ),
                 }
                 };
-                if (abreviatura) {
-                    setToothDisplays(prevDisp => ({ ...prevDisp, [numDiente]: { abreviatura, color: colorFinal }}));
-                }
+                // if (abreviatura) {
+                //     setToothDisplays(prevDisp => ({ ...prevDisp, [numDiente]: { abreviatura, color: colorFinal }}));
+                // }
             });
         }
         return newState;
       });
       setRangoSeleccion([]);
     }
-  }, [rangoSeleccion, currentMode, Hallazgos]);
+  }, [rangoSeleccion]);
 
   const handleSaveFaceSelection = useCallback(() => {
-    if (toModal.selectedTooth !== null && toModal.code && currentMode.cara) {
-      setDientes(prevDientes => {
-        const dienteActual = prevDientes[toModal.selectedTooth!] || {};
-        const hallazgoExistente = dienteActual[toModal.code!] || Hallazgos.find(h => h.tipo === toModal.code); // Fallback to definition
-
-        if (!hallazgoExistente) return prevDientes; // Should not happen if modal opened
-
-        const nuevasCaras = [...(hallazgoExistente.cara || []), currentMode.cara!];
-        
-        const hallazgoActualizado: HallazgoType = {
-          ...hallazgoExistente,
-          tipo: hallazgoExistente.tipo, // Ensure tipo is correctly from definition
-          nombre: hallazgoExistente.nombre,
-          color: currentMode.color, // Update color from currentMode if changed for RD
-          abreviatura: hallazgoExistente.abreviatura, // Keep original abreviatura
-          cara: nuevasCaras,
-          // Preserve other properties like 'detalle', 'grupo', 'direccion'
-          ...(hallazgoExistente.detalle && { detalle: hallazgoExistente.detalle }),
-          ...(hallazgoExistente.grupo && { grupo: hallazgoExistente.grupo }),
-          ...(hallazgoExistente.direccion && { direccion: hallazgoExistente.direccion }),
+    const id = toModal.selectedTooth;
+    const code = toModal.code;
+  
+    // Validación de condiciones esenciales
+    if (!id || !code || currentMode.cara === undefined || currentMode.position === undefined) return;
+  
+    const tipoCara = currentMode.cara.tipo;
+    const hallazgoConfig = Hallazgos[currentMode.position];
+  
+    // Actualización del estado 'dientes'
+    setDientes(prev => {
+      const nuevos = { ...prev };
+      const idKey: string = String(id);
+  
+      // Inicializar estructuras si no existen
+      if (!nuevos[idKey]) nuevos[idKey] = {};
+      if (!nuevos[idKey][code]) {
+        nuevos[idKey][code] = {
+          tipo: hallazgoConfig.tipo,
+          abreviatura: hallazgoConfig.abreviatura,
+          nombre: hallazgoConfig.denominacion,
+          cara: {}
         };
-        
-        setToothDisplays(prevDisplays => ({
-          ...prevDisplays,
-          [toModal.selectedTooth!]: { abreviatura: currentMode.cara!.abreviatura, color: currentMode.color },
-        }));
-
+      }
+  
+      const hallazgo = nuevos[idKey][code];
+      const anterior = prev[idKey]?.[code];
+  
+      // Preservar atributos anteriores
+      if (anterior?.grupo) hallazgo.grupo = anterior.grupo;
+      if (anterior?.direccion) hallazgo.direccion = anterior.direccion;
+      if (anterior?.detalle) hallazgo.detalle = anterior.detalle;
+  
+      // Manejo de actualización o creación de cara
+      const caraActual = hallazgo.cara?.[tipoCara];
+      const nuevoDetalle = currentMode.cara?.detalle;
+  
+      if (caraActual) {
+        const detalles = caraActual.detalle || [];
+        const nuevosDetalles = nuevoDetalle
+          ? [...detalles, nuevoDetalle].filter((d, i, arr) =>
+              arr.findIndex(x => x.abreviatura === d.abreviatura) === i
+            )
+          : detalles;
+  
+        hallazgo.cara[tipoCara] = {
+          ...caraActual,
+          color: currentMode.cara?.color,
+          detalle: nuevosDetalles
+        };
+      } else {
+        hallazgo.cara[tipoCara] = {
+          tipo: tipoCara,
+          abreviatura: currentMode.cara?.abreviatura,
+          nombre: currentMode.cara?.nombre,
+          color: currentMode.cara?.color,
+          ...(nuevoDetalle && { detalle: [nuevoDetalle] })
+        };
+      }
+  
+      return nuevos;
+    });
+  
+    // Actualización del estado 'toothDisplays' si hay detalle válido
+    const displayAbreviatura = currentMode.cara?.detalle?.abreviatura;
+    if (displayAbreviatura) {
+      setToothDisplays(prev => {
+        const actuales = prev[id] || [];
+        const yaExiste = actuales.some(d => d.abreviatura === displayAbreviatura);
+        if (yaExiste) return prev;
+  
         return {
-          ...prevDientes,
-          [toModal.selectedTooth!]: {
-            ...dienteActual,
-            [toModal.code!]: hallazgoActualizado,
-          },
+          ...prev,
+          [id]: [...actuales, { abreviatura: displayAbreviatura, color: currentMode.cara.color }]
         };
       });
     }
-    setToModal({ selectedTooth: null, code: '', to: '', detalle: undefined, group: undefined });
-    setCurrentMode(prev => ({...prev, cara: undefined})); // Reset cara selection
-  }, [toModal, currentMode.cara, currentMode.color, Hallazgos]);
-
-
-  if (!isClient) {
-    return <p className="text-center py-10 text-muted-foreground">Cargando Odontograma...</p>;
-  }
+  
+    // Reset de estados temporales
+    setToModal({ selectedTooth: '', code: '', to: '' });
+    setCurrentMode(prev => ({ ...prev, cara: undefined }));
+  }, [toModal, currentMode, Hallazgos]);
+  
+    
+  
+  //control
+  useEffect(() => {
+    console.log(dientes);
+    onChangeDientes(dientes);
+  }, [dientes]);
 
   return (
-    <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 p-2 md:p-4 bg-card rounded-lg shadow">
-      {/* Odontogram Canvas and Tooth Number Displays */}
-      <div className="flex-grow order-2 md:order-1">
-        <div className="flex justify-center">
-          {SettingSupperJaw.map((setting) => (
-            <div
-              key={`display-sup-${setting.number}`}
-              onClick={() => activeView === 'eliminar' && setSelectedTooth(setting.number)}
-              className="flex flex-col items-center m-px text-xs font-medium text-center cursor-pointer h-10 w-[51px]" // Tailwind for width, ensure consistency
-            >
-              <span style={{ color: toothDisplays[setting.number]?.color || 'inherit' }} className="h-4">
-                {toothDisplays[setting.number]?.abreviatura}
-              </span>
-              <span className="text-muted-foreground">{setting.number}</span>
-            </div>
-          ))}
-        </div>
-        <Stage width={885} height={370}>
+    <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 p-2 md:p-4">
+      {typeTooth === 'Permanent' && (
+        <div className="flex-grow order-2 md:order-1">
+        <Stage width={scalaTeeth.x} height={scalaTeeth.y}>
           <Layer>
-            <KonvaGroup x={0} y={0}>
+            <KonvaGroup x={scalaTeeth.moveTeethX} y={scalaTeeth.moveTeethY}>
               {SettingSupperJaw.map((setting, idx) => (
-                <Tooth
+                <ToothA
                   key={`tooth-sup-${setting.number}`}
                   id={idx}
                   dientes={dientes[setting.number] || {}}
@@ -389,15 +569,16 @@ export function Teeth() {
                   rotated={Boolean(setting.rotated)}
                   reflected={Boolean(setting.reflected)}
                   numTooth={setting.number}
-                  scale={0.28}
-                  separation={55}
+                  scale={scalaTooth.scale}
+                  separation={scalaTooth.separation}
                   rangoSelect={rangoSeleccion.filter(r => r.jaw === 'superior')}
+                  display={toothDisplays}
                 />
               ))}
             </KonvaGroup>
-            <KonvaGroup x={0} y={140}>
+            <KonvaGroup x={scalaTeeth.moveTeethX} y={scalaTeeth.moveTeethY+130}>
               {SettingsLowerJaw.map((setting, idx) => (
-                <Tooth
+                <ToothA
                   key={`tooth-inf-${setting.number}`}
                   id={idx}
                   dientes={dientes[setting.number] || {}}
@@ -406,30 +587,62 @@ export function Teeth() {
                   rotated={Boolean(setting.rotated)}
                   reflected={Boolean(setting.reflected)}
                   numTooth={setting.number}
-                  scale={0.28}
-                  separation={55}
+                  scale={scalaTooth.scale}
+                  separation={scalaTooth.separation}
                   rangoSelect={rangoSeleccion.filter(r => r.jaw === 'inferior')}
+                  display={toothDisplays}
                 />
               ))}
             </KonvaGroup>
           </Layer>
         </Stage>
-        <div className="flex justify-center">
-          {SettingsLowerJaw.map((setting) => (
-            <div
-              key={`display-inf-${setting.number}`}
-              onClick={() => activeView === 'eliminar' && setSelectedTooth(setting.number)}
-              className="flex flex-col items-center m-px text-xs font-medium text-center cursor-pointer h-10 w-[51px]" // Tailwind for width
-            >
-              <span className="text-muted-foreground">{setting.number}</span>
-              <span style={{ color: toothDisplays[setting.number]?.color || 'inherit' }} className="h-4">
-                {toothDisplays[setting.number]?.abreviatura}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
+        </div>       
+      )}
+      {typeTooth === 'Primary' && (
+        <div className="flex-grow order-2 md:order-1">
+          <Stage width={scalaTeeth.x} height={scalaTeeth.y}>
+            <Layer>
+              <KonvaGroup x={scalaTeeth.moveTeethX} y={scalaTeeth.moveTeethY}>
+                {SettingSupperJawPrimary.map((setting, idx) => (
+                  <ToothB
+                    key={`tooth-sup-${setting.number}`}
+                    id={idx}
+                    dientes={dientes[setting.number] || {}}
+                    onClick={() => handleToothClick(setting.number, idx, 'superior')}
+                    typeTeeth={setting.typeTooth}
+                    rotated={Boolean(setting.rotated)}
+                    reflected={Boolean(setting.reflected)}
+                    numTooth={setting.number}
+                    scale={scalaTooth.scale}
+                    separation={scalaTooth.separation}
+                    rangoSelect={rangoSeleccion.filter(r => r.jaw === 'superior')}
+                    display={toothDisplays}
+                  />
+                ))}
+              </KonvaGroup>
+              <KonvaGroup x={scalaTeeth.moveTeethX} y={scalaTeeth.moveTeethY+130}>
+                {SettingsLowerJawPrimary.map((setting, idx) => (
+                  <ToothB
+                    key={`tooth-inf-${setting.number}`}
+                    id={idx}
+                    dientes={dientes[setting.number] || {}}
+                    onClick={() => handleToothClick(setting.number, idx, 'inferior')}
+                    typeTeeth={setting.typeTooth}
+                    rotated={Boolean(setting.rotated)}
+                    reflected={Boolean(setting.reflected)}
+                    numTooth={setting.number}
+                    scale={scalaTooth.scale}
+                    separation={scalaTooth.separation}
+                    rangoSelect={rangoSeleccion.filter(r => r.jaw === 'inferior')}
+                    display={toothDisplays}
+                  />
+                ))}
+              </KonvaGroup>
+            </Layer>
+          </Stage>
+        </div>        
+      )}
+      
       {/* Controls Panel */}
       <div className="w-full md:w-72 lg:w-80 order-1 md:order-2 space-y-4 sticky top-4 self-start">
         <div className="flex items-center justify-around bg-muted p-1 rounded-md">
@@ -469,8 +682,8 @@ export function Teeth() {
                       {tiposEspeciales.map(([key, label]) => {
                         let colorClass = "";
                         if (label.tipo === 'LCD') colorClass = "border-red-500 text-red-600 hover:bg-red-50";
-                        else if (label.tipo === 'RD') colorClass = "border-red-500 text-red-600 hover:bg-red-50";
-                        else if (label.tipo === 'RT') colorClass = "border-blue-500 text-blue-600 hover:bg-blue-50";
+                        else if (label.tipo === 'RD') colorClass = "border-blue-500 text-blue-600 hover:bg-blue-50";
+                        else if (label.tipo === 'RT') colorClass = "border-red-500 text-red-600 hover:bg-red-50";
                         
                         return (
                           <Button
@@ -484,7 +697,7 @@ export function Teeth() {
                               direccion: undefined,
                               cara: undefined,
                             })}
-                            className={`h-auto py-1 px-2 ${colorClass} ${currentMode?.position === Number(key) ? (label.tipo === 'LCD' || label.tipo === 'RD' ? 'bg-red-50' : 'bg-blue-50') : ''}`}
+                            className={`h-auto py-1 px-2 ${colorClass} ${currentMode?.position === Number(key) ? (label.tipo === 'LCD' || label.tipo === 'RT' ? 'bg-red-50' : 'bg-blue-50') : ''}`}
                           >
                             {label.denominacion}
                           </Button>
@@ -492,54 +705,114 @@ export function Teeth() {
                       })}
                     </div>
                   )}
+                  {tiposNormales.length > 0 && (
+                    <>
+                      {tiposNormales.map(([key, label]) => (
+                        <div key={key} className="mb-2">
+                          <Button
+                            variant="ghost"
+                            className={`w-full justify-between h-auto py-2 px-3 text-left ${currentMode?.position === Number(key) ? 'bg-accent text-accent-foreground' : ''}`}
+                            onClick={() =>{
+                              let newMode;
+                              if (label.tipo === 'GI'){
+                                setCurrentMode({
+                                  position: Number(key),
+                                  color: label.color === '' ? colorHallazgo[key]?colorHallazgo[key]:'#0880D7' : label.color,
+                                  detalle: (label.detalle && label.detalle.length > 0) ? 0 : -1,
+                                  direccion: 'izquierda',
+                                  cara: undefined,
+                                })
+                              }else{
+                                setCurrentMode({
+                                  position: Number(key),
+                                  color: label.color === '' ? colorHallazgo[key]?colorHallazgo[key]:'#0880D7' : label.color,
+                                  detalle: (label.detalle && label.detalle.length > 0) ? 0 : -1,
+                                  direccion: undefined,
+                                  cara: undefined,
+                                })
+                              }
 
-                  {tiposNormales.map(([key, label]) => (
-                    <div key={key} className="mb-2">
-                      <Button
-                        variant="ghost"
-                        className={`w-full justify-between h-auto py-2 px-3 text-left ${currentMode?.position === Number(key) ? 'bg-accent text-accent-foreground' : ''}`}
-                        onClick={() => setCurrentMode({
-                          position: Number(key),
-                          color: label.color === '' ? '#0880D7' : label.color,
-                          detalle: (label.detalle && label.detalle.length > 0) ? 0 : -1,
-                          direccion: undefined,
-                          cara: undefined,
-                        })}
-                      >
-                        <span>{label.denominacion}</span>
-                        {(label.color === '' || (label.detalle && label.detalle.length > 0) || label.tipo === 'GI') && (
-                          <span onClick={(e) => { e.stopPropagation(); toggleDetails(key); }} className="text-muted-foreground hover:text-foreground">
-                            {openDetails[key] ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                          </span>
-                        )}
-                      </Button>
-                      {openDetails[key] && (
-                        <div className="p-2 ml-3 mt-1 bg-muted/50 rounded space-y-2 text-xs">
-                          {label.tipo === 'GI' && (
-                            <div className="flex items-center justify-start gap-2">
-                              <Button variant={currentMode?.direccion === 'izquierda' ? 'secondary' : 'outline'} size="icon" onClick={() => setCurrentMode(prev => ({ ...prev, direccion: 'izquierda' }))}><ArrowLeft size={16}/></Button>
-                              <Button variant={currentMode?.direccion === 'derecha' ? 'secondary' : 'outline'} size="icon" onClick={() => setCurrentMode(prev => ({ ...prev, direccion: 'derecha' }))}><ArrowRight size={16}/></Button>
-                            </div>
-                          )}
-                          {label.color === '' && (
-                            <div className="space-y-1">
-                              <Button variant={currentMode.color === '#E40000' ? 'destructive' : 'outline'} size="sm" className="w-full justify-start gap-2" onClick={() => setCurrentMode(prev => ({ ...prev, color: '#E40000' }))}><div className="w-3 h-3 rounded-full bg-red-500"/>Mal estado</Button>
-                              <Button variant={currentMode.color === '#0880D7' ? 'default' : 'outline'} size="sm" className="w-full justify-start gap-2" onClick={() => setCurrentMode(prev => ({ ...prev, color: '#0880D7' }))}><div className="w-3 h-3 rounded-full bg-blue-500"/>Buen estado</Button>
-                            </div>
-                          )}
-                          {label.detalle && label.detalle.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {label.detalle.map((item, idx) => (
-                                <Button key={idx} variant={currentMode.detalle === idx ? 'secondary': 'outline'} size="sm" className="h-auto py-0.5 px-1.5" onClick={() => setCurrentMode(prev => ({ ...prev, detalle: idx }))}>
-                                  {item.tipo}
-                                </Button>
-                              ))}
+                              if(!colorHallazgo[key])  setColorHallazgo(prev => ({ ...prev, [key]: label.color === '' ? currentMode.color : label.color }))
+                            }
+                            } 
+                          >
+                            <span>{label.denominacion}</span>
+                            {(label.color === '' || (label.detalle && label.detalle.length > 0) || label.tipo === 'GI') && (
+                              <span onClick={() =>  toggleDetails(key)} className="text-muted-foreground hover:text-foreground">
+                                {openDetails[key] ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                              </span>
+                            )}
+                          </Button>
+                          {openDetails[key] && (
+                            <div className="p-2 ml-3 mt-1 bg-muted/50 rounded space-y-2 text-xs">
+                              {label.tipo === 'GI' && (
+                                <div className="flex items-center justify-start gap-2">
+                                  <Button variant={currentMode?.direccion === 'izquierda' ? 'secondary' : 'outline'} size="icon" onClick={() => setCurrentMode(prev => ({ ...prev, direccion: 'izquierda' }))}><ArrowLeft size={16}/></Button>
+                                  <Button variant={currentMode?.direccion === 'derecha' ? 'secondary' : 'outline'} size="icon" onClick={() => setCurrentMode(prev => ({ ...prev, direccion: 'derecha' }))}><ArrowRight size={16}/></Button>
+                                </div>
+                              )}
+                              {label.color === '' && (
+                                <div className="space-y-1">
+                                  <Button variant={colorHallazgo[key] === '#E40000' ? 'destructive' : 'outline'} size="sm" className="w-full justify-start gap-2" 
+                                    onClick={() => {
+                                      const isSameKey = currentMode?.position === Number(key);
+                                    
+                                      // Si el hallazgo no tiene color predeterminado
+                                      let finalColor: string;
+                                      if (label.color === '') {
+                                        finalColor = isSameKey
+                                          ? '#E40000' // Si es el mismo, forzar color base al volver a hacer clic
+                                          : (colorHallazgo[key] || '#E40000'); // Si es otro, usa color guardado si hay
+                                      } else {
+                                        finalColor = label.color;
+                                      }
+                                    
+                                      // Guardamos en el estado compartido de colores por hallazgo
+                                      setColorHallazgo(prev => ({ ...prev, [key]: finalColor }));
+                                    
+                                      // Actualizamos el modo activo
+                                      setCurrentMode(prev => ({ ...prev, color: finalColor }));
+                                    }}
+                                    
+                                  ><div className="w-3 h-3 rounded-full bg-red-500"/>Mal estado</Button>
+                                  <Button variant={colorHallazgo[key] === '#0880D7' ? 'default' : 'outline'} size="sm" className="w-full justify-start gap-2" 
+                                   onClick={() => {
+                                    const isSameKey = currentMode?.position === Number(key);
+                                  
+                                    // Si el hallazgo no tiene color predeterminado
+                                    let finalColor: string;
+                                    if (label.color === '') {
+                                      finalColor = isSameKey
+                                        ? '#0880D7' // Si es el mismo, forzar color base al volver a hacer clic
+                                        : (colorHallazgo[key] || '#0880D7'); // Si es otro, usa color guardado si hay
+                                    } else {
+                                      finalColor = label.color;
+                                    }
+                                  
+                                    // Guardamos en el estado compartido de colores por hallazgo
+                                    setColorHallazgo(prev => ({ ...prev, [key]: finalColor }));
+                                  
+                                    // Actualizamos el modo activo
+                                    setCurrentMode(prev => ({ ...prev, color: finalColor }));
+                                  }}
+                                  ><div className="w-3 h-3 rounded-full bg-blue-500"/>Buen estado</Button>
+                                </div>
+                              )}
+                              {label.detalle && label.detalle.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {label.detalle.map((item, idx) => (
+                                    <Button key={idx} variant={currentMode.detalle === idx ? 'secondary': 'outline'} size="sm" className="h-auto py-0.5 px-1.5" onClick={() => setCurrentMode(prev => ({ ...prev, detalle: idx }))}>
+                                      {item.tipo}
+                                    </Button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                      ))}
+                    </>
+                  )}
                 </>
               );
             })()}
@@ -553,7 +826,10 @@ export function Teeth() {
                     <div className="flex items-center justify-between text-sm">
                       <span>{hallazgo.nombre}</span>
                       <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10" onClick={() => handleRemoveToothCode(selectedTooth, code)} title="Eliminar hallazgo completo">
-                        <Trash2 size={14} />
+                        <Trash2 size={16} onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveToothCode(selectedTooth, code);
+                        }}/>
                       </Button>
                     </div>
                     {hallazgo.detalle && hallazgo.detalle.length > 0 && (
@@ -568,12 +844,45 @@ export function Teeth() {
                         ))}
                       </div>
                     )}
-                    {hallazgo.cara && hallazgo.cara.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1 pl-2">
-                            {hallazgo.cara.map((c, idx) => (
-                                <Badge key={`cara-${idx}`} variant="outline" className="text-xs py-0.5 px-1.5 border-blue-500 text-blue-600">
-                                    Cara: {c.abreviatura}
-                                </Badge>
+                    {hallazgo.cara && (
+                        <div className="space-y-4 border-t pt-2">
+                            {Object.entries(hallazgo.cara).map(([FaceName, FaceData]) => (
+                              <div key={code} className=" rounded-lg overflow-hidden"> 
+                                <div  className="text-xs py-0.5 px-1.5 border-blue-500 text-blue-600 flex justify-between items-center mb-2 w-full">
+                                  <span className="text-sm font-medium text-gray-600">{FaceData.nombre}</span>
+                                  <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRemoveFace(selectedTooth, code, FaceName);
+                                    }}
+                                    className="text-xs text-gray-400 hover:text-red-500"
+                                  >
+                                    Eliminar cara
+                                  </button>
+                                </div>
+                                <div className="px-3 pb-3 space-y-3">
+                                  {FaceData.detalle &&  FaceData?.detalle?.length > 0 && (
+                                    <div className="space-y-2">
+                                      <div className="flex flex-wrap gap-2">
+                                        {FaceData.detalle.map((item, idx) => (
+                                          <Badge key={idx} variant="secondary" className="text-xs py-0.5 px-1.5 relative group">
+                                            <span className="text-sm text-blue-700">{item.abreviatura}</span>
+                                            <button
+                                               onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleRemoveFaceDetalle(selectedTooth, code, FaceName, idx);
+                                              }}       
+                                              className="ml-1 text-gray-400 hover:text-red-500"
+                                            >
+                                              <X size={14} />
+                                            </button>
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             ))}
                         </div>
                     )}
@@ -596,72 +905,126 @@ export function Teeth() {
               ¿Estás seguro de que deseas eliminar el hallazgo &quot;{Hallazgos.find(h => h.tipo === toModal.code)?.denominacion || toModal.code}&quot; de todos los dientes en el grupo seleccionado?
             </p>
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={cancelarEliminacionGrupo}>Cancelar</Button>
-              <Button variant="destructive" onClick={confirmarEliminacionGrupo}>Sí, eliminar</Button>
+              <Button variant="outline" onClick={()=>setToModal({ selectedTooth: null, code: '', to: '', detalle: undefined, group: undefined })}>Cancelar</Button>
+              <Button variant="destructive" onClick={confirmGroupDeletion}>Sí, eliminar</Button>
             </div>
           </div>
         </div>
       )}
 
       {toModal.to === 'toToothFace' && toModal.selectedTooth !== null && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-card rounded-lg shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
-            <div className="p-6 border-b">
-              <h2 className="text-lg font-semibold text-primary">
-                {dientes[toModal.selectedTooth]?.[toModal.code!]?.nombre || Hallazgos.find(h => h.tipo === toModal.code)?.denominacion}
-              </h2>
-              <p className="text-sm text-muted-foreground">Seleccione la cara afectada y/o el tipo de hallazgo.</p>
-            </div>
-            
-            <div className="p-6 flex-grow overflow-y-auto space-y-4">
-              <div className="flex items-center justify-center">
-                <Stage width={150} height={150}>
-                  <Layer scaleX={0.75} scaleY={0.75} x={-25} y={-25}>
-                    <InteractiveFace
-                      onSelectCara={(hallazgo) => setCurrentMode(prev => ({ ...prev, cara: { ...hallazgo, color: prev.color } }))}
-                    />
-                  </Layer>
-                </Stage>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+        >
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-card rounded-lg shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+              <div className="p-6 border-b">
+                <h2 className="text-lg font-semibold text-primary">
+                  {dientes[toModal.selectedTooth]?.[toModal.code!]?.nombre || Hallazgos.find(h => h.tipo === toModal.code)?.denominacion}
+                </h2>
+                <p className="text-sm text-muted-foreground">Seleccione la cara afectada y/o el tipo de hallazgo.</p>
               </div>
-              {currentMode.cara && (
-                <div className="text-center text-sm">
-                    Cara seleccionada: <Badge variant="outline">{currentMode.cara.nombre} ({currentMode.cara.abreviatura})</Badge>
+              
+              <div className="p-6 flex-grow overflow-y-auto space-y-4">
+                <div className="flex items-center justify-center">
+                  <Stage width={150} height={150}>
+                    <Layer scaleX={0.75} scaleY={0.75} x={0} y={0}>
+                      <InteractiveFace
+                        onSelectCara={(hallazgo) =>
+                          setCurrentMode((prev) => ({
+                            ...prev,
+                            cara: {
+                              ...hallazgo,
+                              color: prev.color,
+                            },
+                          }))
+                        }
+                        color={currentMode.color}
+                      />
+                    </Layer>
+                  </Stage>
                 </div>
-              )}
-
-              {toModal.detalle && toModal.detalle.length > 0 && (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Tipo de hallazgo:</label>
-                  <div className="space-y-1">
-                    {toModal.detalle.map((item, idx) => (
-                      <Button
-                        key={idx}
-                        variant={currentMode.detalle === idx ? 'default' : 'outline'}
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => setCurrentMode(prev => ({ ...prev, detalle: idx, cara: undefined }))} // Reset cara if detail changes
-                      >
-                        {item.denominacion} ({item.tipo})
-                      </Button>
-                    ))}
+                {currentMode.cara && (
+                  <div className="text-center text-sm">
+                      Cara seleccionada: <Badge variant="outline">{currentMode.cara.nombre} ({currentMode.cara.abreviatura})</Badge>
                   </div>
-                </div>
-              )}
+                )}
 
-              {(toModal.code === 'RD' || toModal.code === 'LCD' || toModal.code === 'RT') && (
-                <div>
-                    <label className="text-sm font-medium text-muted-foreground mb-1 block">Estado:</label>
-                    <div className="flex gap-2">
-                        <Button variant={currentMode.color === '#E40000' ? 'destructive' : 'outline'} size="sm" className="flex-1 justify-start gap-2" onClick={() => setCurrentMode(prev => ({ ...prev, color: '#E40000' }))}><div className="w-3 h-3 rounded-full bg-red-500"/>Mal estado</Button>
-                        <Button variant={currentMode.color === '#0880D7' ? 'default' : 'outline'} size="sm" className="flex-1 justify-start gap-2" onClick={() => setCurrentMode(prev => ({ ...prev, color: '#0880D7' }))}><div className="w-3 h-3 rounded-full bg-blue-500"/>Buen estado</Button>
+                {toModal.detalle && toModal.detalle.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-1 block">Tipo de hallazgo:</label>
+                    <div className="space-y-1">
+                      {toModal.detalle.map((item, idx) => (
+                        <Button
+                          key={idx}
+                          variant={currentMode?.cara?.detalle?.abreviatura == item.tipo? 'default' : 'outline'}
+                          size="sm"
+                          className="w-full justify-start"
+                          onClick={() =>
+                            setCurrentMode((prev) => ({
+                              ...prev,
+                              cara: prev.cara
+                                ? {
+                                    ...prev.cara,
+                                    detalle: {
+                                      abreviatura: item.tipo,
+                                      nombre: item.denominacion,
+                                    },
+                                  }
+                                : undefined,
+                            }))
+                          }
+                        >
+                          {item.denominacion} ({item.tipo})
+                        </Button>
+                      ))}
                     </div>
-                </div>
-              )}
-            </div>
+                  </div>
+                )}
 
-            <div className="p-6 border-t flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setToModal({ selectedTooth: null, code: '', to: '', detalle: undefined, group: undefined })}>Cancelar</Button>
-              <Button onClick={handleSaveFaceSelection}>Guardar Selección</Button>
+                {(toModal.code === 'RD') && (
+                  <div>
+                      <label className="text-sm font-medium text-muted-foreground mb-1 block">Estado:</label>
+                      <div className="flex gap-2">
+                          <Button variant={currentMode.color === '#E40000' ? 'destructive' : 'outline'} size="sm" className="flex-1 justify-start gap-2" 
+                            onClick={() =>{
+                              setCurrentMode((prev) => {
+                                const nuevoColor = '#E40000';
+                                return {
+                                  ...prev,
+                                  color: nuevoColor,
+                                  cara: prev.cara ? { ...prev.cara, color: nuevoColor } : undefined,
+                                };
+                              })
+                            }}
+                          ><div className="w-3 h-3 rounded-full bg-red-500"/>Mal estado</Button>
+                          <Button variant={currentMode.color === '#0880D7' ? 'default' : 'outline'} size="sm" className="flex-1 justify-start gap-2" 
+                            onClick={() =>
+                              setCurrentMode((prev) => {
+                                const nuevoColor = '#0880D7';
+                                return {
+                                  ...prev,
+                                  color: nuevoColor,
+                                  cara: prev.cara ? { ...prev.cara, color: nuevoColor } : undefined,
+                                };
+                              })
+                            }
+                          ><div className="w-3 h-3 rounded-full bg-blue-500"/>Buen estado</Button>
+                      </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t flex justify-end space-x-2">
+                <Button variant="outline" onClick={() =>{
+                  setToModal({ selectedTooth: '', code: '', to: '', detalle: undefined, group: undefined })
+                  setCurrentMode(prev => ({
+                    ...prev,
+                    detalle: -1
+                  }));
+                }}>Cancelar</Button>
+                <Button onClick={handleSaveFaceSelection}>Guardar Selección</Button>
+              </div>
             </div>
           </div>
         </div>
@@ -669,3 +1032,5 @@ export function Teeth() {
     </div>
   );
 }
+
+export default Teeth;
