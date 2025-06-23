@@ -562,7 +562,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                           >
                             <span>{label.denominacion}</span>
                             {(label.color === '' || (label.detalle && label.detalle.length > 0) || label.tipo === 'GI') && (
-                              <span className="text-foreground transition-colors">
+                              <span className={cn("transition-colors", currentMode?.position === Number(key) ? "text-accent-foreground" : "text-foreground")}>
                                 {openDetails[key] ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                               </span>
                             )}
@@ -571,8 +571,30 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                               <div className="p-2 ml-3 mt-1 bg-muted/50 rounded space-y-2 text-xs">
                                 {label.tipo === 'GI' && (
                                   <div className="flex items-center justify-start gap-2">
-                                    <Button variant={currentMode?.direccion === 'izquierda' ? 'secondary' : 'outline'} size="icon" onClick={() => setCurrentMode(prev => ({ ...prev, direccion: 'izquierda' }))}><ArrowLeft size={16}/></Button>
-                                    <Button variant={currentMode?.direccion === 'derecha' ? 'secondary' : 'outline'} size="icon" onClick={() => setCurrentMode(prev => ({ ...prev, direccion: 'derecha' }))}><ArrowRight size={16}/></Button>
+                                    <Button variant={currentMode?.direccion === 'izquierda' ? 'secondary' : 'outline'} size="icon" 
+                                      onClick={() => {
+                                        const newActiveFinding = Hallazgos[Number(key)];
+                                        setCurrentMode({
+                                          position: Number(key),
+                                          color: newActiveFinding.color === '' ? colorHallazgo[key] || '#0880D7' : newActiveFinding.color,
+                                          detalle: (newActiveFinding.detalle && newActiveFinding.detalle.length > 0) ? 0 : -1,
+                                          direccion: 'izquierda',
+                                          cara: undefined,
+                                        });
+                                      }}
+                                    ><ArrowLeft size={16}/></Button>
+                                    <Button variant={currentMode?.direccion === 'derecha' ? 'secondary' : 'outline'} size="icon" 
+                                      onClick={() => {
+                                        const newActiveFinding = Hallazgos[Number(key)];
+                                        setCurrentMode({
+                                          position: Number(key),
+                                          color: newActiveFinding.color === '' ? colorHallazgo[key] || '#0880D7' : newActiveFinding.color,
+                                          detalle: (newActiveFinding.detalle && newActiveFinding.detalle.length > 0) ? 0 : -1,
+                                          direccion: 'derecha',
+                                          cara: undefined,
+                                        });
+                                      }}
+                                    ><ArrowRight size={16}/></Button>
                                   </div>
                                 )}
                                 {label.color === '' && (
@@ -580,27 +602,48 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                                     <Button variant={colorHallazgo[key] === '#E40000' ? 'destructive' : 'outline'} size="sm" className="w-full justify-start gap-2" 
                                       onClick={() => {
                                         const newColor = '#E40000';
+                                        const newActiveFinding = Hallazgos[Number(key)];
                                         setColorHallazgo(prev => ({ ...prev, [key]: newColor }));
-                                        if(currentMode?.position === Number(key)) {
-                                          setCurrentMode(prev => ({ ...prev, color: newColor }));
-                                        }
+                                        setCurrentMode({
+                                          position: Number(key),
+                                          color: newColor,
+                                          detalle: (newActiveFinding.detalle && newActiveFinding.detalle.length > 0) ? 0 : -1,
+                                          direccion: newActiveFinding.tipo === 'GI' ? 'izquierda' : undefined,
+                                          cara: undefined,
+                                        });
                                       }}
                                     ><div className="w-3 h-3 rounded-full bg-red-500"/>Mal estado</Button>
                                     <Button variant={colorHallazgo[key] === '#0880D7' ? 'default' : 'outline'} size="sm" className="w-full justify-start gap-2" 
-                                    onClick={() => {
-                                      const newColor = '#0880D7';
-                                      setColorHallazgo(prev => ({ ...prev, [key]: newColor }));
-                                      if(currentMode?.position === Number(key)) {
-                                        setCurrentMode(prev => ({ ...prev, color: newColor }));
-                                      }
-                                    }}
+                                      onClick={() => {
+                                        const newColor = '#0880D7';
+                                        const newActiveFinding = Hallazgos[Number(key)];
+                                        setColorHallazgo(prev => ({ ...prev, [key]: newColor }));
+                                        setCurrentMode({
+                                          position: Number(key),
+                                          color: newColor,
+                                          detalle: (newActiveFinding.detalle && newActiveFinding.detalle.length > 0) ? 0 : -1,
+                                          direccion: newActiveFinding.tipo === 'GI' ? 'izquierda' : undefined,
+                                          cara: undefined,
+                                        });
+                                      }}
                                     ><div className="w-3 h-3 rounded-full bg-blue-500"/>Buen estado</Button>
                                   </div>
                                 )}
                                 {label.detalle && label.detalle.length > 0 && (
                                   <div className="flex flex-wrap gap-1">
                                     {label.detalle.map((item, idx) => (
-                                      <Button key={idx} variant={currentMode.detalle === idx ? 'secondary': 'outline'} size="sm" className="h-auto py-0.5 px-1.5" onClick={() => setCurrentMode(prev => ({ ...prev, detalle: idx }))}>
+                                      <Button key={idx} variant={currentMode?.position === Number(key) && currentMode.detalle === idx ? 'secondary': 'outline'} size="sm" className="h-auto py-0.5 px-1.5" 
+                                        onClick={() => {
+                                          const newActiveFinding = Hallazgos[Number(key)];
+                                          setCurrentMode({
+                                            position: Number(key),
+                                            color: newActiveFinding.color === '' ? colorHallazgo[key] || '#0880D7' : newActiveFinding.color,
+                                            detalle: idx,
+                                            direccion: newActiveFinding.tipo === 'GI' ? 'izquierda' : undefined,
+                                            cara: undefined,
+                                          });
+                                        }}
+                                      >
                                         {item.tipo}
                                       </Button>
                                     ))}
