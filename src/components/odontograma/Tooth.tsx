@@ -4,13 +4,14 @@
 import React, {useState} from 'react';
 import { Group as KonvaGroup, Rect, Line, Text, Circle, Arc, Ellipse } from 'react-konva';
 import { ToothAnnotations } from './ToothAnnotations';
-import type { HallazgosPorDiente } from './setting';
+import type { HallazgosPorDiente, ToothDisplays } from './setting';
 import {ShowFaceA, ShowFaceC, ShowFaceB,ShowFaceD, ShowFaceE} from './ToothFace';
 
 type ToothProps = {
   id: number;
   dientes: HallazgosPorDiente;
   onClick: (event: any) => void;
+  onDisplayClick: (findings: ToothDisplays[], event: any) => void;
   typeTeeth: number;
   rotated: boolean;
   reflected: boolean;
@@ -25,12 +26,13 @@ export function ToothA({
   id,
   dientes,
   onClick,
+  onDisplayClick,
   typeTeeth,
   rotated = false,
   reflected = false,
   numTooth,
-  scale = 0.28, // Matched scale from Teeth.tsx
-  separation = 55, // Matched separation from Teeth.tsx
+  scale = 0.28,
+  separation = 55,
   rangoSelect,
   display
 }: ToothProps) {
@@ -42,6 +44,9 @@ export function ToothA({
   const strokeWidth = 4;
 
   const [isHovered, setIsHovered] = useState(false);
+  const findings = display[numTooth] || [];
+  const firstFinding = findings.length > 0 ? findings[0] : null;
+  const otherFindingsCount = findings.length > 1 ? findings.length - 1 : 0;
 
   return (
     <KonvaGroup
@@ -58,6 +63,16 @@ export function ToothA({
       <KonvaGroup
         scaleX={reflected ? -1 : 1}
         offsetX={reflected ? 200 : 0}
+        onClick={(e) => onDisplayClick(findings, e)}
+        onTap={(e) => onDisplayClick(findings, e)}
+        onMouseEnter={e => {
+            const container = e.target.getStage()?.container();
+            if (container && findings.length > 0) container.style.cursor = 'pointer';
+        }}
+        onMouseLeave={e => {
+            const container = e.target.getStage()?.container();
+            if (container) container.style.cursor = 'default';
+        }}
         >
           <Rect
             x={0}
@@ -66,20 +81,35 @@ export function ToothA({
             height={150}
             fill="#E5E7EB"
           />
-          <Text
-            x={80}
-            y={-380}
-            text={display[numTooth]?.at(-1)?.abreviatura}
-            fontSize={70}
-            fontFamily="Calibri"
-            fill={display[numTooth]?.at(-1)?.color}
-            offsetX={20}
-            offsetY={30}
-            scaleY={rotated ? -1 : 1}
-          />
+          {firstFinding && (
+             <Text
+                x={80}
+                y={-380}
+                text={firstFinding.abreviatura}
+                fontSize={70}
+                fontFamily="Calibri"
+                fill={firstFinding.color}
+                offsetX={20}
+                offsetY={30}
+                scaleY={rotated ? -1 : 1}
+              />
+          )}
+          {otherFindingsCount > 0 && (
+             <Text
+                x={130}
+                y={-380}
+                text={`+${otherFindingsCount}`}
+                fontSize={50}
+                fontFamily="Calibri"
+                fill="hsl(var(--primary))"
+                offsetX={20}
+                offsetY={30}
+                scaleY={rotated ? -1 : 1}
+              />
+          )}
       </KonvaGroup>
       {/* Tooth Shapes */}
-      <KonvaGroup key={`clickable-tooth-shape-${numTooth}`} >
+      <KonvaGroup key={`clickable-tooth-shape-${numTooth}`} onClick={onClick} onTap={onClick} >
         {typeTeeth === 1 && (
           <>
             <ShowFaceA hallazgo={hallazgosParaEsteDiente} strokeWidth={strokeWidth} rotated={rotated} reflected={reflected} />
@@ -165,6 +195,7 @@ export function ToothA({
           fill="rgb(59 130 246 / .5)"
           opacity={0.5}
           onClick={onClick}
+          onTap={onClick}
         />
       )}
     </KonvaGroup>
@@ -174,12 +205,13 @@ export function ToothB({
   id,
   dientes,
   onClick,
+  onDisplayClick,
   typeTeeth,
   rotated = false,
   reflected = false,
   numTooth,
-  scale = 0.28, // Matched scale from Teeth.tsx
-  separation = 55, // Matched separation from Teeth.tsx
+  scale = 0.28,
+  separation = 55,
   rangoSelect,
   display
   }: ToothProps) {
@@ -190,23 +222,34 @@ export function ToothB({
   const strokeWidth = 4;
 
   const [isHovered, setIsHovered] = useState(false);
+  const findings = display[numTooth] || [];
+  const firstFinding = findings.length > 0 ? findings[0] : null;
+  const otherFindingsCount = findings.length > 1 ? findings.length - 1 : 0;
 
   return (
     <KonvaGroup 
       key={id} x={xPos+30} y={120}
-      scaleX={(reflected ? -1 : 1) * scale} // escala y reflexión combinadas
-      scaleY={(rotated ? -1 : 1) * scale}   // escala y rotación combinadas  
+      scaleX={(reflected ? -1 : 1) * scale}
+      scaleY={(rotated ? -1 : 1) * scale}
       offsetX={200 / 2}
       offsetY={350 / 2}
-      onTap={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <KonvaGroup>
-        <KonvaGroup
+      <KonvaGroup
         scaleX={reflected ? -1 : 1}
         offsetX={reflected ? 200 : 0}
-        >
+        onClick={(e) => onDisplayClick(findings, e)}
+        onTap={(e) => onDisplayClick(findings, e)}
+        onMouseEnter={e => {
+            const container = e.target.getStage()?.container();
+            if (container && findings.length > 0) container.style.cursor = 'pointer';
+        }}
+        onMouseLeave={e => {
+            const container = e.target.getStage()?.container();
+            if (container) container.style.cursor = 'default';
+        }}
+      >
           <Rect
             x={0}
             y={-450}
@@ -214,23 +257,37 @@ export function ToothB({
             height={150}
             fill="#E5E7EB"
           />
-          <Text
-            x={80}
-            y={-380}
-            text={display[numTooth]?.at(-1)?.abreviatura}
-            fontSize={70}
-            fontFamily="Calibri"
-            fill={display[numTooth]?.at(-1)?.color}
-            offsetX={20}
-            offsetY={30}
-            scaleY={rotated ? -1 : 1}
-          />
-        </KonvaGroup>
+          {firstFinding && (
+             <Text
+                x={80}
+                y={-380}
+                text={firstFinding.abreviatura}
+                fontSize={70}
+                fontFamily="Calibri"
+                fill={firstFinding.color}
+                offsetX={20}
+                offsetY={30}
+                scaleY={rotated ? -1 : 1}
+              />
+          )}
+          {otherFindingsCount > 0 && (
+             <Text
+                x={130}
+                y={-380}
+                text={`+${otherFindingsCount}`}
+                fontSize={50}
+                fontFamily="Calibri"
+                fill="hsl(var(--primary))"
+                offsetX={20}
+                offsetY={30}
+                scaleY={rotated ? -1 : 1}
+              />
+          )}
+      </KonvaGroup>
+      <KonvaGroup onClick={onClick} onTap={onClick}>
         {typeTeeth==1 && (
           <>
             <ShowFaceA hallazgo={hallazgosParaEsteDiente} strokeWidth={strokeWidth} rotated={rotated} reflected={reflected} />
-
-            {/* Triángulos */}
             <KonvaGroup x={0} y={19}>
               {(() => {
                 const base = [58.5,140,100,-30,144.5,140];
@@ -245,10 +302,7 @@ export function ToothB({
         )}
         {typeTeeth==2 && (
           <>
-            {/* Diente */}
             <ShowFaceB hallazgo={hallazgosParaEsteDiente} strokeWidth={strokeWidth} rotated={rotated} reflected={reflected} />
-
-            {/* Triángulos */}
             <KonvaGroup x={0} y={19}>
               {(() => {
                 const base = [58.5,140,100,-30,144.5,140];
@@ -261,10 +315,7 @@ export function ToothB({
         )}
         {typeTeeth==3 && (
           <>
-            {/* Diente */}
             <ShowFaceB hallazgo={hallazgosParaEsteDiente} strokeWidth={strokeWidth} rotated={rotated} reflected={reflected} />
-
-            {/* Triángulos */}
             <KonvaGroup x={0} y={19}>
               {(() => {
                 const base = [58.5,140,100,-30,144.5,140];
@@ -279,8 +330,6 @@ export function ToothB({
         {typeTeeth==4 && (
           <>
             <ShowFaceC hallazgo={hallazgosParaEsteDiente} strokeWidth={strokeWidth} rotated={rotated} reflected={reflected} />
-
-            {/* Triángulos */}
             <KonvaGroup x={0} y={19}>
               {(() => {
                 const base = [10,140,100,-30,190,140];
@@ -293,10 +342,7 @@ export function ToothB({
         )}
         {typeTeeth==5 && (
           <>
-            {/* Diente */}
             <ShowFaceA hallazgo={hallazgosParaEsteDiente} strokeWidth={strokeWidth} rotated={rotated} reflected={reflected} />
-
-            {/* Triángulos */}
             <KonvaGroup x={2} y={19}>
               {(() => {
                 const base = [77,140,120,-30,166,140];
@@ -311,8 +357,6 @@ export function ToothB({
         {typeTeeth==6 && (
           <>
             <ShowFaceD hallazgo={hallazgosParaEsteDiente} strokeWidth={strokeWidth} rotated={rotated} reflected={reflected} />
-
-            {/* Triángulos */}
             <KonvaGroup x={0} y={19}>
               {(() => {
                 const base = [58.5,140,100,-30,144.5,140];
@@ -327,10 +371,7 @@ export function ToothB({
         )}
         {typeTeeth==7 && (
           <>
-            {/* Diente */}
             <ShowFaceE hallazgo={hallazgosParaEsteDiente} strokeWidth={strokeWidth} rotated={rotated} reflected={reflected} />
-
-            {/* Triángulos */}
             <KonvaGroup x={2} y={19}>
               {(() => {
                 const base = [77,140,120,-30,166,140];
@@ -343,8 +384,6 @@ export function ToothB({
           </>  
         )}
       </KonvaGroup>
-
-      {/* Anotaciones */}
       <ToothAnnotations hallazgos={hallazgosParaEsteDiente} rotated={rotated} reflected={reflected} numTooth={numTooth}  baseStrokeWidth={8}/>
 
       {isSelectedInRange && (
@@ -359,6 +398,7 @@ export function ToothB({
           fill="rgb(59 130 246 / .5)"
           opacity={0.5}
           onClick={onClick}
+          onTap={onClick}
         />
       )}
 </KonvaGroup>

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Stage, Layer, Group as KonvaGroup } from 'react-konva';
 import { ChevronDown, ChevronUp, ArrowLeft, ArrowRight, Trash2, X } from "lucide-react";
 import {ToothA, ToothB} from './Tooth';
@@ -35,6 +35,12 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
 
   const [dientes, setDientes] = useState<DientesMap>(initialDientesMap);
   const [toothDisplays, setToothDisplays] = useState<Record<number, ToothDisplays[]>>({});
+
+  const [popoverState, setPopoverState] = useState<{
+    findings: ToothDisplays[];
+    position: { top: number; left: number };
+  } | null>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   const [currentMode, setCurrentMode] = useState<CurrentMode>({
     position: -1,
@@ -92,6 +98,30 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
     }
     setToothDisplays(newDisplays);
   }, [dientes, onChangeDientes]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+        if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+            setPopoverState(null);
+        }
+    };
+    if (popoverState) {
+        document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [popoverState]);
+
+  const handleDisplayClick = useCallback((findings: ToothDisplays[], event: any) => {
+    event.evt.preventDefault();
+    if (findings.length > 0) {
+        setPopoverState({
+            findings: findings,
+            position: { top: event.evt.clientY, left: event.evt.clientX }
+        });
+    }
+  }, []);
 
   const toggleDetails = useCallback((key: string) => {
     setOpenDetails((prev) => ({
@@ -378,7 +408,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
   }, [toModal, currentMode]);
 
   return (
-    <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 p-2 md:p-4">
+    <div className="relative flex flex-col md:flex-row items-start gap-4 md:gap-6 p-2 md:p-4">
       {typeTooth === 'Permanent' ? (
         <div className="flex-grow order-2 md:order-1">
         <Stage width={scalaTeeth.x} height={scalaTeeth.y}>
@@ -390,6 +420,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                   id={idx}
                   dientes={dientes[setting.number] || {}}
                   onClick={() => handleToothClick(setting.number, idx, 'superior')}
+                  onDisplayClick={handleDisplayClick}
                   typeTeeth={setting.typeTooth}
                   rotated={Boolean(setting.rotated)}
                   reflected={Boolean(setting.reflected)}
@@ -408,6 +439,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                   id={idx}
                   dientes={dientes[setting.number] || {}}
                   onClick={() => handleToothClick(setting.number, idx, 'inferior')}
+                  onDisplayClick={handleDisplayClick}
                   typeTeeth={setting.typeTooth}
                   rotated={Boolean(setting.rotated)}
                   reflected={Boolean(setting.reflected)}
@@ -433,6 +465,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                     id={idx}
                     dientes={dientes[setting.number] || {}}
                     onClick={() => handleToothClick(setting.number, idx, 'superior')}
+                    onDisplayClick={handleDisplayClick}
                     typeTeeth={setting.typeTooth}
                     rotated={Boolean(setting.rotated)}
                     reflected={Boolean(setting.reflected)}
@@ -451,6 +484,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                     id={idx}
                     dientes={dientes[setting.number] || {}}
                     onClick={() => handleToothClick(setting.number, idx, 'inferior')}
+                    onDisplayClick={handleDisplayClick}
                     typeTeeth={setting.typeTooth}
                     rotated={Boolean(setting.rotated)}
                     reflected={Boolean(setting.reflected)}
@@ -536,27 +570,26 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                             variant="ghost"
                             className={`w-full justify-between h-auto py-2 px-3 text-left ${currentMode?.position === Number(key) ? 'bg-accent text-accent-foreground' : ''}`}
                             onClick={() => {
-                              if (label.tipo === 'GI'){
-                                setCurrentMode({
-                                  position: Number(key),
-                                  color: label.color === '' ? colorHallazgo[key]?colorHallazgo[key]:'#0880D7' : label.color,
-                                  detalle: (label.detalle && label.detalle.length > 0) ? 0 : -1,
-                                  direccion: 'izquierda',
-                                  cara: undefined,
-                                })
-                              }else{
-                                setCurrentMode({
-                                  position: Number(key),
-                                  color: label.color === '' ? colorHallazgo[key]?colorHallazgo[key]:'#0880D7' : label.color,
-                                  detalle: (label.detalle && label.detalle.length > 0) ? 0 : -1,
-                                  direccion: undefined,
-                                  cara: undefined,
-                                })
-                              }
-                              if(!colorHallazgo[key])  setColorHallazgo(prev => ({ ...prev, [key]: label.color === '' ? currentMode.color : label.color }));
-                              
                               if (label.color === '' || (label.detalle && label.detalle.length > 0) || label.tipo === 'GI') {
+                                if (currentMode.position !== Number(key)) {
+                                    setCurrentMode(prev => ({
+                                        ...prev,
+                                        position: Number(key),
+                                        color: label.color === '' ? colorHallazgo[key] || '#0880D7' : label.color,
+                                        detalle: (label.detalle && label.detalle.length > 0) ? 0 : -1,
+                                        direccion: label.tipo === 'GI' ? 'izquierda' : undefined,
+                                        cara: undefined,
+                                    }));
+                                }
                                 toggleDetails(key);
+                              } else {
+                                setCurrentMode({
+                                    position: Number(key),
+                                    color: label.color,
+                                    detalle: -1,
+                                    direccion: undefined,
+                                    cara: undefined,
+                                });
                               }
                             }}
                           >
@@ -599,7 +632,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                                 )}
                                 {label.color === '' && (
                                   <div className="space-y-1">
-                                    <Button variant={colorHallazgo[key] === '#E40000' ? 'destructive' : 'outline'} size="sm" className="w-full justify-start gap-2" 
+                                    <Button variant={currentMode.color === '#E40000' && currentMode.position === Number(key) ? 'destructive' : 'outline'} size="sm" className="w-full justify-start gap-2" 
                                       onClick={() => {
                                         const newColor = '#E40000';
                                         const newActiveFinding = Hallazgos[Number(key)];
@@ -613,7 +646,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                                         });
                                       }}
                                     ><div className="w-3 h-3 rounded-full bg-red-500"/>Mal estado</Button>
-                                    <Button variant={colorHallazgo[key] === '#0880D7' ? 'default' : 'outline'} size="sm" className="w-full justify-start gap-2" 
+                                    <Button variant={currentMode.color === '#0880D7' && currentMode.position === Number(key) ? 'default' : 'outline'} size="sm" className="w-full justify-start gap-2" 
                                       onClick={() => {
                                         const newColor = '#0880D7';
                                         const newActiveFinding = Hallazgos[Number(key)];
@@ -734,6 +767,31 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
           </div>
         )}
       </div>
+
+      {popoverState && (
+        <div
+            ref={popoverRef}
+            style={{
+                position: 'fixed',
+                top: `${popoverState.position.top}px`,
+                left: `${popoverState.position.left}px`,
+                transform: 'translateY(-100%) translateX(10px)',
+                zIndex: 50,
+            }}
+        >
+            <div className="bg-popover text-popover-foreground rounded-md border p-3 shadow-lg w-max min-w-[150px]">
+                 <h4 className="text-sm font-semibold mb-2 border-b pb-1">Hallazgos</h4>
+                 <ul className="space-y-1.5">
+                    {popoverState.findings.map((finding, index) => (
+                        <li key={index} className="flex items-center gap-2 text-xs">
+                            <div style={{width: '10px', height: '10px', backgroundColor: finding.color, borderRadius: '50%', border: '1px solid #ccc'}} />
+                            <span>{finding.abreviatura}</span>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </div>
+      )}
 
       {toModal.to === 'toConfirmDelGroup' && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
