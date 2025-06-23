@@ -1,4 +1,6 @@
 
+import type { Procedimiento } from '@/types';
+
 export type Hallazgo = {
   tipo: any ; 
   abreviatura: any;
@@ -8,6 +10,7 @@ export type Hallazgo = {
   detalle?: DetalleHallazgo[];
   grupo?: number[];
   direccion?: any;
+  servicios?: Procedimiento[];
 };
 
 

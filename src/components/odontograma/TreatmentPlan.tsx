@@ -10,21 +10,23 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
 import { Link2, PlusCircle, XIcon } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from "@/hooks/use-toast";
 
 interface Props {
   dientesMap: DientesMap;
   odontogramType: 'Permanent' | 'Primary';
+  onDientesChange: (newDientesMap: DientesMap) => void;
 }
 
 type PlanTratamientoItem = {
   id: string;
   diente: number | number[];
-  hallazgo: Omit<Hallazgo, 'grupo'>;
+  hallazgo: Omit<Hallazgo, 'grupo' | 'servicios'>;
   nota: string;
   servicios: Procedimiento[];
 };
 
-const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => {
+const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType, onDientesChange }) => {
   const [planTratamiento, setPlanTratamiento] = useState<PlanTratamientoItem[]>([]);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [inputNota, setInputNota] = useState<string>('');
@@ -35,7 +37,8 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
   
   const botonRefs = useRef<{ [id: string]: HTMLButtonElement | null }>({});
   const modalRef = useRef<HTMLDivElement | null>(null);
-  const modalServicioRef = useRef<HTMLDivElement | null>(null);
+  
+  const { toast } = useToast();
 
   const procedimientoOptions: ComboboxOption[] = mockProcedimientos.map(p => ({
     value: p.id,
@@ -49,8 +52,8 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
     return diente.toString();
   };
 
-  const procesarDatos = (): Array<{ id: string; diente: number | number[]; hallazgo: Omit<Hallazgo, 'grupo'> }> => {
-    const resultados: Array<{ id: string; diente: number | number[]; hallazgo: Omit<Hallazgo, 'grupo'> }> = [];
+  const procesarDatos = (): PlanTratamientoItem[] => {
+    const resultados: PlanTratamientoItem[] = [];
     const idsAgregados = new Set<string>();
 
     const permanentToothRanges = [[11, 18], [21, 28], [31, 38], [41, 48]];
@@ -79,7 +82,9 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
           resultados.push({
             id,
             diente: esGrupo ? hallazgo.grupo! : numeroDiente,
-            hallazgo: hallazgoSinGrupo
+            hallazgo: hallazgoSinGrupo,
+            nota: '', // Nota is local state
+            servicios: hallazgo.servicios || []
           });
           idsAgregados.add(id);
         }
@@ -94,17 +99,13 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
   };
 
   useEffect(() => {
-    const inicial = procesarDatos();
-    setPlanTratamiento((prev) => {
-      const mapPrev = new Map(prev.map((item) => [item.id, item]));
-      return inicial.map((item) => {
-        const existente = mapPrev.get(item.id);
-        return {
-          ...item,
-          nota: existente?.nota || '',
-          servicios: existente?.servicios || [],
-        };
-      });
+    const nuevosDatos = procesarDatos();
+    setPlanTratamiento((prevPlan) => {
+        const mapaNotas = new Map(prevPlan.map(item => [item.id, item.nota]));
+        return nuevosDatos.map(item => ({
+            ...item,
+            nota: mapaNotas.get(item.id) || '',
+        }));
     });
   }, [dientesMap, odontogramType]);
 
@@ -139,15 +140,31 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
   
   const guardarServicios = () => {
       if (!modalServicio) return;
-      setPlanTratamiento(prev =>
-          prev.map(item =>
-              item.id === modalServicio.key
-                  ? { ...item, servicios: serviciosEnModal }
-                  : item
-          )
-      );
+  
+      const { key } = modalServicio;
+      const lastHyphenIndex = key.lastIndexOf('-');
+      const dientesIdsStr = key.substring(0, lastHyphenIndex);
+      const hallazgoTipo = key.substring(lastHyphenIndex + 1);
+  
+      const dienteIds = dientesIdsStr.split('-').map(Number);
+      
+      const newDientesMap = JSON.parse(JSON.stringify(dientesMap));
+      
+      dienteIds.forEach(dienteId => {
+          if (newDientesMap[dienteId] && newDientesMap[dienteId][hallazgoTipo]) {
+              newDientesMap[dienteId][hallazgoTipo].servicios = serviciosEnModal;
+          }
+      });
+      
+      onDientesChange(newDientesMap);
+  
       setModalServicio(null);
       setServiciosEnModal([]);
+
+      toast({
+          title: "Servicios Vinculados",
+          description: "Los servicios se han vinculado correctamente.",
+      });
   };
 
   const handleAddServicio = (procedimientoId: string) => {
@@ -174,7 +191,7 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
     M: 'Mesial', D: 'Distal', O: 'Oclusal/Incisal', C: 'Cervical', V: 'Vestibular/Lingual'
   };
 
-  const getAbreviaturas = (hallazgo: Omit<Hallazgo, 'grupo'>): { abreviatura: string, color: string }[] => {
+  const getAbreviaturas = (hallazgo: Omit<Hallazgo, 'grupo' | 'servicios'>): { abreviatura: string, color: string }[] => {
     const fromDetails = hallazgo.detalle?.map(d => ({ abreviatura: d.abreviatura, color: hallazgo.color })) || [];
     const fromCaras = hallazgo.cara 
         ? Object.values(hallazgo.cara)
@@ -235,12 +252,12 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
                         <div className="flex items-center gap-1 flex-wrap">
                           {item.servicios.map(s => <Badge key={s.id} variant="secondary" className="font-normal">{s.denominacion}</Badge>)}
                         </div>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => abrirModalServicios(item)}>
-                            <PlusCircle className="h-4 w-4 text-primary" />
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-primary hover:bg-primary hover:text-primary-foreground" onClick={() => abrirModalServicios(item)}>
+                            <PlusCircle className="h-4 w-4" />
                         </Button>
                       </div>
                     ) : (
-                      <Button variant="ghost" className="text-muted-foreground hover:text-primary px-2" onClick={() => abrirModalServicios(item)}>
+                      <Button variant="ghost" className="text-muted-foreground hover:bg-primary hover:text-primary-foreground px-2" onClick={() => abrirModalServicios(item)}>
                           <Link2 className="mr-2 h-4 w-4" />
                           Vincular
                       </Button>

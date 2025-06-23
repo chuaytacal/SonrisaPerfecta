@@ -48,7 +48,11 @@ export function Odontogram({ dientesData, onDientesChange, odontogramType }: Odo
       </div>
       <div className="mt-6 border-t pt-4">
         <h3 className="text-lg font-semibold text-foreground mb-4 px-1">Plan de Tratamiento</h3>
-        <TreatmentPlanTable dientesMap={dientesData} odontogramType={odontogramType} />
+        <TreatmentPlanTable
+          dientesMap={dientesData}
+          odontogramType={odontogramType}
+          onDientesChange={onDientesChange}
+        />
       </div>
     </div>
   );
