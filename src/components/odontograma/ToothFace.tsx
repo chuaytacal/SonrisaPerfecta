@@ -3,7 +3,7 @@
 
 import React, { useState }  from 'react';
 import { Group, Rect, Line } from 'react-konva';
-import type { Hallazgo as HallazgoType  } from './setting';
+import type { Hallazgo as HallazgoType, HallazgoCaraCurrent  } from './setting';
 
 
 
@@ -164,89 +164,45 @@ export function ShowFaceE({ hallazgo, strokeWidth = 3, rotated = false, reflecte
 
 
 type InteractiveFaceProps = {
-    onSelectCara: (hallazgo: HallazgoType) => void;
+    onToggleCara: (faceKey: string) => void;
     color: any;
+    selectedCaras: Record<string, HallazgoCaraCurrent>;
 };
 
-export function InteractiveFace({ onSelectCara,color }: InteractiveFaceProps) {
-    const [filled, setFilled] = useState<Record<string, boolean>>({
-      M: false, D: false, O: false, C: false, V: false,
-    });
-    const [locked, setLocked] = useState(false);
-
-    const caraLabels: Record<string, string> = {
-      M: 'Mesial', D: 'Distal', O: 'Oclusal/Incisal', C: 'Cervical', V: 'Vestibular/Lingual',
-    };
-
-    const handleClick = (key: string) => {
-      if (locked) return;
-
-      setFilled((prev) => ({ ...prev, [key]: true }));
-      setLocked(true);
-
-      const hallazgo: HallazgoType = {
-        tipo: key,
-        abreviatura: key,
-        color: color,
-        nombre: caraLabels[key],
-      };
-      onSelectCara(hallazgo);
+export function InteractiveFace({ onToggleCara, color, selectedCaras }: InteractiveFaceProps) {
+    const faceParts = {
+        M: { points: [10, 10, 70, 70, 70, 130, 10, 190] },
+        D: { points: [190, 10, 130, 70, 130, 130, 190, 190] },
+        O: { points: [10, 10, 190, 10, 130, 70, 70, 70] },
+        C: { points: [10, 190, 190, 190, 130, 130, 70, 130] },
     };
 
     return (
       <Group x={0} y={0}>
-        <Line
-          key="interactive-M"
-          points={[10, 10, 70, 70, 70, 130, 10, 190]}
-          fill={filled.M ? color : 'white'}
-          stroke="black"
-          strokeWidth={3}
-          closed
-          onClick={() => handleClick('M')}
-          onTap={() => handleClick('M')}
-        />
-        <Line
-          key="interactive-D"
-          points={[190, 10, 130, 70, 130, 130, 190, 190]}
-          fill={filled.D ? color : 'white'}
-          stroke="black"
-          strokeWidth={3}
-          closed
-          onClick={() => handleClick('D')}
-          onTap={() => handleClick('D')}
-        />
-        <Line
-          key="interactive-O"
-          points={[10, 10, 190, 10, 130, 70, 70, 70]}
-          fill={filled.O ? color : 'white'}
-          stroke="black"
-          strokeWidth={3}
-          closed
-          onClick={() => handleClick('O')}
-          onTap={() => handleClick('O')}
-        />
-        <Line
-          key="interactive-C"
-          points={[10, 190, 190, 190, 130, 130, 70, 130]}
-          fill={filled.C ? color : 'white'}
-          stroke="black"
-          strokeWidth={3}
-          closed
-          onClick={() => handleClick('C')}
-          onTap={() => handleClick('C')}
-        />
+        {Object.entries(faceParts).map(([key, { points }]) => (
+            <Line
+                key={`interactive-${key}`}
+                points={points}
+                fill={selectedCaras[key] ? color : 'white'}
+                stroke="black"
+                strokeWidth={3}
+                closed
+                onClick={() => onToggleCara(key)}
+                onTap={() => onToggleCara(key)}
+            />
+        ))}
         <Rect
-          key="interactive-V"
-          x={70}
-          y={70}
-          width={60}
-          height={60}
-          stroke="black"
-          strokeWidth={3}
-          fill={filled.V ? color : 'white'}
-          onClick={() => handleClick('V')}
-          onTap={() => handleClick('V')}
+            key="interactive-V"
+            x={70}
+            y={70}
+            width={60}
+            height={60}
+            stroke="black"
+            strokeWidth={3}
+            fill={selectedCaras['V'] ? color : 'white'}
+            onClick={() => onToggleCara('V')}
+            onTap={() => onToggleCara('V')}
         />
       </Group>
     );
-  }
+}

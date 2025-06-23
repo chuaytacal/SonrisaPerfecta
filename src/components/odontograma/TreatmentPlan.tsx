@@ -58,32 +58,16 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
 
       for (const hallazgo of Object.values(hallazgos)) {
         const esGrupo = hallazgo.grupo?.length > 1;
-        const esMultiCara = typeof hallazgo.cara === 'object' && !Array.isArray(hallazgo.cara) && hallazgo.cara !== null;
-
-        if (esMultiCara) {
-          for (const [claveCara, dataCara] of Object.entries(hallazgo.cara)) {
-            const id = `${numeroDiente}-${hallazgo.tipo}-cara-${claveCara}`;
-            if (!idsAgregados.has(id)) {
-              const { grupo, ...hallazgoSinGrupo } = hallazgo;
-              resultados.push({
-                id,
-                diente: numeroDiente,
-                hallazgo: { ...hallazgoSinGrupo, cara: dataCara }
-              });
-              idsAgregados.add(id);
-            }
-          }
-        } else {
-          const id = esGrupo ? `${hallazgo.grupo!.join('-')}-${hallazgo.tipo}` : `${numeroDiente}-${hallazgo.tipo}`;
-          if (!idsAgregados.has(id)) {
-            const { grupo, ...hallazgoSinGrupo } = hallazgo;
-            resultados.push({
-              id,
-              diente: esGrupo ? hallazgo.grupo! : numeroDiente,
-              hallazgo: hallazgoSinGrupo
-            });
-            idsAgregados.add(id);
-          }
+        
+        const id = esGrupo ? `${hallazgo.grupo!.join('-')}-${hallazgo.tipo}` : `${numeroDiente}-${hallazgo.tipo}`;
+        if (!idsAgregados.has(id)) {
+          const { grupo, ...hallazgoSinGrupo } = hallazgo;
+          resultados.push({
+            id,
+            diente: esGrupo ? hallazgo.grupo! : numeroDiente,
+            hallazgo: hallazgoSinGrupo
+          });
+          idsAgregados.add(id);
         }
       }
     }
@@ -159,6 +143,14 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
     console.log(planTratamiento);
   }, [planTratamiento]);
 
+  const caraNombres: Record<string, string> = {
+    M: 'Mesial',
+    D: 'Distal',
+    O: 'Oclusal/Incisal',
+    C: 'Cervical',
+    V: 'Vestibular/Lingual'
+  };
+
   return (
     <div className="relative overflow-x-auto shadow-md rounded-lg">
       <table className="min-w-full divide-y divide-gray-200">
@@ -181,15 +173,16 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
                   <div className="flex items-center">
                     <div
                       className="h-3 w-3 rounded-full mr-2"
-                      style={{ backgroundColor: item.hallazgo.cara?.color || item.hallazgo.color }}
+                      style={{ backgroundColor: item.hallazgo.color }}
                     />
                     <div>
                       <div className="text-sm font-medium text-gray-900">{item.hallazgo.nombre}</div>
-                      {item.hallazgo.abreviatura && (
-                        <div className="text-xs text-gray-500">{item.hallazgo.abreviatura}</div>
-                      )}
-                      {item.hallazgo.cara && (
-                        <div className="text-xs text-gray-500">{item.hallazgo.cara.nombre}</div>
+                      {item.hallazgo.cara && Object.keys(item.hallazgo.cara).length > 0 && (
+                        <div className="text-xs text-gray-500">
+                          {Object.entries(item.hallazgo.cara)
+                            .map(([key, cara]) => `${caraNombres[key] || key} (${cara.detalle?.abreviatura || ''})`)
+                            .join(', ')}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -207,7 +200,7 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap relative">
                   <div className="flex flex-wrap items-center gap-1">
-                    {(item.hallazgo.detalle || item.hallazgo.cara?.detalle)?.map((detalle, index) => (
+                    {(item.hallazgo.detalle || (item.hallazgo.cara ? Object.values(item.hallazgo.cara).map(c => c.detalle) : [])).flat().filter(Boolean).map((detalle, index) => (
                       <span
                         key={index}
                         className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
@@ -278,7 +271,7 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
             {(() => {
               const item = planTratamiento.find(p => p.id === modalServicio.key);
               if (!item) return null;
-              const color = item.hallazgo.cara?.color || item.hallazgo.color;
+              const color = item.hallazgo.color;
               return (
                 <div className="w-full max-w-[640px] mx-auto mb-6 px-6 py-4 rounded-xl">
                   <div className="text-center mb-4">
@@ -293,11 +286,11 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
                       />
                     </div>
 
-                    {item.hallazgo.cara?.nombre && (
-                      <p className="text-base italic text-gray-600 mt-1">
-                        Cara: {item.hallazgo.cara.nombre}
-                      </p>
-                    )}
+                    {item.hallazgo.cara && Object.keys(item.hallazgo.cara).length > 0 && (
+                        <p className="text-base italic text-gray-600 mt-1">
+                          Caras: {Object.values(item.hallazgo.cara).map(c => c.nombre).join(', ')}
+                        </p>
+                      )}
                   </div>
 
                   {item.hallazgo.abreviatura && (

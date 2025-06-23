@@ -4,7 +4,7 @@ export type Hallazgo = {
   abreviatura: any;
   color: string;
   nombre: string; 
-  cara?: Hallazgo[];
+  cara?: Record<string, HallazgoCaraCurrent>; // Changed to Record
   detalle?: DetalleHallazgo[];
   grupo?: number[];
   direccion?: any;
@@ -36,7 +36,8 @@ export type CurrentMode = {
   color: string;
   detalle: number;
   direccion?: any;
-  cara?: HallazgoCaraCurrent;
+  caras: Record<string, HallazgoCaraCurrent>; // Changed from 'cara'
+  activeDetail: DetalleHallazgo | null; // Added for brush functionality
 };
 
 export type ToothDisplays = {
