@@ -72,10 +72,6 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
     }
     return { supperJawSettings: SettingSupperJaw, lowerJawSettings: SettingsLowerJaw };
   }, [typeTooth]);
-
-  useEffect(() => {
-    setDientes(initialDientesMap);
-  }, [initialDientesMap]);
   
   useEffect(() => {
     onChangeDientes(dientes);
@@ -259,8 +255,10 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
     const requiresPincel = hallazgoConfig && hallazgoConfig.detalle && hallazgoConfig.detalle.length > 0;
     
     if (requiresPincel && !currentMode.activeDetail) {
-        console.warn("Please select a finding type (pincel) before selecting a face.");
-        return;
+        if(code !== 'RT'){
+          console.warn("Please select a finding type (pincel) before selecting a face.");
+          return;
+        }
     }
 
     setCurrentMode(prev => {
@@ -268,7 +266,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
         // For RT, since it has no details, we create a placeholder detail object to store color info.
         const detailToApply = prev.activeDetail || (code === 'RT' ? { abreviatura: 'RT', nombre: 'Restauración Temporal'} : null);
         
-        if (!detailToApply && code !== 'RT') return prev; 
+        if (!detailToApply) return prev; 
 
         if (newCaras[faceKey]) {
             delete newCaras[faceKey];
@@ -582,9 +580,17 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                     <div className="mb-3 flex flex-wrap gap-2">
                       {tiposEspeciales.map(([key, label]) => {
                         let colorClass = "";
-                        if (label.tipo === 'LCD') colorClass = "border-red-500 text-red-600 hover:bg-red-50 hover:text-red-600";
-                        else if (label.tipo === 'RD') colorClass = "border-blue-500 text-blue-600 hover:bg-blue-50 hover:text-blue-600";
-                        else if (label.tipo === 'RT') colorClass = "border-red-500 text-red-600 hover:bg-red-50 hover:text-red-600";
+                        let hoverBgClass = "";
+                        if (label.tipo === 'LCD') {
+                          colorClass = "border-red-500 text-red-600";
+                          hoverBgClass = "hover:bg-red-50";
+                        } else if (label.tipo === 'RD') {
+                          colorClass = "border-blue-500 text-blue-600";
+                           hoverBgClass = "hover:bg-blue-50";
+                        } else if (label.tipo === 'RT') {
+                           colorClass = "border-red-500 text-red-600";
+                           hoverBgClass = "hover:bg-red-50";
+                        }
                         
                         return (
                           <Button
@@ -599,7 +605,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                               caras: {},
                               activeDetail: null,
                             })}
-                            className={`h-auto py-1 px-2 ${colorClass} ${currentMode?.position === Number(key) ? (label.tipo === 'LCD' || label.tipo === 'RT' ? 'bg-red-50' : 'bg-blue-50') : ''}`}
+                            className={`h-auto py-1 px-2 ${colorClass} ${hoverBgClass} ${currentMode?.position === Number(key) ? (label.tipo === 'LCD' || label.tipo === 'RT' ? 'bg-red-50' : 'bg-blue-50') : ''}`}
                           >
                             {label.nombre}
                           </Button>
@@ -693,7 +699,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                                   </div>
                                 )}
                                 {label.detalle && label.detalle.length > 0 && 
-                                    (label.tipo !== 'C' || (currentMode.position === Number(key) && currentMode.color === '#E40000')) &&
+                                    (label.tipo === 'DDE' || (label.tipo === 'C' && currentMode.position === Number(key) && currentMode.color === '#E40000')) &&
                                 (
                                   <div className="flex flex-wrap gap-1">
                                     {label.detalle.map((item, idx) => (
