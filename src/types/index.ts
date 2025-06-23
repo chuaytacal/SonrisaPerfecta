@@ -18,16 +18,7 @@ export interface Persona {
   email: string;
 }
 
-export type EtiquetaPaciente =
-  | "Alergia a Penicilina"
-  | "Diabético"
-  | "Menor de Edad"
-  | "Fumador"
-  | "Hipertenso"
-  | "Covid+"
-  | "Postquirúrgico"
-  | "Anciano"
-  | "Nuevo Tag Ejemplo"; // Added for testing tag functionality
+export type EtiquetaPaciente = string;
 
 export interface AntecedentesMedicosData {
   q1_hospitalizado?: "Sí" | "No" | string;

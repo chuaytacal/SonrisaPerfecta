@@ -26,6 +26,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { mockEtiquetas } from '@/lib/data';
 
 interface EtiquetasNotasSaludProps {
   etiquetas: EtiquetaPaciente[];
@@ -36,10 +37,6 @@ interface EtiquetasNotasSaludProps {
   onAddTag: (newTag: EtiquetaPaciente) => boolean; // Returns true on success, false if duplicate
   patientId: string; // Keep for keying elements or specific logic if needed locally
 }
-
-const predefinedEtiquetas: EtiquetaPaciente[] = [
-    "Alergia a Penicilina", "Diabético", "Menor de Edad", "Fumador", "Hipertenso", "Covid+", "Postquirúrgico", "Anciano", "Nuevo Tag Ejemplo"
-  ];  
 
 export default function EtiquetasNotasSalud({
   etiquetas,
@@ -103,7 +100,7 @@ export default function EtiquetasNotasSalud({
                         <SelectContent>
                             <SelectGroup>
                                 <SelectLabel>Etiquetas Disponibles</SelectLabel>
-                                {predefinedEtiquetas.filter(tag => !(etiquetas || []).includes(tag)).map(tag => (
+                                {mockEtiquetas.filter(tag => !(etiquetas || []).includes(tag)).map(tag => (
                                     <SelectItem key={tag} value={tag}>{tag}</SelectItem>
                                 ))}
                             </SelectGroup>

@@ -45,7 +45,7 @@ import { CalendarIcon, Tag, UserSquare, User, ClipboardList } from "lucide-react
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { mockPacientesData, mockPersonasData } from "@/lib/data";
+import { mockPacientesData, mockPersonasData, mockEtiquetas } from "@/lib/data";
 
 
 const pacienteFormSchema = z.object({
@@ -137,10 +137,6 @@ interface AddPacienteFormProps {
   selectedPersonaToPreload?: Persona | null; 
   isCreatingNewPersonaFlow?: boolean; 
 }
-
-const predefinedEtiquetas: EtiquetaPaciente[] = [
-    "Alergia a Penicilina", "Diabético", "Menor de Edad", "Fumador", "Hipertenso", "Covid+", "Postquirúrgico", "Anciano", "Nuevo Tag Ejemplo"
-];
 
 export function AddPacienteForm({
     open,
@@ -535,7 +531,7 @@ export function AddPacienteForm({
                         </FormDescription>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
-                        {predefinedEtiquetas.map((item) => (
+                        {mockEtiquetas.map((item) => (
                           <FormField
                             key={item}
                             control={form.control}

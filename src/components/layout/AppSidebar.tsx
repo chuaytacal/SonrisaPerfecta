@@ -21,8 +21,7 @@ import {
   Briefcase,
   Archive,
   PlusSquare,
-  Settings,
-  UserCog,
+  BookMarked,
   History,
   CircleDollarSign,
   ClipboardType,
@@ -58,15 +57,6 @@ const sidebarNavItems = [
     ],
   },
   {
-    label: 'Administración',
-    icon: Settings,
-    basePathForActive: '/administracion',
-    subItems: [
-      { href: '/administracion/perfiles/gestion', label: 'Gestión de Perfiles', icon: UserCog },
-      { href: '/administracion/perfiles/lista', label: 'Lista de Perfiles', icon: List },
-    ],
-  },
-  {
     label: 'Historial de Pago',
     icon: History,
     basePathForActive: '/historial-pago',
@@ -84,6 +74,7 @@ const sidebarNavItems = [
       { href: '/recetas/etiquetas', label: 'Etiquetas', icon: Tag },
     ],
   },
+  { href: '/catalogo', label: 'Catálogo', icon: BookMarked },
   { href: '/reportes', label: 'Reportes', icon: BarChart3 },
 ];
 

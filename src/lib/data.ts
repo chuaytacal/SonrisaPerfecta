@@ -137,6 +137,10 @@ export const mockProcedimientos: Procedimiento[] = [
   { id: 'proc-9', denominacion: 'Ortodoncia cuota mensual', descripcion: 'Pago mensual para tratamiento de ortodoncia.', precioBase: 200 },
 ];
 
+export const mockEtiquetas: string[] = [
+    "Alergia a Penicilina", "Diabético", "Menor de Edad", "Fumador", "Hipertenso", "Covid+", "Postquirúrgico", "Anciano", "Nuevo Tag Ejemplo"
+];
+
 // Moved from `calendario/page.tsx`
 const generateInitialAppointments = (): Appointment[] => {
   const today = new Date();
