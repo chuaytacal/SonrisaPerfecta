@@ -13,11 +13,11 @@ import { Input } from '@/components/ui/input';
 import { cn } from "@/lib/utils";
 
 type Props = {
+  dientes: DientesMap;
+  onChangeDientes: (nuevo: DientesMap) => void;
   scalaTeeth: { x: number; y: number; moveTeethX: number; moveTeethY: number };
   scalaTooth: { scale: number; separation: number };
   typeTooth: 'Permanent' | 'Primary';
-  onChangeDientes: (nuevo: DientesMap) => void;
-  dientes: DientesMap;
 };
 
 type PopoverState = {
@@ -34,7 +34,8 @@ const faceNamesMap: Record<string, string> = {
 };
 
 
-export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, dientes }: Props) {
+export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, dientes: initialDientesMap }: Props) {
+  const [dientes, setDientes] = useState<DientesMap>(initialDientesMap);
   const [openDetails, setOpenDetails] = useState<Record<string, boolean>>({});
   const [activeView, setActiveView] = useState<'agregar' | 'eliminar'>('agregar');
   const [toModal, setToModal] = useState<OpenModeal>({
@@ -68,7 +69,18 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, dien
     }
     return { supperJawSettings: SettingSupperJaw, lowerJawSettings: SettingsLowerJaw };
   }, [typeTooth]);
-
+  
+  useEffect(() => {
+    // This effect ensures that if the parent's data changes (e.g. from the treatment plan),
+    // the internal state of this component is updated to reflect that change.
+    // This prevents the state from becoming stale.
+    // The comparison prevents an infinite loop where the child re-triggers the parent update.
+    if (JSON.stringify(dientes) !== JSON.stringify(initialDientesMap)) {
+      setDientes(initialDientesMap);
+    }
+  }, [initialDientesMap]);
+  
+  
   const toothDisplays = useMemo<Record<number, ToothDisplays[]>>(() => {
     const newDisplays: Record<number, ToothDisplays[]> = {};
     for (const toothNum in dientes) {
@@ -108,9 +120,15 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, dien
     
     const { clientX, clientY } = event.evt;
 
+    const popoverHeight = findings.length * 24 + 40; // Approximate height
+    let top = clientY - popoverHeight - 10;
+    if (top < 10) { // If it would go off-screen at the top
+        top = clientY + 20;
+    }
+
     setPopoverState({
         findings: findings,
-        position: { top: clientY, left: clientX + 15 } // Position it relative to the click
+        position: { top, left: clientX + 15 } // Position it relative to the click
     });
   }, []);
 
@@ -559,13 +577,13 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, dien
                         let colorClass = "";
                         let hoverBgClass = "";
                         if (label.tipo === 'LCD') {
-                          colorClass = "border-red-500 text-red-600";
+                          colorClass = "border-red-500 text-red-600 hover:text-red-600";
                           hoverBgClass = "hover:bg-red-50";
                         } else if (label.tipo === 'RD') {
-                          colorClass = "border-blue-500 text-blue-600";
+                          colorClass = "border-blue-500 text-blue-600 hover:text-blue-600";
                            hoverBgClass = "hover:bg-blue-50";
                         } else if (label.tipo === 'RT') {
-                           colorClass = "border-red-500 text-red-600";
+                           colorClass = "border-red-500 text-red-600 hover:text-red-600";
                            hoverBgClass = "hover:bg-red-50";
                         }
                         
@@ -582,7 +600,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, dien
                               caras: {},
                               activeDetail: null,
                             })}
-                            className={`h-auto py-1 px-2 text-red-600 ${colorClass} ${hoverBgClass} ${currentMode?.position === Number(key) ? (label.tipo === 'LCD' || label.tipo === 'RT' ? 'bg-red-50' : 'bg-blue-50') : ''}`}
+                            className={`h-auto py-1 px-2 ${colorClass} ${hoverBgClass} ${currentMode?.position === Number(key) ? (label.tipo === 'LCD' || label.tipo === 'RT' ? 'bg-red-50' : 'bg-blue-50') : ''}`}
                           >
                             {label.nombre}
                           </Button>
@@ -677,8 +695,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, dien
                                 )}
                                 {label.detalle && label.detalle.length > 0 &&
                                   (
-                                    ['DDE', 'PDA', 'PAD', 'RD', 'TC'].includes(label.tipo) ||
-                                    (label.tipo === 'C' && currentMode.position === Number(key) && currentMode.color === '#E40000')
+                                    ['DDE', 'PDA', 'PAD', 'RD', 'TC', 'C'].includes(label.tipo) 
                                   ) &&
                                 (
                                   <div className="flex flex-wrap gap-1">
@@ -790,7 +807,6 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, dien
                 position: 'fixed',
                 top: `${popoverState.position.top}px`,
                 left: `${popoverState.position.left}px`,
-                transform: 'translateY(-100%)',
                 zIndex: 50,
             }}
         >
