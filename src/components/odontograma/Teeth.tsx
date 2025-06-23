@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { DientesMap, SettingSupperJaw, SettingsLowerJaw, SettingSupperJawPrimary, SettingsLowerJawPrimary, Hallazgos, CurrentMode, Hallazgo as HallazgoType, ToothDisplays, OpenModeal, DetalleHallazgo } from './setting';
 import { InteractiveFace } from './ToothFace';
 import { Button } from '@/components/ui/button';
+import { cn } from "@/lib/utils";
 
 type Props = {
   scalaTeeth: { x: number; y: number; moveTeethX: number; moveTeethY: number };
@@ -534,7 +535,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                           <Button
                             variant="ghost"
                             className={`w-full justify-between h-auto py-2 px-3 text-left ${currentMode?.position === Number(key) ? 'bg-accent text-accent-foreground' : ''}`}
-                            onClick={() =>{
+                            onClick={() => {
                               if (label.tipo === 'GI'){
                                 setCurrentMode({
                                   position: Number(key),
@@ -552,57 +553,61 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                                   cara: undefined,
                                 })
                               }
-                              if(!colorHallazgo[key])  setColorHallazgo(prev => ({ ...prev, [key]: label.color === '' ? currentMode.color : label.color }))
-                            }} 
+                              if(!colorHallazgo[key])  setColorHallazgo(prev => ({ ...prev, [key]: label.color === '' ? currentMode.color : label.color }));
+                              
+                              if (label.color === '' || (label.detalle && label.detalle.length > 0) || label.tipo === 'GI') {
+                                toggleDetails(key);
+                              }
+                            }}
                           >
                             <span>{label.denominacion}</span>
                             {(label.color === '' || (label.detalle && label.detalle.length > 0) || label.tipo === 'GI') && (
-                              <span onClick={(e) =>  { e.stopPropagation(); toggleDetails(key);}} className="text-muted-foreground hover:text-foreground">
+                              <span className="text-foreground transition-colors">
                                 {openDetails[key] ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                               </span>
                             )}
                           </Button>
-                          {openDetails[key] && (
-                            <div className="p-2 ml-3 mt-1 bg-muted/50 rounded space-y-2 text-xs">
-                              {label.tipo === 'GI' && (
-                                <div className="flex items-center justify-start gap-2">
-                                  <Button variant={currentMode?.direccion === 'izquierda' ? 'secondary' : 'outline'} size="icon" onClick={() => setCurrentMode(prev => ({ ...prev, direccion: 'izquierda' }))}><ArrowLeft size={16}/></Button>
-                                  <Button variant={currentMode?.direccion === 'derecha' ? 'secondary' : 'outline'} size="icon" onClick={() => setCurrentMode(prev => ({ ...prev, direccion: 'derecha' }))}><ArrowRight size={16}/></Button>
-                                </div>
-                              )}
-                              {label.color === '' && (
-                                <div className="space-y-1">
-                                  <Button variant={colorHallazgo[key] === '#E40000' ? 'destructive' : 'outline'} size="sm" className="w-full justify-start gap-2" 
+                          <div className={cn("overflow-hidden transition-all duration-300 ease-in-out", openDetails[key] ? "max-h-96" : "max-h-0")}>
+                              <div className="p-2 ml-3 mt-1 bg-muted/50 rounded space-y-2 text-xs">
+                                {label.tipo === 'GI' && (
+                                  <div className="flex items-center justify-start gap-2">
+                                    <Button variant={currentMode?.direccion === 'izquierda' ? 'secondary' : 'outline'} size="icon" onClick={() => setCurrentMode(prev => ({ ...prev, direccion: 'izquierda' }))}><ArrowLeft size={16}/></Button>
+                                    <Button variant={currentMode?.direccion === 'derecha' ? 'secondary' : 'outline'} size="icon" onClick={() => setCurrentMode(prev => ({ ...prev, direccion: 'derecha' }))}><ArrowRight size={16}/></Button>
+                                  </div>
+                                )}
+                                {label.color === '' && (
+                                  <div className="space-y-1">
+                                    <Button variant={colorHallazgo[key] === '#E40000' ? 'destructive' : 'outline'} size="sm" className="w-full justify-start gap-2" 
+                                      onClick={() => {
+                                        const newColor = '#E40000';
+                                        setColorHallazgo(prev => ({ ...prev, [key]: newColor }));
+                                        if(currentMode?.position === Number(key)) {
+                                          setCurrentMode(prev => ({ ...prev, color: newColor }));
+                                        }
+                                      }}
+                                    ><div className="w-3 h-3 rounded-full bg-red-500"/>Mal estado</Button>
+                                    <Button variant={colorHallazgo[key] === '#0880D7' ? 'default' : 'outline'} size="sm" className="w-full justify-start gap-2" 
                                     onClick={() => {
-                                      const newColor = '#E40000';
+                                      const newColor = '#0880D7';
                                       setColorHallazgo(prev => ({ ...prev, [key]: newColor }));
                                       if(currentMode?.position === Number(key)) {
                                         setCurrentMode(prev => ({ ...prev, color: newColor }));
                                       }
                                     }}
-                                  ><div className="w-3 h-3 rounded-full bg-red-500"/>Mal estado</Button>
-                                  <Button variant={colorHallazgo[key] === '#0880D7' ? 'default' : 'outline'} size="sm" className="w-full justify-start gap-2" 
-                                   onClick={() => {
-                                    const newColor = '#0880D7';
-                                    setColorHallazgo(prev => ({ ...prev, [key]: newColor }));
-                                    if(currentMode?.position === Number(key)) {
-                                      setCurrentMode(prev => ({ ...prev, color: newColor }));
-                                    }
-                                  }}
-                                  ><div className="w-3 h-3 rounded-full bg-blue-500"/>Buen estado</Button>
-                                </div>
-                              )}
-                              {label.detalle && label.detalle.length > 0 && (
-                                <div className="flex flex-wrap gap-1">
-                                  {label.detalle.map((item, idx) => (
-                                    <Button key={idx} variant={currentMode.detalle === idx ? 'secondary': 'outline'} size="sm" className="h-auto py-0.5 px-1.5" onClick={() => setCurrentMode(prev => ({ ...prev, detalle: idx }))}>
-                                      {item.tipo}
-                                    </Button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
+                                    ><div className="w-3 h-3 rounded-full bg-blue-500"/>Buen estado</Button>
+                                  </div>
+                                )}
+                                {label.detalle && label.detalle.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {label.detalle.map((item, idx) => (
+                                      <Button key={idx} variant={currentMode.detalle === idx ? 'secondary': 'outline'} size="sm" className="h-auto py-0.5 px-1.5" onClick={() => setCurrentMode(prev => ({ ...prev, detalle: idx }))}>
+                                        {item.tipo}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                          </div>
                         </div>
                       ))}
                     </>
@@ -824,5 +829,3 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
 }
 
 export default Teeth;
-
-    
