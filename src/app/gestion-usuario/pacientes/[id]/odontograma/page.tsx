@@ -77,11 +77,17 @@ export default function OdontogramaPage() {
 
   const handleOdontogramaChange = (newData: DientesMap) => {
     const oldData = activeTab === 'Permanente' ? permanenteData : primariaData;
+    
+    // This check is crucial to prevent infinite loops.
+    if (JSON.stringify(oldData) === JSON.stringify(newData)) {
+        return; // No actual change, so we do nothing.
+    }
+
     const oldCount = countTopLevelFindings(oldData);
     const newCount = countTopLevelFindings(newData);
     
     let actionOccurred = true;
-    let toastMessage = "Odontograma actualizado con éxito.";
+    let toastMessage = "Hallazgo modificado con éxito.";
 
     if (newCount > oldCount) {
         toastMessage = "Hallazgo agregado con éxito.";
@@ -89,8 +95,6 @@ export default function OdontogramaPage() {
         toastMessage = "Hallazgo eliminado con éxito.";
     } else if (oldCount === 0 && newCount === 0) {
         actionOccurred = false; // No action if both are empty
-    } else {
-        toastMessage = "Hallazgo modificado con éxito.";
     }
 
     // Update state first
