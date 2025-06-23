@@ -1,3 +1,6 @@
+
+import type { DientesMap } from "@/components/odontograma/setting";
+
 export type TipoDocumento = "DNI" | "EXTRANJERIA" | "PASAPORTE";
 export type Sexo = "M" | "F";
 
@@ -56,6 +59,8 @@ export interface Paciente {
   notas?: string;
   antecedentesMedicos?: AntecedentesMedicosData;
   idApoderado?: string;
+  odontogramaPermanente?: DientesMap;
+  odontogramaPrimaria?: DientesMap;
 }
 
 export interface Procedimiento {

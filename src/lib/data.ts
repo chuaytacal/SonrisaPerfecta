@@ -1,6 +1,8 @@
+
 import type { MotivoCita, Procedimiento, Persona, Paciente, Personal, AntecedentesMedicosData } from '@/types';
 import type { Appointment } from '@/types/calendar';
 import { addDays, setHours, setMinutes } from 'date-fns';
+import type { DientesMap } from '@/components/odontograma/setting';
 
 // Mock data for Personas (can be shared or fetched)
 export const mockPersonasData: Persona[] = [ 
@@ -60,6 +62,18 @@ export const initialAntecedentesExample: AntecedentesMedicosData = {
   q10_ultimaConsultaDental: "Hace 6 meses",
 };
 
+const sampleOdontogramaPermanente: DientesMap = {
+  18: {
+    'FD': { tipo: 'FD', nombre: 'Fractura Dental', color: '#E40000', abreviatura: '' }
+  },
+  16: {
+    'C': { tipo: 'C', nombre: 'Corona', color: '#0880D7', abreviatura: '', detalle: [{ abreviatura: 'CM', nombre: 'Corona Metálica' }] }
+  },
+  26: {
+    'PDA': { tipo: 'PDA', nombre: 'Pieza Dentaria Ausente', color: '#0880D7', abreviatura: '' }
+  }
+};
+
 export const mockPacientesData: Paciente[] = [ 
   {
     id: "paciente-1",
@@ -70,6 +84,8 @@ export const mockPacientesData: Paciente[] = [
     etiquetas: ["Diabético", "Hipertenso"],
     notas: "Paciente refiere sensibilidad dental al frío. Programar revisión.",
     antecedentesMedicos: initialAntecedentesExample,
+    odontogramaPermanente: sampleOdontogramaPermanente,
+    odontogramaPrimaria: {},
   },
   {
     id: "paciente-2",
@@ -81,6 +97,8 @@ export const mockPacientesData: Paciente[] = [
     notas: "Acompañado por su madre. Buena higiene bucal.",
     antecedentesMedicos: { ...initialAntecedentesExample, q3_alergico: "No", q3_cuales: "", q5_enfermedades: [] },
     idApoderado: "persona-g1",
+    odontogramaPermanente: {},
+    odontogramaPrimaria: {},
   },
   {
     id: "paciente-3",
@@ -91,6 +109,8 @@ export const mockPacientesData: Paciente[] = [
     etiquetas: ["Fumador", "Postquirúrgico"],
     notas: "Control post-extracción molar. Cita de seguimiento pendiente.",
     antecedentesMedicos: { ...initialAntecedentesExample, q8_embarazada: "Sí", q8_semanas: "12" },
+    odontogramaPermanente: {},
+    odontogramaPrimaria: {},
   }
 ];
 

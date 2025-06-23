@@ -2,15 +2,18 @@
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 import { mockPacientesData } from '@/lib/data';
 import type { Paciente as PacienteType, Persona, EtiquetaPaciente } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { DientesMap } from '@/components/odontograma/setting';
+import { useToast } from '@/hooks/use-toast';
 
 // Define ToothIconCustomSvg locally for error display or import from a shared location if available
 const ToothIconCustomSvg = (props: React.SVGProps<SVGSVGElement>) => (
@@ -36,26 +39,67 @@ const OdontogramComponent = dynamic(() => import('@/components/odontograma/Odont
   loading: () => <p className="text-center py-10">Cargando Odontograma...</p>
 });
 
+type OdontogramType = 'Permanente' | 'Primaria';
+
 export default function OdontogramaPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const patientId = params.id as string;
 
   const [paciente, setPaciente] = useState<PacienteType | null>(null);
   const [persona, setPersona] = useState<Persona | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [permanenteData, setPermanenteData] = useState<DientesMap>({});
+  const [primariaData, setPrimariaData] = useState<DientesMap>({});
+  const [activeTab, setActiveTab] = useState<OdontogramType>('Permanente');
+
   useEffect(() => {
     const foundPaciente = mockPacientesData.find(p => p.id === patientId);
     if (foundPaciente) {
       setPaciente(foundPaciente);
       setPersona(foundPaciente.persona);
+      setPermanenteData(foundPaciente.odontogramaPermanente || {});
+      setPrimariaData(foundPaciente.odontogramaPrimaria || {});
     } else {
       setPaciente(null);
       setPersona(null);
     }
     setLoading(false);
   }, [patientId]);
+  
+  const handleOdontogramaChange = (newData: DientesMap) => {
+    if (activeTab === 'Permanente') {
+      setPermanenteData(newData);
+    } else {
+      setPrimariaData(newData);
+    }
+  };
+
+  const handleSaveChanges = () => {
+    // Simulate saving the data back to our mock database
+    const patientIndex = mockPacientesData.findIndex(p => p.id === patientId);
+    if (patientIndex > -1) {
+      mockPacientesData[patientIndex].odontogramaPermanente = permanenteData;
+      mockPacientesData[patientIndex].odontogramaPrimaria = primariaData;
+      
+      // Update the local paciente state as well to be consistent
+      setPaciente(prev => prev ? ({...prev, odontogramaPermanente: permanenteData, odontogramaPrimaria: primariaData}) : null);
+
+      toast({
+        title: "Odontograma Guardado",
+        description: "Los cambios en el odontograma han sido guardados.",
+      });
+    } else {
+       toast({
+        title: "Error al Guardar",
+        description: "No se pudo encontrar al paciente para guardar los cambios.",
+        variant: "destructive"
+      });
+    }
+  };
+
 
   // Dummy callbacks for EtiquetasNotasSalud
   const handleDummySaveNotes = (notes: string) => { console.log("Save notes (dummy):", notes); };
@@ -90,11 +134,37 @@ export default function OdontogramaPage() {
           patientId={patientId}
         />
         <Card>
-          <CardHeader>
-            <CardTitle>Odontograma</CardTitle>
+          <CardHeader className="flex flex-row justify-between items-start">
+            <div>
+              <CardTitle>Odontograma</CardTitle>
+              <CardDescription>Registre los hallazgos dentales del paciente.</CardDescription>
+            </div>
+            <Button onClick={handleSaveChanges} size="sm">
+              <Save className="mr-2 h-4 w-4"/>
+              Guardar Cambios
+            </Button>
           </CardHeader>
           <CardContent>
-            <OdontogramComponent />
+             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as OdontogramType)} className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="Permanente">Permanente</TabsTrigger>
+                <TabsTrigger value="Primaria">Primaria (Decidua)</TabsTrigger>
+              </TabsList>
+              <TabsContent value="Permanente">
+                 <OdontogramComponent 
+                    dientesData={permanenteData} 
+                    onDientesChange={handleOdontogramaChange} 
+                    odontogramType="Permanent"
+                 />
+              </TabsContent>
+              <TabsContent value="Primaria">
+                 <OdontogramComponent 
+                    dientesData={primariaData} 
+                    onDientesChange={handleOdontogramaChange} 
+                    odontogramType="Primary"
+                 />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
