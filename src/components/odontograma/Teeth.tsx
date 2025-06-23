@@ -75,7 +75,11 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
 
   // Sync internal state with prop changes from parent (e.g., from TreatmentPlanTable)
   useEffect(() => {
-    setDientes(initialDientesMap);
+    // Only update if the incoming prop is actually different from the internal state
+    // This prevents an infinite loop where the child re-triggers the parent update.
+    if (JSON.stringify(dientes) !== JSON.stringify(initialDientesMap)) {
+      setDientes(initialDientesMap);
+    }
   }, [initialDientesMap]);
   
   useEffect(() => {
@@ -585,13 +589,13 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                         let hoverBgClass = "";
                         if (label.tipo === 'LCD') {
                           colorClass = "border-red-500 text-red-600";
-                          hoverBgClass = "hover:bg-red-50 hover:text-red-600";
+                          hoverBgClass = "hover:bg-red-50";
                         } else if (label.tipo === 'RD') {
                           colorClass = "border-blue-500 text-blue-600";
-                           hoverBgClass = "hover:bg-blue-50 hover:text-blue-600";
+                           hoverBgClass = "hover:bg-blue-50";
                         } else if (label.tipo === 'RT') {
                            colorClass = "border-red-500 text-red-600";
-                           hoverBgClass = "hover:bg-red-50 hover:text-red-600";
+                           hoverBgClass = "hover:bg-red-50";
                         }
                         
                         return (
@@ -607,7 +611,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                               caras: {},
                               activeDetail: null,
                             })}
-                            className={`h-auto py-1 px-2 ${colorClass} ${hoverBgClass} ${currentMode?.position === Number(key) ? (label.tipo === 'LCD' || label.tipo === 'RT' ? 'bg-red-50' : 'bg-blue-50') : ''}`}
+                            className={`h-auto py-1 px-2 text-red-600 ${colorClass} ${hoverBgClass} ${currentMode?.position === Number(key) ? (label.tipo === 'LCD' || label.tipo === 'RT' ? 'bg-red-50' : 'bg-blue-50') : ''}`}
                           >
                             {label.nombre}
                           </Button>
