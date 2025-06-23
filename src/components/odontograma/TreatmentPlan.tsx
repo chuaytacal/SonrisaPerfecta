@@ -5,6 +5,7 @@ import { DientesMap, Hallazgo } from './setting';
 
 interface Props {
   dientesMap: DientesMap;
+  odontogramType: 'Permanent' | 'Primary';
 }
 
 type PlanTratamientoItem = {
@@ -15,7 +16,7 @@ type PlanTratamientoItem = {
   servicio: string;
 };
 
-const TreatmentPlanTable: React.FC<Props> = ({ dientesMap }) => {
+const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => {
   const [planTratamiento, setPlanTratamiento] = useState<PlanTratamientoItem[]>([]);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [inputNota, setInputNota] = useState<string>('');
@@ -38,8 +39,23 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap }) => {
     const resultados: Array<{ id: string; diente: number | number[]; hallazgo: Omit<Hallazgo, 'grupo'> }> = [];
     const idsAgregados = new Set<string>();
 
+    const permanentToothRanges = [[11, 18], [21, 28], [31, 38], [41, 48]];
+    const primaryToothRanges = [[51, 55], [61, 65], [71, 75], [81, 85]];
+    
+    const isPermanentTooth = (num: number) => permanentToothRanges.some(([start, end]) => num >= start && num <= end);
+    const isPrimaryTooth = (num: number) => primaryToothRanges.some(([start, end]) => num >= start && num <= end);
+
+
     for (const [dienteStr, hallazgos] of Object.entries(dientesMap)) {
       const numeroDiente = parseInt(dienteStr);
+
+      if (odontogramType === 'Permanent' && !isPermanentTooth(numeroDiente)) {
+        continue;
+      }
+      if (odontogramType === 'Primary' && !isPrimaryTooth(numeroDiente)) {
+        continue;
+      }
+
       for (const hallazgo of Object.values(hallazgos)) {
         const esGrupo = hallazgo.grupo?.length > 1;
         const esMultiCara = typeof hallazgo.cara === 'object' && !Array.isArray(hallazgo.cara) && hallazgo.cara !== null;
@@ -92,7 +108,7 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap }) => {
         };
       });
     });
-  }, [dientesMap]);
+  }, [dientesMap, odontogramType]);
 
   const abrirModal = (id: string) => {
     const ref = botonRefs.current[id];
