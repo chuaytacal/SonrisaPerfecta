@@ -118,7 +118,7 @@ export default function OdontogramaPage() {
         // });
       }
     }
-  }, [activeTab, patientId, permanenteData, primariaData, toast]);
+  }, [activeTab, permanenteData, primariaData, patientId]);
 
 
   // Dummy callbacks for EtiquetasNotasSalud
