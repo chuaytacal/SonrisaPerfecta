@@ -72,6 +72,11 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
     }
     return { supperJawSettings: SettingSupperJaw, lowerJawSettings: SettingsLowerJaw };
   }, [typeTooth]);
+
+  // Sync internal state with prop changes from parent (e.g., from TreatmentPlanTable)
+  useEffect(() => {
+    setDientes(initialDientesMap);
+  }, [initialDientesMap]);
   
   useEffect(() => {
     onChangeDientes(dientes);
@@ -93,7 +98,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
 
         if (hallazgo.cara) {
           Object.values(hallazgo.cara).forEach(caraConDetalle => {
-            if (caraConDetalle.detalle && caraConDetalle.detalle.abreviatura) {
+            if (caraConDetalle.detalle) {
               displaysForTooth.push({
                 abreviatura: caraConDetalle.detalle.abreviatura,
                 color: caraConDetalle.color || hallazgo.color,
@@ -116,7 +121,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
 
     setPopoverState({
         findings: findings,
-        position: { top: clientY - 10, left: clientX + 15 } // Adjust position slightly up
+        position: { top: clientY, left: clientX + 15 } // Position it relative to the click
     });
   }, []);
 
@@ -254,16 +259,13 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
     
     const requiresPincel = hallazgoConfig && hallazgoConfig.detalle && hallazgoConfig.detalle.length > 0;
     
-    if (requiresPincel && !currentMode.activeDetail) {
-        if(code !== 'RT'){
-          console.warn("Please select a finding type (pincel) before selecting a face.");
-          return;
-        }
+    if (requiresPincel && !currentMode.activeDetail && code !== 'RT') {
+        console.warn("Please select a finding type (pincel) before selecting a face.");
+        return;
     }
 
     setCurrentMode(prev => {
         const newCaras = { ...prev.caras };
-        // For RT, since it has no details, we create a placeholder detail object to store color info.
         const detailToApply = prev.activeDetail || (code === 'RT' ? { abreviatura: 'RT', nombre: 'Restauración Temporal'} : null);
         
         if (!detailToApply) return prev; 
@@ -276,7 +278,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                 abreviatura: faceKey, 
                 nombre: faceNamesMap[faceKey] || faceKey,
                 color: prev.color,
-                detalle: detailToApply!
+                detalle: detailToApply
             };
         }
         return { ...prev, caras: newCaras };
@@ -583,13 +585,13 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                         let hoverBgClass = "";
                         if (label.tipo === 'LCD') {
                           colorClass = "border-red-500 text-red-600";
-                          hoverBgClass = "hover:bg-red-50";
+                          hoverBgClass = "hover:bg-red-50 hover:text-red-600";
                         } else if (label.tipo === 'RD') {
                           colorClass = "border-blue-500 text-blue-600";
-                           hoverBgClass = "hover:bg-blue-50";
+                           hoverBgClass = "hover:bg-blue-50 hover:text-blue-600";
                         } else if (label.tipo === 'RT') {
                            colorClass = "border-red-500 text-red-600";
-                           hoverBgClass = "hover:bg-red-50";
+                           hoverBgClass = "hover:bg-red-50 hover:text-red-600";
                         }
                         
                         return (
@@ -698,8 +700,11 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                                     ><div className="w-3 h-3 rounded-full bg-blue-500"/>Buen estado</Button>
                                   </div>
                                 )}
-                                {label.detalle && label.detalle.length > 0 && 
-                                    (label.tipo === 'DDE' || (label.tipo === 'C' && currentMode.position === Number(key) && currentMode.color === '#E40000')) &&
+                                {label.detalle && label.detalle.length > 0 &&
+                                  (
+                                    ['DDE', 'PDA', 'PAD', 'RD', 'TC'].includes(label.tipo) ||
+                                    (label.tipo === 'C' && currentMode.position === Number(key) && currentMode.color === '#E40000')
+                                  ) &&
                                 (
                                   <div className="flex flex-wrap gap-1">
                                     {label.detalle.map((item, idx) => (
@@ -881,7 +886,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                   </span>
                 </div>
                 
-                {toModal.detalle && toModal.detalle.length > 0 && (
+                {toModal.detalle && toModal.detalle.length > 0 && toModal.code !== 'RT' && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground mb-1 block">Tipo de hallazgo (Pincel):</label>
                     <div className="space-y-1">
