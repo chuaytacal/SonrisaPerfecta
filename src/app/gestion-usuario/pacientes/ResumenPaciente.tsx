@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import type { Paciente as PacienteType, Persona } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Mail, MessageSquare, Phone, ArrowLeft, Users, CalendarDays as CalendarIconLucide, ClipboardList, Smile } from 'lucide-react';
+import { Mail, MessageSquare, Phone, ArrowLeft, Users, CalendarDays as CalendarIconLucide, Smile, CircleDollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ResumenPacienteProps {
@@ -75,8 +75,8 @@ export default function ResumenPaciente({ paciente, persona, onBack }: ResumenPa
         { label: "Filiación", href: `/gestion-usuario/pacientes/${paciente.id}/filiacion`, icon: Users },
         { label: "Historia clínica", href: `/gestion-usuario/pacientes/${paciente.id}/historia-clinica`, icon: CalendarIconLucide },
         { label: "Odontograma", href: `/gestion-usuario/pacientes/${paciente.id}/odontograma`, icon: ToothIconCustom },
-        { label: "Periodontograma", href: `/gestion-usuario/pacientes/${paciente.id}/periodontograma`, icon: ClipboardList },
         { label: "Ortodoncia", href: `/gestion-usuario/pacientes/${paciente.id}/ortodoncia`, icon: Smile },
+        { label: "Estado de cuenta", href: `/gestion-usuario/pacientes/${paciente.id}/estado-de-cuenta`, icon: CircleDollarSign },
     ];
     
   return (
@@ -121,4 +121,3 @@ export default function ResumenPaciente({ paciente, persona, onBack }: ResumenPa
       </Card>
   );
 }
-

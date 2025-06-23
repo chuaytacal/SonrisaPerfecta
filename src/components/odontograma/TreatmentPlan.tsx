@@ -10,6 +10,7 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
 import { Link2, PlusCircle, XIcon } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from "@/hooks/use-toast";
 
 interface Props {
   dientesMap: DientesMap;
@@ -36,6 +37,7 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType, onDie
   
   const botonRefs = useRef<{ [id: string]: HTMLButtonElement | null }>({});
   const modalRef = useRef<HTMLDivElement | null>(null);
+  const { toast } = useToast();
 
   const procedimientoOptions: ComboboxOption[] = mockProcedimientos.map(p => ({
     value: p.id,
@@ -155,6 +157,10 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType, onDie
       
       onDientesChange(newDientesMap);
   
+      toast({
+        title: "Servicios Vinculados",
+        description: "Los servicios han sido vinculados al hallazgo correctamente.",
+      });
       setModalServicio(null);
       setServiciosEnModal([]);
   };

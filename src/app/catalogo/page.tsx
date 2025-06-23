@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { mockProcedimientos, mockMotivosCita, mockEtiquetas } from '@/lib/data';
 import type { Procedimiento, MotivoCita } from '@/types';
@@ -26,7 +27,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 const procedimientoSchema = z.object({
   denominacion: z.string().min(3, "La denominación debe tener al menos 3 caracteres."),
   descripcion: z.string().min(3, "La descripción es requerida."),
-  precioBase: z.coerce.number().min(0, "El precio no puede ser negativo."),
+  precioBase: z.coerce.number().min(1, "El precio base debe ser de al menos S/ 1.00."),
 });
 const motivoCitaSchema = z.object({
   nombre: z.string().min(3, "El nombre debe tener al menos 3 caracteres."),
@@ -146,6 +147,7 @@ export default function CatalogoPage() {
     { accessorKey: "precioBase", header: "Precio Base", cell: ({ row }) => `S/ ${row.original.precioBase.toFixed(2)}` },
     {
       id: "actions",
+      header: "Acciones",
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
@@ -162,6 +164,7 @@ export default function CatalogoPage() {
     { accessorKey: "nombre", header: "Nombre" },
     {
       id: "actions",
+      header: "Acciones",
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
@@ -178,6 +181,7 @@ export default function CatalogoPage() {
     { accessorKey: "nombre", header: "Nombre" },
     {
       id: "actions",
+      header: "Acciones",
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
@@ -199,8 +203,31 @@ export default function CatalogoPage() {
           <form onSubmit={formProcedimiento.handleSubmit(onSubmit)} className="space-y-4">
             <FormField control={formProcedimiento.control} name="denominacion" render={({ field }) => ( <FormItem><FormLabel>Denominación</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
             <FormField control={formProcedimiento.control} name="descripcion" render={({ field }) => ( <FormItem><FormLabel>Descripción</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )}/>
-            <FormField control={formProcedimiento.control} name="precioBase" render={({ field }) => ( <FormItem><FormLabel>Precio Base (S/)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-            <DialogFooter>
+            <FormField
+              control={formProcedimiento.control}
+              name="precioBase"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Precio Base</FormLabel>
+                  <div className="flex items-center rounded-md border border-input focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                    <div className="flex h-10 items-center justify-center bg-muted px-3 border-r">
+                      <span className="text-sm text-muted-foreground">S/</span>
+                    </div>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        {...field}
+                        className="border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </FormControl>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter className="pt-4">
                 <Button type="button" variant="outline" onClick={handleCloseModal}>Cancelar</Button>
                 <Button type="submit">Guardar</Button>
             </DialogFooter>
@@ -214,7 +241,7 @@ export default function CatalogoPage() {
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField control={form.control} name="nombre" render={({ field }) => ( <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                <DialogFooter>
+                <DialogFooter className="pt-4">
                     <Button type="button" variant="outline" onClick={handleCloseModal}>Cancelar</Button>
                     <Button type="submit">Guardar</Button>
                 </DialogFooter>
@@ -280,11 +307,15 @@ export default function CatalogoPage() {
       </Tabs>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] sm:w-[90vw] max-w-lg p-6">
             <DialogHeader>
                 <DialogTitle>{getTitle()}</DialogTitle>
             </DialogHeader>
-            {renderForm()}
+            <ScrollArea className="max-h-[60vh] -mr-4 pr-5">
+              <div className="py-2">
+                {renderForm()}
+              </div>
+            </ScrollArea>
         </DialogContent>
       </Dialog>
       
