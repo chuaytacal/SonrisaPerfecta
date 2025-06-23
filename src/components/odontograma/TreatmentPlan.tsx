@@ -2,6 +2,14 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import { DientesMap, Hallazgo } from './setting';
+import type { Procedimiento } from '@/types';
+import { mockProcedimientos } from '@/lib/data';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { Badge } from '@/components/ui/badge';
+import { Link2, PlusCircle, XIcon } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Props {
   dientesMap: DientesMap;
@@ -13,7 +21,7 @@ type PlanTratamientoItem = {
   diente: number | number[];
   hallazgo: Omit<Hallazgo, 'grupo'>;
   nota: string;
-  servicio: string;
+  servicios: Procedimiento[];
 };
 
 const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => {
@@ -21,13 +29,19 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [inputNota, setInputNota] = useState<string>('');
   const [modalPos, setModalPos] = useState<{ top: number; left: number } | null>(null);
-  const [modalServicio, SetModalServicio] = useState<{ key: string; servicio: string } | null>(null);
+  
+  const [modalServicio, setModalServicio] = useState<{ key: string; hallazgo: Omit<Hallazgo, 'grupo'> } | null>(null);
+  const [serviciosEnModal, setServiciosEnModal] = useState<Procedimiento[]>([]);
+  
   const botonRefs = useRef<{ [id: string]: HTMLButtonElement | null }>({});
   const modalRef = useRef<HTMLDivElement | null>(null);
   const modalServicioRef = useRef<HTMLDivElement | null>(null);
 
-  const servicios = [{ definicion: 'Obturar caries' }, { definicion: 'Manejar fusión' }];
-
+  const procedimientoOptions: ComboboxOption[] = mockProcedimientos.map(p => ({
+    value: p.id,
+    label: `${p.denominacion} - S/ ${p.precioBase.toFixed(2)}`
+  }));
+  
   const formatGrupoDientes = (diente: number | number[]): string => {
     if (Array.isArray(diente)) {
       return diente.length > 1 ? `${diente[0]}-${diente[diente.length - 1]}` : diente[0].toString();
@@ -88,13 +102,13 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
         return {
           ...item,
           nota: existente?.nota || '',
-          servicio: existente?.servicio || '',
+          servicios: existente?.servicios || [],
         };
       });
     });
   }, [dientesMap, odontogramType]);
 
-  const abrirModal = (id: string) => {
+  const abrirModalNotas = (id: string) => {
     const ref = botonRefs.current[id];
     if (ref) {
       const rect = ref.getBoundingClientRect();
@@ -109,69 +123,73 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
     setPlanTratamiento((prev) =>
       prev.map((item) => (item.id === id ? { ...item, nota: inputNota } : item))
     );
-    cerrarModal();
+    cerrarModalNotas();
   };
 
-  const cerrarModal = () => {
+  const cerrarModalNotas = () => {
     setEditandoId(null);
     setInputNota('');
     setModalPos(null);
   };
+  
+  const abrirModalServicios = (item: PlanTratamientoItem) => {
+    setModalServicio({ key: item.id, hallazgo: item.hallazgo });
+    setServiciosEnModal(item.servicios);
+  };
+  
+  const guardarServicios = () => {
+      if (!modalServicio) return;
+      setPlanTratamiento(prev =>
+          prev.map(item =>
+              item.id === modalServicio.key
+                  ? { ...item, servicios: serviciosEnModal }
+                  : item
+          )
+      );
+      setModalServicio(null);
+      setServiciosEnModal([]);
+  };
+
+  const handleAddServicio = (procedimientoId: string) => {
+    const procedimientoToAdd = mockProcedimientos.find(p => p.id === procedimientoId);
+    if (procedimientoToAdd && !serviciosEnModal.some(p => p.id === procedimientoId)) {
+        setServiciosEnModal(prev => [...prev, procedimientoToAdd]);
+    }
+  };
+
+  const handleRemoveServicio = (procedimientoId: string) => {
+      setServiciosEnModal(prev => prev.filter(p => p.id !== procedimientoId));
+  };
+
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(e.target as Node)) cerrarModal();
+      if (modalRef.current && !modalRef.current.contains(e.target as Node)) cerrarModalNotas();
     };
     if (editandoId) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [editandoId]);
 
-  useEffect(() => {
-    const handleClickOutsideServicio = (e: MouseEvent) => {
-      if (modalServicioRef.current && !modalServicioRef.current.contains(e.target as Node)) {
-        SetModalServicio(null);
-      }
-    };
-    if (modalServicio) {
-      document.addEventListener('mousedown', handleClickOutsideServicio);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutsideServicio);
-    };
-  }, [modalServicio]);
-  useEffect(() => {
-    console.log(planTratamiento);
-  }, [planTratamiento]);
-
   const caraNombres: Record<string, string> = {
-    M: 'Mesial',
-    D: 'Distal',
-    O: 'Oclusal/Incisal',
-    C: 'Cervical',
-    V: 'Vestibular/Lingual'
+    M: 'Mesial', D: 'Distal', O: 'Oclusal/Incisal', C: 'Cervical', V: 'Vestibular/Lingual'
   };
 
   const getAbreviaturas = (hallazgo: Omit<Hallazgo, 'grupo'>): { abreviatura: string, color: string }[] => {
     const fromDetails = hallazgo.detalle?.map(d => ({ abreviatura: d.abreviatura, color: hallazgo.color })) || [];
-    
     const fromCaras = hallazgo.cara 
         ? Object.values(hallazgo.cara)
             .filter(c => c.detalle)
             .map(c => ({ abreviatura: c.detalle!.abreviatura, color: c.color || hallazgo.color })) 
         : [];
-    
     const allDetailAbrevs = [...fromDetails, ...fromCaras];
-
-    if (allDetailAbrevs.length > 0) {
-        return allDetailAbrevs;
-    }
-
-    if (hallazgo.abreviatura) {
-        return [{ abreviatura: hallazgo.abreviatura, color: hallazgo.color }];
-    }
-
+    if (allDetailAbrevs.length > 0) return allDetailAbrevs;
+    if (hallazgo.abreviatura) return [{ abreviatura: hallazgo.abreviatura, color: hallazgo.color }];
     return [];
   };
+
+  const filteredProcedimientoOptions = procedimientoOptions.filter(
+    opt => !serviciosEnModal.some(s => s.id === opt.value)
+  );
 
   return (
     <div className="relative overflow-x-auto shadow-md rounded-lg">
@@ -180,7 +198,7 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Diente</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hallazgo</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Servicio</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Servicios</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notas</th>
           </tr>
         </thead>
@@ -204,7 +222,7 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
                         {item.hallazgo.cara && Object.keys(item.hallazgo.cara).length > 0 && (
                           <div className="text-xs text-gray-500">
                             {Object.entries(item.hallazgo.cara)
-                              .map(([key, cara]) => `${caraNombres[key] || key} (${cara.detalle?.abreviatura || ''})`)
+                              .map(([key, cara]) => `${caraNombres[key] || key}${cara.detalle ? ` (${cara.detalle.abreviatura})` : ''}`)
                               .join(', ')}
                           </div>
                         )}
@@ -212,14 +230,20 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.servicio ? (
-                      <div onClick={() => SetModalServicio({ key: item.id, servicio: item.servicio })} className="cursor-pointer">
-                        {item.servicio}
+                    {item.servicios && item.servicios.length > 0 ? (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {item.servicios.map(s => <Badge key={s.id} variant="secondary" className="font-normal">{s.denominacion}</Badge>)}
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => abrirModalServicios(item)}>
+                            <PlusCircle className="h-4 w-4 text-primary" />
+                        </Button>
                       </div>
                     ) : (
-                      <div onClick={() => SetModalServicio({ key: item.id, servicio: '' })} className="cursor-pointer text-blue-500 underline">
-                        agregar un servicio
-                      </div>
+                      <Button variant="ghost" className="text-muted-foreground hover:text-primary px-2" onClick={() => abrirModalServicios(item)}>
+                          <Link2 className="mr-2 h-4 w-4" />
+                          Vincular
+                      </Button>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap relative">
@@ -227,7 +251,7 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
                       {abreviaturas.map((detalle, index) => (
                         <span
                           key={index}
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${detalle.color === '#E40000' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${detalle.color === '#E40000' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}
                         >
                           {detalle.abreviatura}
                         </span>
@@ -235,14 +259,14 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
                       {item.nota && (
                         <span
                           title={item.nota}
-                          className="inline-flex items-center max-w-[500px] truncate px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                          className="inline-flex items-center max-w-[200px] truncate px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
                         >
                           {item.nota}
                         </span>
                       )}
                       <button
                         ref={(el) => (botonRefs.current[item.id] = el)}
-                        onClick={() => abrirModal(item.id)}
+                        onClick={() => abrirModalNotas(item.id)}
                         className="inline-flex items-center px-2 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
                       >
                         + Agregar
@@ -284,80 +308,66 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
           </div>
         </div>
       )}
-
+      
       {modalServicio && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div
-            ref={modalServicioRef}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-lg shadow-lg w-[640px] max-h-[95vh] overflow-y-auto p-6"
-          >
-            <h2 className="text-lg font-semibold mb-2 text-gray-800">Seleccionar Servicio</h2>
-            {(() => {
-              const item = planTratamiento.find(p => p.id === modalServicio.key);
-              if (!item) return null;
-              const color = item.hallazgo.color;
-              return (
-                <div className="w-full max-w-[640px] mx-auto mb-6 px-6 py-4 rounded-xl">
-                  <div className="text-center mb-4">
-                    <div className="flex justify-center items-center gap-3">
-                      <h2 className="text-3xl font-bold text-gray-800 leading-tight tracking-wide">
-                        {item.hallazgo.nombre}
-                      </h2>
-                      <div
-                        className="w-6 h-6 rounded-full border border-gray-300 shadow-inner"
-                        style={{ backgroundColor: color }}
-                        title="Color del hallazgo"
-                      />
+        <Dialog open={!!modalServicio} onOpenChange={(open) => !open && setModalServicio(null)}>
+            <DialogContent className="w-[95vw] sm:w-[90vw] max-w-lg p-0">
+                 <DialogHeader className="p-6 pb-4 border-b">
+                    <DialogTitle>Vincular Servicio</DialogTitle>
+                     <DialogDescription>
+                        Vincula un hallazgo clínico con uno o más servicios.
+                    </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-[70vh]">
+                  <div className="px-6 py-4 space-y-4">
+                    <div className="w-full mx-auto mb-4 px-4 py-3 rounded-lg bg-muted/50 border">
+                        <div className="flex justify-center items-center gap-3">
+                          <h3 className="text-xl font-bold text-foreground leading-tight tracking-wide">
+                            {modalServicio.hallazgo.nombre}
+                          </h3>
+                          <div
+                            className="w-5 h-5 rounded-full border border-gray-300 shadow-inner shrink-0"
+                            style={{ backgroundColor: modalServicio.hallazgo.color }}
+                            title="Color del hallazgo"
+                          />
+                        </div>
                     </div>
-
-                    {item.hallazgo.cara && Object.keys(item.hallazgo.cara).length > 0 && (
-                        <p className="text-base italic text-gray-600 mt-1">
-                          Caras: {Object.values(item.hallazgo.cara).map(c => c.nombre).join(', ')}
-                        </p>
-                      )}
+                    
+                    <div className="space-y-2">
+                        <p className="text-sm font-medium text-foreground">¿Qué servicios propondrías ante este hallazgo clínico? Agrega al menos un servicio.</p>
+                        <Combobox 
+                            options={filteredProcedimientoOptions}
+                            onChange={handleAddServicio}
+                            placeholder="Buscar y agregar servicio..."
+                            searchPlaceholder='Buscar servicio...'
+                            emptyPlaceholder='No hay más servicios para agregar.'
+                        />
+                    </div>
+                    
+                    <div className="space-y-2 pt-2">
+                        <p className="text-xs text-muted-foreground">Servicios a vincular:</p>
+                        {serviciosEnModal.length > 0 ? (
+                            <div className="flex flex-wrap gap-2 border p-3 rounded-md min-h-[4rem]">
+                                {serviciosEnModal.map(proc => (
+                                    <Badge key={proc.id} variant="default" className="flex items-center gap-1 text-sm py-1">
+                                        {proc.denominacion}
+                                        <button onClick={() => handleRemoveServicio(proc.id)} className="rounded-full hover:bg-white/20 p-0.5">
+                                            <XIcon className="h-3 w-3" />
+                                            <span className="sr-only">Quitar {proc.denominacion}</span>
+                                        </button>
+                                    </Badge>
+                                ))}
+                            </div>
+                        ) : <div className="text-xs text-center text-muted-foreground italic border rounded-md p-3 min-h-[4rem] flex items-center justify-center">Ningún servicio seleccionado.</div>}
+                    </div>
                   </div>
-
-                  {item.hallazgo.abreviatura && (
-                    <div className="text-center">
-                      <p className="text-sm text-gray-600">
-                        <span className="font-semibold text-gray-700">Abreviatura:</span>{' '}
-                        {item.hallazgo.abreviatura}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-            <select
-              value={modalServicio.servicio}
-              onChange={(e) => SetModalServicio((prev) => prev ? { ...prev, servicio: e.target.value } : null)}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-            >
-              <option value="">Seleccionar</option>
-              {servicios.map((s, i) => (
-                <option key={i} value={s.definicion}>{s.definicion}</option>
-              ))}
-            </select>
-            <div className="flex justify-end mt-5">
-              <button
-                onClick={() => {
-                  if (modalServicio) {
-                    setPlanTratamiento((prev) =>
-                      prev.map((item) =>
-                        item.id === modalServicio.key ? { ...item, servicio: modalServicio.servicio } : item
-                      )
-                    );
-                    SetModalServicio(null);
-                  }
-                }}
-                className="px-6 py-3 font-semibold text-white rounded-lg shadow-md transition transform hover:translate-y-[-2px] bg-[#0880D7] hover:bg-[#066BB0]"
-              >
-                Guardar
-              </button>
-            </div>
-          </div>
-        </div>
+                </ScrollArea>
+                <DialogFooter className="p-6 pt-4 border-t">
+                    <Button variant="outline" onClick={() => setModalServicio(null)}>Cancelar</Button>
+                    <Button onClick={guardarServicios}>Guardar Vínculos</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
       )}
     </div>
   );
