@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Stage, Layer, Group as KonvaGroup } from 'react-konva';
 import { ChevronDown, ChevronUp, ArrowLeft, ArrowRight, Trash2, X } from "lucide-react";
 import {ToothA, ToothB} from './Tooth';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 type Props = {
   scalaTeeth: { x: number; y: number; moveTeethX: number; moveTeethY: number };
   scalaTooth: { scale: number; separation: number };
-  typeTooth: string;
+  typeTooth: 'Permanent' | 'Primary';
   onChangeDientes: (nuevo: DientesMap) => void;
   initialDientesMap: DientesMap;
 };
@@ -42,6 +42,13 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
     direccion: undefined,
     cara: undefined,
   });
+
+  const { supperJawSettings, lowerJawSettings } = useMemo(() => {
+    if (typeTooth === 'Primary') {
+        return { supperJawSettings: SettingSupperJawPrimary, lowerJawSettings: SettingsLowerJawPrimary };
+    }
+    return { supperJawSettings: SettingSupperJaw, lowerJawSettings: SettingsLowerJaw };
+  }, [typeTooth]);
 
   useEffect(() => {
     setDientes(initialDientesMap);
@@ -209,7 +216,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
           return prevRango.length === 0 ? [nuevoPunto] : [prevRango[0], nuevoPunto];
         });
       } else if (['D', 'F', 'PDS', 'TD'].includes(tipo)) {
-        const dentalArch = jaw === 'superior' ? SettingSupperJaw : SettingsLowerJaw;
+        const dentalArch = jaw === 'superior' ? supperJawSettings : lowerJawSettings;
         const nextId = dentalArch[id + 1] ? id + 1 : (id - 1 >=0 ? id -1 : -1) ;
         if (nextId !== -1) {
             const nextTooth = dentalArch[nextId]?.number;
@@ -261,13 +268,13 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
     } else if (activeView === 'eliminar') {
       setSelectedTooth(toothNum);
     }
-  }, [activeView, currentMode, Hallazgos, dientes]);
+  }, [activeView, currentMode, dientes, supperJawSettings, lowerJawSettings]);
 
   useEffect(() => {
     if (rangoSeleccion.length === 2) {
       const { tipo, denominacion, abreviatura, detalle: detalleDef, color: colorDef } = Hallazgos[currentMode.position];
       const colorFinal = colorDef === '' ? currentMode.color : colorDef;
-      const dentalArch = rangoSeleccion[0].jaw === 'superior' ? SettingSupperJaw : SettingsLowerJaw;
+      const dentalArch = rangoSeleccion[0].jaw === 'superior' ? supperJawSettings : lowerJawSettings;
       const inicioId = Math.min(rangoSeleccion[0].id, rangoSeleccion[1].id);
       const finId = Math.max(rangoSeleccion[0].id, rangoSeleccion[1].id);
       setDientes((prevDientes) => {
@@ -307,7 +314,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
       });
       setRangoSeleccion([]);
     }
-  }, [rangoSeleccion, currentMode, Hallazgos, SettingsLowerJaw, SettingSupperJaw]);
+  }, [rangoSeleccion, currentMode, supperJawSettings, lowerJawSettings]);
 
   const handleSaveFaceSelection = useCallback(() => {
     const id = toModal.selectedTooth;
@@ -367,7 +374,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
   
     setToModal({ selectedTooth: '', code: '', to: '' });
     setCurrentMode(prev => ({ ...prev, cara: undefined }));
-  }, [toModal, currentMode, Hallazgos]);
+  }, [toModal, currentMode]);
 
   return (
     <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 p-2 md:p-4">
@@ -817,3 +824,5 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
 }
 
 export default Teeth;
+
+    
