@@ -20,6 +20,12 @@ type Props = {
   initialDientesMap: DientesMap;
 };
 
+type PopoverState = {
+  findings: ToothDisplays[];
+  position: { top: number; left: number };
+} | null;
+
+
 export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, initialDientesMap }: Props) {
   const [openDetails, setOpenDetails] = useState<Record<string, boolean>>({});
   const [activeView, setActiveView] = useState<'agregar' | 'eliminar'>('agregar');
@@ -36,8 +42,8 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
 
   const [dientes, setDientes] = useState<DientesMap>(initialDientesMap);
   const [toothDisplays, setToothDisplays] = useState<Record<number, ToothDisplays[]>>({});
-
-  const popoverState = null; // Removed to fix build error
+  
+  const [popoverState, setPopoverState] = useState<PopoverState>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -82,17 +88,20 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
         }
 
         if (hallazgo.cara) {
-            Object.values(hallazgo.cara).forEach(c => {
-                if (c.detalle) {
-                    c.detalle.forEach(cd => {
-                        if(c.abreviatura) {
-                           displaysForTooth.push({ abreviatura: cd.abreviatura, color: c.color || hallazgo.color });
-                        }
-                    });
-                } else if(c.abreviatura) {
-                    displaysForTooth.push({ abreviatura: c.abreviatura, color: c.color || hallazgo.color });
-                }
-            });
+          Object.values(hallazgo.cara).forEach(caraConDetalle => {
+            if (caraConDetalle.detalle && caraConDetalle.detalle.abreviatura) {
+              displaysForTooth.push({
+                abreviatura: caraConDetalle.detalle.abreviatura,
+                color: caraConDetalle.color || hallazgo.color,
+              });
+            } else if (caraConDetalle.abreviatura) {
+              // Fallback for faces without details
+              displaysForTooth.push({
+                abreviatura: caraConDetalle.abreviatura,
+                color: caraConDetalle.color || hallazgo.color,
+              });
+            }
+          });
         }
       }
       if (displaysForTooth.length > 0) {
@@ -103,8 +112,35 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
   }, [dientes, onChangeDientes]);
 
   const handleDisplayClick = useCallback((findings: ToothDisplays[], event: any) => {
-    // Placeholder, functionality removed as per build error fix
+    if (findings.length === 0) return;
+
+    const target = event.target.getStage();
+    const pointerPosition = target.getPointerPosition();
+    
+    if (pointerPosition) {
+        setPopoverState({
+            findings: findings,
+            position: { top: pointerPosition.y, left: pointerPosition.x }
+        });
+    }
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setPopoverState(null);
+      }
+    };
+
+    if (popoverState) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [popoverState]);
+
 
   const toggleDetails = useCallback((key: string) => {
     setOpenDetails((prev) => ({
@@ -361,8 +397,11 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
       nuevos[idKey] = {
         ...nuevos[idKey],
         [code]: {
-          ...nuevoHallazgoBase,
-          cara: carasSeleccionadas,
+          ...(nuevos[idKey]?.[code] || nuevoHallazgoBase), // Keep existing details if any
+          cara: {
+            ...(nuevos[idKey]?.[code]?.cara || {}), // Merge with existing faces
+            ...carasSeleccionadas,
+          }
         },
       };
       return nuevos;
@@ -371,6 +410,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
     setToModal({ selectedTooth: '', code: '', to: '' });
     setCurrentMode(prev => ({ ...prev, caras: {}, activeDetail: null }));
   }, [toModal, currentMode]);
+  
   
   const handleToggleCara = useCallback((faceKey: string) => {
     if (!currentMode.activeDetail) {
@@ -387,10 +427,10 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
             // Cara doesn't exist, so select it with the active detail
             newCaras[faceKey] = {
                 tipo: faceKey,
-                abreviatura: faceKey, // Or derive a more descriptive one if needed
-                nombre: Hallazgos.find(h => h.tipo === prev.activeDetail?.tipo)?.denominacion || faceKey, // A bit complex, needs a map
+                abreviatura: faceKey,
+                nombre: Hallazgos.find(h => h.tipo === prev.activeDetail?.tipo)?.denominacion || faceKey,
                 color: prev.color,
-                detalle: prev.activeDetail
+                detalle: prev.activeDetail!
             };
         }
         return { ...prev, caras: newCaras };
@@ -535,9 +575,9 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                     <div className="mb-3 flex flex-wrap gap-2">
                       {tiposEspeciales.map(([key, label]) => {
                         let colorClass = "";
-                        if (label.tipo === 'LCD') colorClass = "border-red-500 text-red-600 hover:bg-red-50 hover:text-red-600";
-                        else if (label.tipo === 'RD') colorClass = "border-blue-500 text-blue-600 hover:bg-blue-50 hover:text-blue-600";
-                        else if (label.tipo === 'RT') colorClass = "border-red-500 text-red-600 hover:bg-red-50 hover:text-red-600";
+                        if (label.tipo === 'LCD') colorClass = "border-red-500 text-red-600 hover:text-red-600";
+                        else if (label.tipo === 'RD') colorClass = "border-blue-500 text-blue-600 hover:text-blue-600";
+                        else if (label.tipo === 'RT') colorClass = "border-red-500 text-red-600 hover:text-red-600";
                         
                         return (
                           <Button
@@ -828,7 +868,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                           key={idx}
                           variant={currentMode.activeDetail?.abreviatura === item.tipo ? 'default' : 'outline'}
                           size="sm"
-                          className="w-full justify-start whitespace-normal h-auto py-2"
+                          className="w-full justify-start text-left whitespace-normal h-auto py-2"
                           onClick={() => {
                             setCurrentMode(prev => ({
                               ...prev,
