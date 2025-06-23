@@ -53,121 +53,121 @@ export type OpenModeal = {
   to: 'toConfirmDelGroup'| 'toToothFace' | '';
 };
 export const Hallazgos = [
-  { tipo:'AOF', abreviatura: '', denominacion:'Aparato Ortodóntico Fijo',color:'', detalle:[] },
-  { tipo:'AOR', abreviatura: '', denominacion:'Aparato Ortodóntico Removible',color:'', detalle:[] },
+  { tipo:'AOF', abreviatura: '', nombre:'Aparato Ortodóntico Fijo',color:'', detalle:[] },
+  { tipo:'AOR', abreviatura: '', nombre:'Aparato Ortodóntico Removible',color:'', detalle:[] },
   { 
     tipo:'C', 
     abreviatura: '',
-    denominacion:'Corona', 
+    nombre:'Corona', 
     color:'',
     detalle:[
-      { tipo:'CM', denominacion:'Corona Metálica' },
-      { tipo:'CF', denominacion:'Corona Fenestrada' },
-      { tipo:'CMC', denominacion:'Corona Metal Cerámica' },
-      { tipo:'CV', denominacion:'Corona Veneer' },
-      { tipo:'CLM', denominacion:'Corona Line de Metal' }
+      { tipo:'CM', nombre:'Corona Metálica' },
+      { tipo:'CF', nombre:'Corona Fenestrada' },
+      { tipo:'CMC', nombre:'Corona Metal Cerámica' },
+      { tipo:'CV', nombre:'Corona Veneer' },
+      { tipo:'CLM', nombre:'Corona Line de Metal' }
     ] 
   },
-  { tipo:'CT',abreviatura: 'CT', denominacion:'Corona Temporal',color:'#E40000', detalle:[] },
+  { tipo:'CT',abreviatura: 'CT', nombre:'Corona Temporal',color:'#E40000', detalle:[] },
   { 
     tipo:'DDE', 
     abreviatura: 'DDE',
-    denominacion:'Defectos de Desarrollo del Esmalte', 
+    nombre:'Defectos de Desarrollo del Esmalte', 
     color:'#E40000',
     detalle:[
-      { tipo:'O', denominacion:'Opacidades del esmalte' },
-      { tipo:'PE', denominacion:'Pigmentacion del Esmalte' },
-      { tipo:'F', denominacion:'Fluorosis' }
+      { tipo:'O', nombre:'Opacidades del esmalte' },
+      { tipo:'PE', nombre:'Pigmentacion del Esmalte' },
+      { tipo:'F', nombre:'Fluorosis' }
     ] 
   },
-  { tipo:'D',abreviatura: '', denominacion:'Diastema',color:'#0880D7', detalle:[] },
-  { tipo:'ET',abreviatura: '', denominacion:'Edentulo Total',color:'#0880D7', detalle:[] },
-  { tipo:'M',abreviatura: '', denominacion:'Espigo/Muñon',color:'', detalle:[] },
-  { tipo:'FFP',abreviatura: 'FFP', denominacion:'Fosas y Fisuras Profundas',color:'#0880D7', detalle:[] },
-  { tipo:'FD',abreviatura: '', denominacion:'Fractura Dental',color:'#E40000', detalle:[] },
-  { tipo:'F',abreviatura: '', denominacion:'Fusion',color:'#0880D7', detalle:[] },
-  { tipo:'GE',abreviatura: '', denominacion:'Geminacion',color:'#0880D7', detalle:[] },
-  { tipo:'GI',abreviatura: '', denominacion:'Giroversion',color:'#0880D7', detalle:[] },
-  { tipo:'I',abreviatura: 'I', denominacion:'Impactacion',color:'#0880D7', detalle:[] },
-  { tipo:'ID',abreviatura: 'IMP', denominacion:'Implante Dental',color:'', detalle:[] },
+  { tipo:'D',abreviatura: '', nombre:'Diastema',color:'#0880D7', detalle:[] },
+  { tipo:'ET',abreviatura: '', nombre:'Edentulo Total',color:'#0880D7', detalle:[] },
+  { tipo:'M',abreviatura: '', nombre:'Espigo/Muñon',color:'', detalle:[] },
+  { tipo:'FFP',abreviatura: 'FFP', nombre:'Fosas y Fisuras Profundas',color:'#0880D7', detalle:[] },
+  { tipo:'FD',abreviatura: '', nombre:'Fractura Dental',color:'#E40000', detalle:[] },
+  { tipo:'F',abreviatura: '', nombre:'Fusion',color:'#0880D7', detalle:[] },
+  { tipo:'GE',abreviatura: '', nombre:'Geminacion',color:'#0880D7', detalle:[] },
+  { tipo:'GI',abreviatura: '', nombre:'Giroversion',color:'#0880D7', detalle:[] },
+  { tipo:'I',abreviatura: 'I', nombre:'Impactacion',color:'#0880D7', detalle:[] },
+  { tipo:'ID',abreviatura: 'IMP', nombre:'Implante Dental',color:'', detalle:[] },
   { 
     tipo:'LCD', 
     abreviatura: '',
-    denominacion:'Caries', 
+    nombre:'Caries', 
     color:'#E40000',
     detalle:[
-      { tipo:'MB', denominacion:'Mancha Blanca' },
-      { tipo:'CE', denominacion:'Lesion de Caries Dental a Nivel del Esmalte' },
-      { tipo:'CD', denominacion:'Lesion de Caries Dental a Nivel del Dentina' },
-      { tipo:'CDP', denominacion:'Lesion de Caries Dental a Nivel del Dentina/compromiso de la pulpa' }
+      { tipo:'MB', nombre:'Mancha Blanca' },
+      { tipo:'CE', nombre:'Lesion de Caries Dental a Nivel del Esmalte' },
+      { tipo:'CD', nombre:'Lesion de Caries Dental a Nivel del Dentina' },
+      { tipo:'CDP', nombre:'Lesion de Caries Dental a Nivel del Dentina/compromiso de la pulpa' }
     ] 
   },
-  { tipo:'MA',abreviatura: 'MAC', denominacion:'Macrodoncia',color:'#0880D7', detalle:[] },
-  { tipo:'MI',abreviatura: 'MIC', denominacion:'Microdoncia',color:'#0880D7', detalle:[] },
-  { tipo:'MP',abreviatura: 'M', denominacion:'Movilidad Patologica',color:'#E40000', detalle:[] },
+  { tipo:'MA',abreviatura: 'MAC', nombre:'Macrodoncia',color:'#0880D7', detalle:[] },
+  { tipo:'MI',abreviatura: 'MIC', nombre:'Microdoncia',color:'#0880D7', detalle:[] },
+  { tipo:'MP',abreviatura: 'M', nombre:'Movilidad Patologica',color:'#E40000', detalle:[] },
   { 
     tipo:'PDA', 
     abreviatura: '',
-    denominacion:'Pieza Dentaria Ausente', 
+    nombre:'Pieza Dentaria Ausente', 
     color:'#0880D7',
     detalle:[
-      { tipo:'DNE', denominacion:'Diente no Erupcionado' },
-      { tipo:'DEX', denominacion:'Diente ausente por extracion debido a experiencia' },
-      { tipo:'DAO', denominacion:'Diente ausente por otras razones que no tienen relacion a experiencia' }
+      { tipo:'DNE', nombre:'Diente no Erupcionado' },
+      { tipo:'DEX', nombre:'Diente ausente por extracion debido a experiencia' },
+      { tipo:'DAO', nombre:'Diente ausente por otras razones que no tienen relacion a experiencia' }
     ] 
   },
-  { tipo:'PDCL',abreviatura: '', denominacion:'Pieza Dentaria en Clavija',color:'#0880D7', detalle:[] },
-  { tipo:'E',abreviatura: 'E', denominacion:'Pieza Dentaria Ectopica',color:'#0880D7', detalle:[] },
-  { tipo:'PDE',abreviatura: '', denominacion:'Pieza Dentaria Erupcion',color:'#0880D7', detalle:[] },
-  { tipo:'PDEX',abreviatura: '', denominacion:'Pieza Dentaria Extruida',color:'#0880D7', detalle:[] },
-  { tipo:'PDI',abreviatura: '', denominacion:'Pieza Dentaria Intruida',color:'#0880D7', detalle:[] },
-  { tipo:'PDS',abreviatura: '', denominacion:'Pieza Dentaria Supernumeraria',color:'#0880D7', detalle:[] },
-  { tipo:'PP',abreviatura: 'PP', denominacion:'Pulpotomia',color:'', detalle:[] },
+  { tipo:'PDCL',abreviatura: '', nombre:'Pieza Dentaria en Clavija',color:'#0880D7', detalle:[] },
+  { tipo:'E',abreviatura: 'E', nombre:'Pieza Dentaria Ectopica',color:'#0880D7', detalle:[] },
+  { tipo:'PDE',abreviatura: '', nombre:'Pieza Dentaria Erupcion',color:'#0880D7', detalle:[] },
+  { tipo:'PDEX',abreviatura: '', nombre:'Pieza Dentaria Extruida',color:'#0880D7', detalle:[] },
+  { tipo:'PDI',abreviatura: '', nombre:'Pieza Dentaria Intruida',color:'#0880D7', detalle:[] },
+  { tipo:'PDS',abreviatura: '', nombre:'Pieza Dentaria Supernumeraria',color:'#0880D7', detalle:[] },
+  { tipo:'PP',abreviatura: 'PP', nombre:'Pulpotomia',color:'', detalle:[] },
   { 
     tipo:'PAD', 
     abreviatura: '',
-    denominacion:'Posicion Anormal Dentaria', 
+    nombre:'Posicion Anormal Dentaria', 
     color:'#0880D7',
     detalle:[
-      { tipo:'M', denominacion:'Mesializado' },
-      { tipo:'D', denominacion:'Distalizado' },
-      { tipo:'V', denominacion:'Vestibularizado' },
-      { tipo:'P', denominacion:'Palatinizado' },
-      { tipo:'L', denominacion:'Lingualizado' }
+      { tipo:'M', nombre:'Mesializado' },
+      { tipo:'D', nombre:'Distalizado' },
+      { tipo:'V', nombre:'Vestibularizado' },
+      { tipo:'P', nombre:'Palatinizado' },
+      { tipo:'L', nombre:'Lingualizado' }
     ] 
   },
-  { tipo:'PDPF',abreviatura: '', denominacion:'Proteis Dental Parcial Fija',color:'', detalle:[] },
-  { tipo:'PDC',abreviatura: '', denominacion:'Proteis Dental Completa',color:'', detalle:[] },
-  { tipo:'PDPR',abreviatura: '', denominacion:'Proteis Dental Parcial Removible',color:'', detalle:[] },
-  { tipo:'RR',abreviatura: 'RR', denominacion:'Remanente Radicular',color:'#E40000', detalle:[] },
+  { tipo:'PDPF',abreviatura: '', nombre:'Proteis Dental Parcial Fija',color:'', detalle:[] },
+  { tipo:'PDC',abreviatura: '', nombre:'Proteis Dental Completa',color:'', detalle:[] },
+  { tipo:'PDPR',abreviatura: '', nombre:'Proteis Dental Parcial Removible',color:'', detalle:[] },
+  { tipo:'RR',abreviatura: 'RR', nombre:'Remanente Radicular',color:'#E40000', detalle:[] },
   { 
     tipo:'RD', 
     abreviatura: '',
-    denominacion:'Restauracion Definitiva', 
+    nombre:'Restauracion Definitiva', 
     color:'',
     detalle:[
-      { tipo:'AM', denominacion:'Amalgama Dental' },
-      { tipo:'R', denominacion:'Resina' },
-      { tipo:'IV', denominacion:'Ionomero de Vidrio' },
-      { tipo:'IM', denominacion:'Incrustacion Metalica' },
-      { tipo:'IE', denominacion:'Incrustacion Estetica' },
-      { tipo:'C', denominacion:'Carilla' }
+      { tipo:'AM', nombre:'Amalgama Dental' },
+      { tipo:'R', nombre:'Resina' },
+      { tipo:'IV', nombre:'Ionomero de Vidrio' },
+      { tipo:'IM', nombre:'Incrustacion Metalica' },
+      { tipo:'IE', nombre:'Incrustacion Estetica' },
+      { tipo:'C', nombre:'Carilla' }
     ] 
   },
-  { tipo:'RT',abreviatura: '', denominacion:'Restauracion Temporal',color:'#E40000', detalle:[] },
-  { tipo:'S',abreviatura: 'S', denominacion:'Sellantes',color:'', detalle:[] },
-  { tipo:'SD',abreviatura: 'DES', denominacion:'Superficie Desgastada',color:'#E40000', detalle:[] },
+  { tipo:'RT',abreviatura: '', nombre:'Restauracion Temporal',color:'#E40000', detalle:[] },
+  { tipo:'S',abreviatura: 'S', nombre:'Sellantes',color:'', detalle:[] },
+  { tipo:'SD',abreviatura: 'DES', nombre:'Superficie Desgastada',color:'#E40000', detalle:[] },
   { 
     tipo:'TC', 
     abreviatura: '',
-    denominacion:'Tratamiento de Conducto',
+    nombre:'Tratamiento de Conducto',
     color:'', 
     detalle:[
-      { tipo:'TC', denominacion:'Tratamiento de Conductos' },
-      { tipo:'PC', denominacion:'Pulpectomia' }
+      { tipo:'TC', nombre:'Tratamiento de Conductos' },
+      { tipo:'PC', nombre:'Pulpectomia' }
     ] 
   },
-  { tipo:'TD',abreviatura: '', denominacion:'Transposicion Dentaria',color:'#0880D7', detalle:[] }
+  { tipo:'TD',abreviatura: '', nombre:'Transposicion Dentaria',color:'#0880D7', detalle:[] }
 ];
 
 export const SettingSupperJaw = [

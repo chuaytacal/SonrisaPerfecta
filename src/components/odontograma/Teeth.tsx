@@ -102,12 +102,6 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                 abreviatura: caraConDetalle.detalle.abreviatura,
                 color: caraConDetalle.color || hallazgo.color,
               });
-            } else if (caraConDetalle.abreviatura) {
-              // Fallback for faces without details
-              displaysForTooth.push({
-                abreviatura: caraConDetalle.abreviatura,
-                color: caraConDetalle.color || hallazgo.color,
-              });
             }
           });
         }
@@ -122,12 +116,11 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
   const handleDisplayClick = useCallback((findings: ToothDisplays[], event: any) => {
     if (findings.length === 0) return;
     
-    // Use the native event to get client coordinates for fixed positioning
     const { clientX, clientY } = event.evt;
 
     setPopoverState({
         findings: findings,
-        position: { top: clientY, left: clientX }
+        position: { top: clientY - 10, left: clientX + 15 } // Adjust position slightly up
     });
   }, []);
 
@@ -272,9 +265,10 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
 
     setCurrentMode(prev => {
         const newCaras = { ...prev.caras };
+        // For RT, since it has no details, we create a placeholder detail object to store color info.
         const detailToApply = prev.activeDetail || (code === 'RT' ? { abreviatura: 'RT', nombre: 'Restauración Temporal'} : null);
         
-        if (!detailToApply) return prev; // Safety check
+        if (!detailToApply && code !== 'RT') return prev; 
 
         if (newCaras[faceKey]) {
             delete newCaras[faceKey];
@@ -284,19 +278,19 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                 abreviatura: faceKey, 
                 nombre: faceNamesMap[faceKey] || faceKey,
                 color: prev.color,
-                detalle: detailToApply
+                detalle: detailToApply!
             };
         }
         return { ...prev, caras: newCaras };
     });
-  }, [toModal.code, currentMode.activeDetail]);
+  }, [toModal.code, currentMode.activeDetail, currentMode.color]);
 
   const handleToothClick = useCallback((toothNum: number, id: number, jaw: 'superior' | 'inferior') => {
     if (currentMode.position === -1 && activeView === 'agregar') return;
     if (activeView === 'agregar') {
       const hallazgoDef = Hallazgos[currentMode.position];
       if (!hallazgoDef) return;
-      const { tipo, denominacion, abreviatura, detalle: detalleDef, color: colorDef } = hallazgoDef;
+      const { tipo, nombre, abreviatura, detalle: detalleDef, color: colorDef } = hallazgoDef;
       const colorFinal = colorDef === '' ? currentMode.color : colorDef;
       if (['AOF', 'AOR', 'ET', 'PDPF', 'PDC', 'PDPR'].includes(tipo)) {
         setRangoSeleccion((prevRango) => {
@@ -315,9 +309,6 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
       } else {
         if (['RT', 'RD', 'LCD'].includes(tipo)) {
           let activeDetailForModal: DetalleHallazgo | null = null;
-          if (tipo === 'RT') {
-              activeDetailForModal = { abreviatura: 'RT', nombre: 'Restauración Temporal' };
-          }
           setCurrentMode(prev => ({
             ...prev,
             caras: {},
@@ -338,14 +329,14 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
               if (!yaExiste) {
                 nuevosDetalles.push({
                   abreviatura: detalleSeleccionado.tipo,
-                  nombre: detalleSeleccionado.denominacion
+                  nombre: detalleSeleccionado.nombre
                 });
               }
             }
             const nuevoHallazgo: HallazgoType = {
               tipo,
               color: colorFinal,
-              nombre: denominacion,
+              nombre: nombre,
               abreviatura,
               ...(nuevosDetalles.length > 0 && { detalle: nuevosDetalles }),
               ...(currentMode.direccion && { direccion: currentMode.direccion }),
@@ -367,7 +358,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
 
   useEffect(() => {
     if (rangoSeleccion.length === 2) {
-      const { tipo, denominacion, abreviatura, detalle: detalleDef, color: colorDef } = Hallazgos[currentMode.position];
+      const { tipo, nombre, abreviatura, detalle: detalleDef, color: colorDef } = Hallazgos[currentMode.position];
       const colorFinal = colorDef === '' ? currentMode.color : colorDef;
       const dentalArch = rangoSeleccion[0].jaw === 'superior' ? supperJawSettings : lowerJawSettings;
       const inicioId = Math.min(rangoSeleccion[0].id, rangoSeleccion[1].id);
@@ -395,11 +386,11 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                 [tipo]: {
                     tipo: tipo,
                     color: colorFinal,
-                    nombre: denominacion,
+                    nombre: nombre,
                     grupo: grupoAfectado,
                     abreviatura: abreviatura,
                     ...(detalleDef && currentMode.detalle !== -1 && detalleDef[currentMode.detalle] && 
-                        { detalle: [{ abreviatura: detalleDef[currentMode.detalle].tipo, nombre: detalleDef[currentMode.detalle].denominacion }] }
+                        { detalle: [{ abreviatura: detalleDef[currentMode.detalle].tipo, nombre: detalleDef[currentMode.detalle].nombre }] }
                     ),
                 }
                 };
@@ -431,16 +422,16 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
       const nuevoHallazgoBase = {
         tipo: hallazgoConfig.tipo,
         abreviatura: hallazgoConfig.abreviatura,
-        nombre: hallazgoConfig.denominacion,
+        nombre: hallazgoConfig.nombre,
         color: hallazgoConfig.color || currentMode.color,
       };
       
       nuevos[idKey] = {
         ...nuevos[idKey],
         [code]: {
-          ...(nuevos[idKey]?.[code] || nuevoHallazgoBase), // Keep existing details if any
+          ...(nuevos[idKey]?.[code] || nuevoHallazgoBase), 
           cara: {
-            ...(nuevos[idKey]?.[code]?.cara || {}), // Merge with existing faces
+            ...(nuevos[idKey]?.[code]?.cara || {}), 
             ...carasSeleccionadas,
           }
         },
@@ -579,7 +570,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
             </div>
             {(() => {
               const filteredHallazgos = Hallazgos.map((h, i) => [String(i), h] as [string, HallazgoType]).filter(([key, label]) =>
-                  label.denominacion.toLowerCase().includes(searchTerm.toLowerCase())
+                  label.nombre.toLowerCase().includes(searchTerm.toLowerCase())
               );
 
               const tiposEspeciales = filteredHallazgos.filter(([key, label]) => ['RD', 'RT', 'LCD'].includes(label.tipo));
@@ -591,9 +582,9 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                     <div className="mb-3 flex flex-wrap gap-2">
                       {tiposEspeciales.map(([key, label]) => {
                         let colorClass = "";
-                        if (label.tipo === 'LCD') colorClass = "border-red-500 text-red-600 hover:text-red-600";
-                        else if (label.tipo === 'RD') colorClass = "border-blue-500 text-blue-600 hover:text-blue-600";
-                        else if (label.tipo === 'RT') colorClass = "border-red-500 text-red-600 hover:text-red-600";
+                        if (label.tipo === 'LCD') colorClass = "border-red-500 text-red-600 hover:bg-red-50 hover:text-red-600";
+                        else if (label.tipo === 'RD') colorClass = "border-blue-500 text-blue-600 hover:bg-blue-50 hover:text-blue-600";
+                        else if (label.tipo === 'RT') colorClass = "border-red-500 text-red-600 hover:bg-red-50 hover:text-red-600";
                         
                         return (
                           <Button
@@ -610,7 +601,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                             })}
                             className={`h-auto py-1 px-2 ${colorClass} ${currentMode?.position === Number(key) ? (label.tipo === 'LCD' || label.tipo === 'RT' ? 'bg-red-50' : 'bg-blue-50') : ''}`}
                           >
-                            {label.denominacion}
+                            {label.nombre}
                           </Button>
                         );
                       })}
@@ -638,7 +629,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                                 }
                             }}
                           >
-                            <span>{label.denominacion}</span>
+                            <span>{label.nombre}</span>
                             {(label.color === '' || (label.detalle && label.detalle.length > 0) || label.tipo === 'GI') && (
                               <span className={cn("transition-colors", currentMode?.position === Number(key) ? "text-accent-foreground" : "text-foreground")}>
                                 {openDetails[key] ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -812,7 +803,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
             style={{
                 position: 'fixed',
                 top: `${popoverState.position.top}px`,
-                left: `${popoverState.position.left + 15}px`,
+                left: `${popoverState.position.left}px`,
                 transform: 'translateY(-100%)',
                 zIndex: 50,
             }}
@@ -836,7 +827,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
           <div className="bg-card p-6 rounded-lg shadow-xl max-w-md w-full">
             <h2 className="text-lg font-semibold mb-4">Eliminar Hallazgo en Grupo</h2>
             <p className="text-sm text-muted-foreground mb-6">
-              ¿Estás seguro de que deseas eliminar el hallazgo &quot;{Hallazgos.find(h => h.tipo === toModal.code)?.denominacion || toModal.code}&quot; de todos los dientes en el grupo seleccionado?
+              ¿Estás seguro de que deseas eliminar el hallazgo &quot;{Hallazgos.find(h => h.tipo === toModal.code)?.nombre || toModal.code}&quot; de todos los dientes en el grupo seleccionado?
             </p>
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={()=>setToModal({ selectedTooth: null, code: '', to: '', detalle: undefined, group: undefined })}>Cancelar</Button>
@@ -857,7 +848,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
           >
               <div className="p-6 border-b">
                 <h2 className="text-lg font-semibold text-primary">
-                  {dientes[toModal.selectedTooth]?.[toModal.code!]?.nombre || Hallazgos.find(h => h.tipo === toModal.code)?.denominacion}
+                  {dientes[toModal.selectedTooth]?.[toModal.code!]?.nombre || Hallazgos.find(h => h.tipo === toModal.code)?.nombre}
                 </h2>
                 <p className="text-sm text-muted-foreground">Seleccione la cara afectada y/o el tipo de hallazgo.</p>
               </div>
@@ -897,11 +888,11 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                           onClick={() => {
                             setCurrentMode(prev => ({
                               ...prev,
-                              activeDetail: { abreviatura: item.tipo, nombre: item.denominacion }
+                              activeDetail: { abreviatura: item.tipo, nombre: item.nombre }
                             }));
                           }}
                         >
-                          {item.denominacion} ({item.tipo})
+                          {item.nombre} ({item.tipo})
                         </Button>
                       ))}
                     </div>

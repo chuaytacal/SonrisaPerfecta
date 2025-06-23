@@ -151,6 +151,28 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
     V: 'Vestibular/Lingual'
   };
 
+  const getAbreviaturas = (hallazgo: Omit<Hallazgo, 'grupo'>): { abreviatura: string, color: string }[] => {
+    const fromDetails = hallazgo.detalle?.map(d => ({ abreviatura: d.abreviatura, color: hallazgo.color })) || [];
+    
+    const fromCaras = hallazgo.cara 
+        ? Object.values(hallazgo.cara)
+            .filter(c => c.detalle)
+            .map(c => ({ abreviatura: c.detalle!.abreviatura, color: c.color || hallazgo.color })) 
+        : [];
+    
+    const allDetailAbrevs = [...fromDetails, ...fromCaras];
+
+    if (allDetailAbrevs.length > 0) {
+        return allDetailAbrevs;
+    }
+
+    if (hallazgo.abreviatura) {
+        return [{ abreviatura: hallazgo.abreviatura, color: hallazgo.color }];
+    }
+
+    return [];
+  };
+
   return (
     <div className="relative overflow-x-auto shadow-md rounded-lg">
       <table className="min-w-full divide-y divide-gray-200">
@@ -164,69 +186,72 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType }) => 
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {planTratamiento.length > 0 ? (
-            planTratamiento.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  <span className="text-blue-600">{formatGrupoDientes(item.diente)}</span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div
-                      className="h-3 w-3 rounded-full mr-2"
-                      style={{ backgroundColor: item.hallazgo.color }}
-                    />
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{item.hallazgo.nombre}</div>
-                      {item.hallazgo.cara && Object.keys(item.hallazgo.cara).length > 0 && (
-                        <div className="text-xs text-gray-500">
-                          {Object.entries(item.hallazgo.cara)
-                            .map(([key, cara]) => `${caraNombres[key] || key} (${cara.detalle?.abreviatura || ''})`)
-                            .join(', ')}
-                        </div>
-                      )}
+            planTratamiento.map((item) => {
+              const abreviaturas = getAbreviaturas(item.hallazgo);
+              return (
+                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <span className="text-blue-600">{formatGrupoDientes(item.diente)}</span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div
+                        className="h-3 w-3 rounded-full mr-2"
+                        style={{ backgroundColor: item.hallazgo.color }}
+                      />
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{item.hallazgo.nombre}</div>
+                        {item.hallazgo.cara && Object.keys(item.hallazgo.cara).length > 0 && (
+                          <div className="text-xs text-gray-500">
+                            {Object.entries(item.hallazgo.cara)
+                              .map(([key, cara]) => `${caraNombres[key] || key} (${cara.detalle?.abreviatura || ''})`)
+                              .join(', ')}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {item.servicio ? (
-                    <div onClick={() => SetModalServicio({ key: item.id, servicio: item.servicio })} className="cursor-pointer">
-                      {item.servicio}
-                    </div>
-                  ) : (
-                    <div onClick={() => SetModalServicio({ key: item.id, servicio: '' })} className="cursor-pointer text-blue-500 underline">
-                      agregar un servicio
-                    </div>
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap relative">
-                  <div className="flex flex-wrap items-center gap-1">
-                    {(item.hallazgo.detalle || (item.hallazgo.cara ? Object.values(item.hallazgo.cara).map(c => c.detalle) : [])).flat().filter(Boolean).map((detalle, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                      >
-                        {detalle.abreviatura}
-                      </span>
-                    ))}
-                    {item.nota && (
-                      <span
-                        title={item.nota}
-                        className="inline-flex items-center max-w-[500px] truncate px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                      >
-                        {item.nota}
-                      </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {item.servicio ? (
+                      <div onClick={() => SetModalServicio({ key: item.id, servicio: item.servicio })} className="cursor-pointer">
+                        {item.servicio}
+                      </div>
+                    ) : (
+                      <div onClick={() => SetModalServicio({ key: item.id, servicio: '' })} className="cursor-pointer text-blue-500 underline">
+                        agregar un servicio
+                      </div>
                     )}
-                    <button
-                      ref={(el) => (botonRefs.current[item.id] = el)}
-                      onClick={() => abrirModal(item.id)}
-                      className="inline-flex items-center px-2 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                    >
-                      + Agregar
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap relative">
+                    <div className="flex flex-wrap items-center gap-1">
+                      {abreviaturas.map((detalle, index) => (
+                        <span
+                          key={index}
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${detalle.color === '#E40000' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}
+                        >
+                          {detalle.abreviatura}
+                        </span>
+                      ))}
+                      {item.nota && (
+                        <span
+                          title={item.nota}
+                          className="inline-flex items-center max-w-[500px] truncate px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                        >
+                          {item.nota}
+                        </span>
+                      )}
+                      <button
+                        ref={(el) => (botonRefs.current[item.id] = el)}
+                        onClick={() => abrirModal(item.id)}
+                        className="inline-flex items-center px-2 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                      >
+                        + Agregar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })
           ) : (
             <tr>
               <td colSpan={4} className="px-6 py-10 text-center text-sm text-gray-500">
