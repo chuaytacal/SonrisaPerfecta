@@ -5,11 +5,14 @@ import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { mockPacientesData } from '@/lib/data';
+import { mockPacientesData, mockAppointmentsData } from '@/lib/data';
 import type { Paciente as PacienteType, Persona, EtiquetaPaciente } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 // Define ToothIconCustom locally for error display or import from a shared location if available
 const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
@@ -30,6 +33,13 @@ const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
   );
 
+interface ClinicalHistoryItem {
+  fecha: Date;
+  tratamiento: string;
+  notas: string;
+  honorarios: number;
+}
+
 export default function HistoriaClinicaPage() {
   const params = useParams();
   const router = useRouter();
@@ -38,6 +48,7 @@ export default function HistoriaClinicaPage() {
   const [paciente, setPaciente] = useState<PacienteType | null>(null);
   const [persona, setPersona] = useState<Persona | null>(null);
   const [loading, setLoading] = useState(true);
+  const [clinicalHistory, setClinicalHistory] = useState<ClinicalHistoryItem[]>([]);
 
   useEffect(() => {
     const foundPaciente = mockPacientesData.find(p => p.id === patientId);
@@ -50,6 +61,32 @@ export default function HistoriaClinicaPage() {
     }
     setLoading(false);
   }, [patientId]);
+  
+  useEffect(() => {
+    if (paciente) {
+        const patientAppointments = mockAppointmentsData.filter(
+            (appt) => appt.idPaciente === paciente.id
+        );
+
+        const historyItems: ClinicalHistoryItem[] = [];
+        patientAppointments.forEach((appt) => {
+            if (appt.procedimientos && appt.procedimientos.length > 0) {
+                appt.procedimientos.forEach((proc) => {
+                    historyItems.push({
+                        fecha: appt.start,
+                        tratamiento: proc.denominacion,
+                        notas: appt.notas || 'Sin notas para esta cita.',
+                        honorarios: proc.precioBase,
+                    });
+                });
+            }
+        });
+        
+        historyItems.sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
+
+        setClinicalHistory(historyItems);
+    }
+  }, [paciente]);
 
   // Dummy callbacks for EtiquetasNotasSalud as this is a placeholder page
   const handleDummySaveNotes = (notes: string) => { console.log("Save notes (dummy):", notes); };
@@ -86,13 +123,42 @@ export default function HistoriaClinicaPage() {
           patientId={patientId}
         />
         <Card>
-          <CardHeader>
-            <CardTitle>Historia Clínica</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">Construyendo la sección de Historia Clínica...</p>
-            {/* Future content for Historia Clínica will go here */}
-          </CardContent>
+            <CardHeader>
+                <CardTitle>Historia Clínica de Tratamientos</CardTitle>
+                <CardDescription>Resumen de los procedimientos y pagos del paciente, extraídos de sus citas.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                            <TableHead className="w-[120px]">FECHA</TableHead>
+                            <TableHead>TRATAMIENTO</TableHead>
+                            <TableHead>NOTAS</TableHead>
+                            <TableHead className="text-right w-[120px]">HONORARIOS</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {clinicalHistory.length > 0 ? (
+                            clinicalHistory.map((item, index) => (
+                                <TableRow key={index}>
+                                <TableCell>{format(item.fecha, 'dd/MM/yyyy', { locale: es })}</TableCell>
+                                <TableCell className="font-medium">{item.tratamiento}</TableCell>
+                                <TableCell className="text-muted-foreground">{item.notas}</TableCell>
+                                <TableCell className="text-right font-mono">S/ {item.honorarios.toFixed(2)}</TableCell>
+                                </TableRow>
+                            ))
+                            ) : (
+                            <TableRow>
+                                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                                No se encontraron tratamientos registrados en las citas del paciente.
+                                </TableCell>
+                            </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </CardContent>
         </Card>
       </div>
     </div>
