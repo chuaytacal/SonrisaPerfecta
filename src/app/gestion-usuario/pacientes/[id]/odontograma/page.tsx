@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { mockPacientesData } from '@/lib/data';
 import type { Paciente as PacienteType, Persona, EtiquetaPaciente } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
@@ -69,37 +69,54 @@ export default function OdontogramaPage() {
     setLoading(false);
   }, [patientId]);
   
+  // Helper to count top-level findings.
+  const countTopLevelFindings = (data: DientesMap) => {
+    if (!data) return 0;
+    return Object.values(data).reduce((acc, tooth) => acc + Object.keys(tooth).length, 0);
+  };
+
   const handleOdontogramaChange = (newData: DientesMap) => {
+    const oldData = activeTab === 'Permanente' ? permanenteData : primariaData;
+    const oldCount = countTopLevelFindings(oldData);
+    const newCount = countTopLevelFindings(newData);
+    
+    let actionOccurred = true;
+    let toastMessage = "Odontograma actualizado con éxito.";
+
+    if (newCount > oldCount) {
+        toastMessage = "Hallazgo agregado con éxito.";
+    } else if (newCount < oldCount) {
+        toastMessage = "Hallazgo eliminado con éxito.";
+    } else if (oldCount === 0 && newCount === 0) {
+        actionOccurred = false; // No action if both are empty
+    } else {
+        toastMessage = "Hallazgo modificado con éxito.";
+    }
+
+    // Update state first
     if (activeTab === 'Permanente') {
       setPermanenteData(newData);
     } else {
       setPrimariaData(newData);
     }
-  };
 
-  const handleSaveChanges = () => {
     // Simulate saving the data back to our mock database
     const patientIndex = mockPacientesData.findIndex(p => p.id === patientId);
     if (patientIndex > -1) {
-      mockPacientesData[patientIndex].odontogramaPermanente = permanenteData;
-      mockPacientesData[patientIndex].odontogramaPrimaria = primariaData;
+      if (activeTab === 'Permanente') {
+        mockPacientesData[patientIndex].odontogramaPermanente = newData;
+      } else {
+        mockPacientesData[patientIndex].odontogramaPrimaria = newData;
+      }
       
-      // Update the local paciente state as well to be consistent
-      setPaciente(prev => prev ? ({...prev, odontogramaPermanente: permanenteData, odontogramaPrimaria: primariaData}) : null);
-
-      toast({
-        title: "Odontograma Guardado",
-        description: "Los cambios en el odontograma han sido guardados.",
-      });
-    } else {
-       toast({
-        title: "Error al Guardar",
-        description: "No se pudo encontrar al paciente para guardar los cambios.",
-        variant: "destructive"
-      });
+      if (actionOccurred) {
+        toast({
+          title: "Guardado Automático",
+          description: toastMessage,
+        });
+      }
     }
   };
-
 
   // Dummy callbacks for EtiquetasNotasSalud
   const handleDummySaveNotes = (notes: string) => { console.log("Save notes (dummy):", notes); };
@@ -134,15 +151,11 @@ export default function OdontogramaPage() {
           patientId={patientId}
         />
         <Card>
-          <CardHeader className="flex flex-row justify-between items-start">
+          <CardHeader>
             <div>
               <CardTitle>Odontograma</CardTitle>
-              <CardDescription>Registre los hallazgos dentales del paciente.</CardDescription>
+              <CardDescription>Registre los hallazgos dentales del paciente. Los cambios se guardan automáticamente.</CardDescription>
             </div>
-            <Button onClick={handleSaveChanges} size="sm">
-              <Save className="mr-2 h-4 w-4"/>
-              Guardar Cambios
-            </Button>
           </CardHeader>
           <CardContent>
              <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as OdontogramType)} className="w-full">
