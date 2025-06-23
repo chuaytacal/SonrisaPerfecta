@@ -2,7 +2,7 @@
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -75,12 +75,11 @@ export default function OdontogramaPage() {
     return Object.values(data).reduce((acc, tooth) => acc + Object.keys(tooth).length, 0);
   };
 
-  const handleOdontogramaChange = (newData: DientesMap) => {
+  const handleOdontogramaChange = useCallback((newData: DientesMap) => {
     const oldData = activeTab === 'Permanente' ? permanenteData : primariaData;
     
-    // This check is crucial to prevent infinite loops.
     if (JSON.stringify(oldData) === JSON.stringify(newData)) {
-        return; // No actual change, so we do nothing.
+        return;
     }
 
     const oldCount = countTopLevelFindings(oldData);
@@ -94,17 +93,15 @@ export default function OdontogramaPage() {
     } else if (newCount < oldCount) {
         toastMessage = "Hallazgo eliminado con éxito.";
     } else if (oldCount === 0 && newCount === 0) {
-        actionOccurred = false; // No action if both are empty
+        actionOccurred = false;
     }
 
-    // Update state first
     if (activeTab === 'Permanente') {
       setPermanenteData(newData);
     } else {
       setPrimariaData(newData);
     }
 
-    // Simulate saving the data back to our mock database
     const patientIndex = mockPacientesData.findIndex(p => p.id === patientId);
     if (patientIndex > -1) {
       if (activeTab === 'Permanente') {
@@ -114,13 +111,15 @@ export default function OdontogramaPage() {
       }
       
       if (actionOccurred) {
-        toast({
-          title: "Guardado Automático",
-          description: toastMessage,
-        });
+        // Toast notifications disabled by user request to prevent loops
+        // toast({
+        //   title: "Guardado Automático",
+        //   description: toastMessage,
+        // });
       }
     }
-  };
+  }, [activeTab, patientId, permanenteData, primariaData, toast]);
+
 
   // Dummy callbacks for EtiquetasNotasSalud
   const handleDummySaveNotes = (notes: string) => { console.log("Save notes (dummy):", notes); };
