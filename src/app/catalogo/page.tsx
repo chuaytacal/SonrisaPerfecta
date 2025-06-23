@@ -197,9 +197,9 @@ export default function CatalogoPage() {
       return (
         <Form {...formProcedimiento}>
           <form onSubmit={formProcedimiento.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField control={formProcedimiento.control} name="denominacion" render={({ field }) => ( <FormItem> <FormLabel>Denominación</FormLabel> <FormControl> <Input {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-            <FormField control={formProcedimiento.control} name="descripcion" render={({ field }) => ( <FormItem> <FormLabel>Descripción</FormLabel> <FormControl> <Textarea {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-            <FormField control={formProcedimiento.control} name="precioBase" render={({ field }) => ( <FormItem> <FormLabel>Precio Base (S/)</FormLabel> <FormControl> <Input type="number" step="0.01" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
+            <FormField control={formProcedimiento.control} name="denominacion" render={({ field }) => ( <FormItem><FormLabel>Denominación</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
+            <FormField control={formProcedimiento.control} name="descripcion" render={({ field }) => ( <FormItem><FormLabel>Descripción</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )}/>
+            <FormField control={formProcedimiento.control} name="precioBase" render={({ field }) => ( <FormItem><FormLabel>Precio Base (S/)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem> )}/>
             <DialogFooter>
                 <Button type="button" variant="outline" onClick={handleCloseModal}>Cancelar</Button>
                 <Button type="submit">Guardar</Button>
@@ -213,7 +213,7 @@ export default function CatalogoPage() {
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField control={form.control} name="nombre" render={({ field }) => ( <FormItem> <FormLabel>Nombre</FormLabel> <FormControl> <Input {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
+                <FormField control={form.control} name="nombre" render={({ field }) => ( <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
                 <DialogFooter>
                     <Button type="button" variant="outline" onClick={handleCloseModal}>Cancelar</Button>
                     <Button type="submit">Guardar</Button>
