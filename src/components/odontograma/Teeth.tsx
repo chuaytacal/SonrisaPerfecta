@@ -17,7 +17,7 @@ type Props = {
   scalaTooth: { scale: number; separation: number };
   typeTooth: 'Permanent' | 'Primary';
   onChangeDientes: (nuevo: DientesMap) => void;
-  initialDientesMap: DientesMap;
+  dientes: DientesMap;
 };
 
 type PopoverState = {
@@ -34,7 +34,7 @@ const faceNamesMap: Record<string, string> = {
 };
 
 
-export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, initialDientesMap }: Props) {
+export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, dientes }: Props) {
   const [openDetails, setOpenDetails] = useState<Record<string, boolean>>({});
   const [activeView, setActiveView] = useState<'agregar' | 'eliminar'>('agregar');
   const [toModal, setToModal] = useState<OpenModeal>({
@@ -48,14 +48,10 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
   const [rangoSeleccion, setRangoSeleccion] = useState<Array<{ id: number; numTooth: number; jaw: 'superior' | 'inferior' }>>([]);
   const [selectedTooth, setSelectedTooth] = useState<number | null>(null);
 
-  const [dientes, setDientes] = useState<DientesMap>(initialDientesMap);
-  const [toothDisplays, setToothDisplays] = useState<Record<number, ToothDisplays[]>>({});
-  
   const [popoverState, setPopoverState] = useState<PopoverState>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
-
 
   const [currentMode, setCurrentMode] = useState<CurrentMode>({
     position: -1,
@@ -73,18 +69,7 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
     return { supperJawSettings: SettingSupperJaw, lowerJawSettings: SettingsLowerJaw };
   }, [typeTooth]);
 
-  // Sync internal state with prop changes from parent (e.g., from TreatmentPlanTable)
-  useEffect(() => {
-    // Only update if the incoming prop is actually different from the internal state
-    // This prevents an infinite loop where the child re-triggers the parent update.
-    if (JSON.stringify(dientes) !== JSON.stringify(initialDientesMap)) {
-      setDientes(initialDientesMap);
-    }
-  }, [initialDientesMap]);
-  
-  useEffect(() => {
-    onChangeDientes(dientes);
-
+  const toothDisplays = useMemo<Record<number, ToothDisplays[]>>(() => {
     const newDisplays: Record<number, ToothDisplays[]> = {};
     for (const toothNum in dientes) {
       const hallazgos = dientes[toothNum];
@@ -115,8 +100,8 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
         newDisplays[Number(toothNum)] = displaysForTooth;
       }
     }
-    setToothDisplays(newDisplays);
-  }, [dientes, onChangeDientes]);
+    return newDisplays;
+  }, [dientes]);
 
   const handleDisplayClick = useCallback((findings: ToothDisplays[], event: any) => {
     if (findings.length === 0) return;
@@ -157,24 +142,22 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
     if (!toModal || !toModal.group || !toModal.code) return;
     const { code, group } = toModal;
 
-    setDientes((prev) => {
-      const newState = { ...prev };
-      for (const dienteNum of group) {
-        if (newState[dienteNum] && newState[dienteNum][code]) {
-          const newToothState = { ...newState[dienteNum] };
-          delete newToothState[code];
-           if (Object.keys(newToothState).length === 0) {
-            delete newState[dienteNum];
-          } else {
-            newState[dienteNum] = newToothState;
-          }
+    const newState = { ...dientes };
+    for (const dienteNum of group) {
+      if (newState[dienteNum] && newState[dienteNum][code]) {
+        const newToothState = { ...newState[dienteNum] };
+        delete newToothState[code];
+         if (Object.keys(newToothState).length === 0) {
+          delete newState[dienteNum];
+        } else {
+          newState[dienteNum] = newToothState;
         }
       }
-      return newState;
-    });
+    }
+    onChangeDientes(newState);
 
     setToModal({ selectedTooth: null, code: '', to: '', detalle: undefined, group: undefined });
-  }, [toModal]);
+  }, [toModal, dientes, onChangeDientes]);
 
  const handleRemoveToothCode = useCallback((currentSelectedTooth: number | null, code: string) => {
   if (currentSelectedTooth === null) return;
@@ -186,75 +169,68 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
   if (grupo && Array.isArray(grupo) && grupo.length > 0) {
     setToModal({ selectedTooth: currentSelectedTooth, code, group: grupo, to: 'toConfirmDelGroup', detalle: undefined });
   } else {
-    setDientes((prev) => {
-      const nuevo = { ...prev };
-      if (nuevo[currentSelectedTooth]) {
-        const nuevoDiente = { ...nuevo[currentSelectedTooth] };
-        delete nuevoDiente[code];
-        if (Object.keys(nuevoDiente).length === 0) {
-          delete nuevo[currentSelectedTooth];
-        } else {
-          nuevo[currentSelectedTooth] = nuevoDiente;
-        }
+    const nuevo = { ...dientes };
+    if (nuevo[currentSelectedTooth]) {
+      const nuevoDiente = { ...nuevo[currentSelectedTooth] };
+      delete nuevoDiente[code];
+      if (Object.keys(nuevoDiente).length === 0) {
+        delete nuevo[currentSelectedTooth];
+      } else {
+        nuevo[currentSelectedTooth] = nuevoDiente;
       }
-      return nuevo;
-    });
+    }
+    onChangeDientes(nuevo);
   }
-}, [dientes]);
+}, [dientes, onChangeDientes]);
 
 
   const handleRemoveToothCodeDetalle = useCallback((currentSelectedTooth: number | null, code: string, idx: number) => {
     if (currentSelectedTooth === null) return;
-    setDientes((prev) => {
-      const newState = { ...prev };
-      if (!newState[currentSelectedTooth] || !newState[currentSelectedTooth][code] || !newState[currentSelectedTooth][code].detalle) {
-        return prev;
-      }
-      const hallazgoActual = newState[currentSelectedTooth][code];
-      const nuevoDetalle = (hallazgoActual.detalle || []).filter((_, i) => i !== idx);
-      newState[currentSelectedTooth] = {
-        ...newState[currentSelectedTooth],
-        [code]: {
-          ...hallazgoActual,
-          detalle: nuevoDetalle.length > 0 ? nuevoDetalle : undefined,
-        },
-      };
-      return newState;
-    });
-  }, []);
+
+    const newState = { ...dientes };
+    if (!newState[currentSelectedTooth] || !newState[currentSelectedTooth][code] || !newState[currentSelectedTooth][code].detalle) {
+      return;
+    }
+    const hallazgoActual = newState[currentSelectedTooth][code];
+    const nuevoDetalle = (hallazgoActual.detalle || []).filter((_, i) => i !== idx);
+    newState[currentSelectedTooth] = {
+      ...newState[currentSelectedTooth],
+      [code]: {
+        ...hallazgoActual,
+        detalle: nuevoDetalle.length > 0 ? nuevoDetalle : undefined,
+      },
+    };
+    onChangeDientes(newState);
+  }, [dientes, onChangeDientes]);
 
   const handleRemoveFace = (toothNumber: any, code: any, caraName: any) => {
-    setDientes(prevDientes => {
-      const newDientes = JSON.parse(JSON.stringify(prevDientes));
-      if (newDientes[toothNumber]?.[code]?.cara?.[caraName]) {
-        delete newDientes[toothNumber][code].cara[caraName];
-        if (Object.keys(newDientes[toothNumber][code].cara).length === 0) {
-          delete newDientes[toothNumber][code].cara;
-        }
-        if (!newDientes[toothNumber][code].cara && !newDientes[toothNumber][code].detalle && !newDientes[toothNumber][code].grupo) {
-          delete newDientes[toothNumber][code];
-          if (Object.keys(newDientes[toothNumber]).length === 0) {
-            delete newDientes[toothNumber];
-          }
+    const newDientes = JSON.parse(JSON.stringify(dientes));
+    if (newDientes[toothNumber]?.[code]?.cara?.[caraName]) {
+      delete newDientes[toothNumber][code].cara[caraName];
+      if (Object.keys(newDientes[toothNumber][code].cara).length === 0) {
+        delete newDientes[toothNumber][code].cara;
+      }
+      if (!newDientes[toothNumber][code].cara && !newDientes[toothNumber][code].detalle && !newDientes[toothNumber][code].grupo) {
+        delete newDientes[toothNumber][code];
+        if (Object.keys(newDientes[toothNumber]).length === 0) {
+          delete newDientes[toothNumber];
         }
       }
-      return newDientes;
-    });
+    }
+    onChangeDientes(newDientes);
   };
   
   
   const handleRemoveFaceDetalle = (toothNumber: number, code: string, caraName: string,index: number) => {
-    setDientes(prevDientes => {
-      const newDientes = JSON.parse(JSON.stringify(prevDientes));
-      const detalles = newDientes[toothNumber]?.[code]?.cara?.[caraName]?.detalle;
-      if (Array.isArray(detalles)) {
-        detalles.splice(index, 1);
-        if (detalles.length === 0) {
-          delete newDientes[toothNumber][code].cara[caraName].detalle;
-        }
+    const newDientes = JSON.parse(JSON.stringify(dientes));
+    const detalles = newDientes[toothNumber]?.[code]?.cara?.[caraName]?.detalle;
+    if (Array.isArray(detalles)) {
+      detalles.splice(index, 1);
+      if (detalles.length === 0) {
+        delete newDientes[toothNumber][code].cara[caraName].detalle;
       }
-      return newDientes;
-    });
+    }
+    onChangeDientes(newDientes);
   };
   
   const handleToggleCara = useCallback((faceKey: string) => {
@@ -320,45 +296,43 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
           }));
           setToModal({ selectedTooth: toothNum, code: tipo, to: 'toToothFace', detalle: detalleDef });
         } else {
-          setDientes((prevDientes) => {
-            const dienteActual = prevDientes[toothNum] || {};
-            const hallazgoActual = dienteActual[tipo] || {};
-            const seleccionado = currentMode.detalle;
-            const detalleSeleccionado = detalleDef?.[seleccionado];
-            let nuevosDetalles: DetalleHallazgo[] = Array.isArray(hallazgoActual.detalle)
-              ? [...hallazgoActual.detalle]
-              : [];
-            if (detalleSeleccionado) {
-              const yaExiste = nuevosDetalles.some(d => d.abreviatura === detalleSeleccionado.tipo);
-              if (!yaExiste) {
-                nuevosDetalles.push({
-                  abreviatura: detalleSeleccionado.tipo,
-                  nombre: detalleSeleccionado.nombre
-                });
-              }
+          const dienteActual = dientes[toothNum] || {};
+          const hallazgoActual = dienteActual[tipo] || {};
+          const seleccionado = currentMode.detalle;
+          const detalleSeleccionado = detalleDef?.[seleccionado];
+          let nuevosDetalles: DetalleHallazgo[] = Array.isArray(hallazgoActual.detalle)
+            ? [...hallazgoActual.detalle]
+            : [];
+          if (detalleSeleccionado) {
+            const yaExiste = nuevosDetalles.some(d => d.abreviatura === detalleSeleccionado.tipo);
+            if (!yaExiste) {
+              nuevosDetalles.push({
+                abreviatura: detalleSeleccionado.tipo,
+                nombre: detalleSeleccionado.nombre
+              });
             }
-            const nuevoHallazgo: HallazgoType = {
-              tipo,
-              color: colorFinal,
-              nombre: nombre,
-              abreviatura,
-              ...(nuevosDetalles.length > 0 && { detalle: nuevosDetalles }),
-              ...(currentMode.direccion && { direccion: currentMode.direccion }),
-            };
-            return {
-              ...prevDientes,
-              [toothNum]: {
-                ...dienteActual,
-                [tipo]: nuevoHallazgo
-              }
-            };
+          }
+          const nuevoHallazgo: HallazgoType = {
+            tipo,
+            color: colorFinal,
+            nombre: nombre,
+            abreviatura,
+            ...(nuevosDetalles.length > 0 && { detalle: nuevosDetalles }),
+            ...(currentMode.direccion && { direccion: currentMode.direccion }),
+          };
+          onChangeDientes({
+            ...dientes,
+            [toothNum]: {
+              ...dienteActual,
+              [tipo]: nuevoHallazgo
+            }
           });
         }
       }
     } else if (activeView === 'eliminar') {
       setSelectedTooth(toothNum);
     }
-  }, [activeView, currentMode, dientes, supperJawSettings, lowerJawSettings]);
+  }, [activeView, currentMode, dientes, supperJawSettings, lowerJawSettings, onChangeDientes]);
 
   useEffect(() => {
     if (rangoSeleccion.length === 2) {
@@ -367,44 +341,43 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
       const dentalArch = rangoSeleccion[0].jaw === 'superior' ? supperJawSettings : lowerJawSettings;
       const inicioId = Math.min(rangoSeleccion[0].id, rangoSeleccion[1].id);
       const finId = Math.max(rangoSeleccion[0].id, rangoSeleccion[1].id);
-      setDientes((prevDientes) => {
-        const newState = { ...prevDientes };
-        const grupoAfectado: number[] = [];
-        for (let i = inicioId; i <= finId; i++) {
-          const tooth = dentalArch[i];
-          if (!tooth) continue;
-          if (['D', 'F', 'PDS', 'TD'].includes(tipo)) {
-            if (i === rangoSeleccion[0].id || i === rangoSeleccion[1].id) {
-              grupoAfectado.push(tooth.number);
-            }
-          } else {
-            if (!newState[tooth.number]?.[tipo]) {
-              grupoAfectado.push(tooth.number);
-            }
+      
+      const newState = { ...dientes };
+      const grupoAfectado: number[] = [];
+      for (let i = inicioId; i <= finId; i++) {
+        const tooth = dentalArch[i];
+        if (!tooth) continue;
+        if (['D', 'F', 'PDS', 'TD'].includes(tipo)) {
+          if (i === rangoSeleccion[0].id || i === rangoSeleccion[1].id) {
+            grupoAfectado.push(tooth.number);
+          }
+        } else {
+          if (!newState[tooth.number]?.[tipo]) {
+            grupoAfectado.push(tooth.number);
           }
         }
-        if (grupoAfectado.length > 0) {
-            grupoAfectado.forEach(numDiente => {
-                newState[numDiente] = {
-                ...(newState[numDiente] || {}),
-                [tipo]: {
-                    tipo: tipo,
-                    color: colorFinal,
-                    nombre: nombre,
-                    grupo: grupoAfectado,
-                    abreviatura: abreviatura,
-                    ...(detalleDef && currentMode.detalle !== -1 && detalleDef[currentMode.detalle] && 
-                        { detalle: [{ abreviatura: detalleDef[currentMode.detalle].tipo, nombre: detalleDef[currentMode.detalle].nombre }] }
-                    ),
-                }
-                };
-            });
-        }
-        return newState;
-      });
+      }
+      if (grupoAfectado.length > 0) {
+          grupoAfectado.forEach(numDiente => {
+              newState[numDiente] = {
+              ...(newState[numDiente] || {}),
+              [tipo]: {
+                  tipo: tipo,
+                  color: colorFinal,
+                  nombre: nombre,
+                  grupo: grupoAfectado,
+                  abreviatura: abreviatura,
+                  ...(detalleDef && currentMode.detalle !== -1 && detalleDef[currentMode.detalle] && 
+                      { detalle: [{ abreviatura: detalleDef[currentMode.detalle].tipo, nombre: detalleDef[currentMode.detalle].nombre }] }
+                  ),
+              }
+              };
+          });
+      }
+      onChangeDientes(newState);
       setRangoSeleccion([]);
     }
-  }, [rangoSeleccion, currentMode, supperJawSettings, lowerJawSettings]);
+  }, [rangoSeleccion, currentMode, supperJawSettings, lowerJawSettings, dientes, onChangeDientes]);
 
   const handleSaveFaceSelection = useCallback(() => {
     const id = toModal.selectedTooth;
@@ -419,33 +392,31 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
     const hallazgoConfig = Hallazgos.find(h => h.tipo === code);
     if (!hallazgoConfig) return;
   
-    setDientes(prev => {
-      const nuevos = { ...prev };
-      const idKey = String(id);
-  
-      const nuevoHallazgoBase = {
-        tipo: hallazgoConfig.tipo,
-        abreviatura: hallazgoConfig.abreviatura,
-        nombre: hallazgoConfig.nombre,
-        color: hallazgoConfig.color || currentMode.color,
-      };
-      
-      nuevos[idKey] = {
-        ...nuevos[idKey],
-        [code]: {
-          ...(nuevos[idKey]?.[code] || nuevoHallazgoBase), 
-          cara: {
-            ...(nuevos[idKey]?.[code]?.cara || {}), 
-            ...carasSeleccionadas,
-          }
-        },
-      };
-      return nuevos;
-    });
+    const nuevos = { ...dientes };
+    const idKey = String(id);
+
+    const nuevoHallazgoBase = {
+      tipo: hallazgoConfig.tipo,
+      abreviatura: hallazgoConfig.abreviatura,
+      nombre: hallazgoConfig.nombre,
+      color: hallazgoConfig.color || currentMode.color,
+    };
+    
+    nuevos[idKey] = {
+      ...nuevos[idKey],
+      [code]: {
+        ...(nuevos[idKey]?.[code] || nuevoHallazgoBase), 
+        cara: {
+          ...(nuevos[idKey]?.[code]?.cara || {}), 
+          ...carasSeleccionadas,
+        }
+      },
+    };
+    onChangeDientes(nuevos);
   
     setToModal({ selectedTooth: '', code: '', to: '' });
     setCurrentMode(prev => ({ ...prev, caras: {}, activeDetail: null }));
-  }, [toModal, currentMode]);
+  }, [toModal, currentMode, dientes, onChangeDientes]);
   
   
   return (

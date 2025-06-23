@@ -43,7 +43,7 @@ export function Odontogram({ dientesData, onDientesChange, odontogramType }: Odo
           scalaTooth={scalaTooth}
           typeTooth={odontogramType}
           onChangeDientes={onDientesChange}
-          initialDientesMap={dientesData}
+          dientes={dientesData}
         />
       </div>
       <div className="mt-6 border-t pt-4">
