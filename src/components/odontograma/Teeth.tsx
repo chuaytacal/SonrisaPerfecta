@@ -25,6 +25,14 @@ type PopoverState = {
   position: { top: number; left: number };
 } | null;
 
+const faceNamesMap: Record<string, string> = {
+  M: 'Mesial',
+  D: 'Distal',
+  O: 'Oclusal/Incisal',
+  C: 'Cervical',
+  V: 'Vestibular/Lingual',
+};
+
 
 export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, initialDientesMap }: Props) {
   const [openDetails, setOpenDetails] = useState<Record<string, boolean>>({});
@@ -113,16 +121,14 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
 
   const handleDisplayClick = useCallback((findings: ToothDisplays[], event: any) => {
     if (findings.length === 0) return;
-
-    const target = event.target.getStage();
-    const pointerPosition = target.getPointerPosition();
     
-    if (pointerPosition) {
-        setPopoverState({
-            findings: findings,
-            position: { top: pointerPosition.y, left: pointerPosition.x }
-        });
-    }
+    // Use the native event to get client coordinates for fixed positioning
+    const { clientX, clientY } = event.evt;
+
+    setPopoverState({
+        findings: findings,
+        position: { top: clientY, left: clientX }
+    });
   }, []);
 
   useEffect(() => {
@@ -252,6 +258,38 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
       return newDientes;
     });
   };
+  
+  const handleToggleCara = useCallback((faceKey: string) => {
+    const code = toModal.code;
+    const hallazgoConfig = Hallazgos.find(h => h.tipo === code);
+    
+    const requiresPincel = hallazgoConfig && hallazgoConfig.detalle && hallazgoConfig.detalle.length > 0;
+    
+    if (requiresPincel && !currentMode.activeDetail) {
+        console.warn("Please select a finding type (pincel) before selecting a face.");
+        return;
+    }
+
+    setCurrentMode(prev => {
+        const newCaras = { ...prev.caras };
+        const detailToApply = prev.activeDetail || (code === 'RT' ? { abreviatura: 'RT', nombre: 'Restauración Temporal'} : null);
+        
+        if (!detailToApply) return prev; // Safety check
+
+        if (newCaras[faceKey]) {
+            delete newCaras[faceKey];
+        } else {
+            newCaras[faceKey] = {
+                tipo: faceKey,
+                abreviatura: faceKey, 
+                nombre: faceNamesMap[faceKey] || faceKey,
+                color: prev.color,
+                detalle: detailToApply
+            };
+        }
+        return { ...prev, caras: newCaras };
+    });
+  }, [toModal.code, currentMode.activeDetail]);
 
   const handleToothClick = useCallback((toothNum: number, id: number, jaw: 'superior' | 'inferior') => {
     if (currentMode.position === -1 && activeView === 'agregar') return;
@@ -276,11 +314,14 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
         }
       } else {
         if (['RT', 'RD', 'LCD'].includes(tipo)) {
-          // Reset modal state when opening
+          let activeDetailForModal: DetalleHallazgo | null = null;
+          if (tipo === 'RT') {
+              activeDetailForModal = { abreviatura: 'RT', nombre: 'Restauración Temporal' };
+          }
           setCurrentMode(prev => ({
             ...prev,
             caras: {},
-            activeDetail: null,
+            activeDetail: activeDetailForModal,
           }));
           setToModal({ selectedTooth: toothNum, code: tipo, to: 'toToothFace', detalle: detalleDef });
         } else {
@@ -412,31 +453,6 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
   }, [toModal, currentMode]);
   
   
-  const handleToggleCara = useCallback((faceKey: string) => {
-    if (!currentMode.activeDetail) {
-        // Maybe provide feedback to the user that they need to select a detail first
-        return;
-    }
-    
-    setCurrentMode(prev => {
-        const newCaras = { ...prev.caras };
-        if (newCaras[faceKey]) {
-            // Cara exists, so deselect it
-            delete newCaras[faceKey];
-        } else {
-            // Cara doesn't exist, so select it with the active detail
-            newCaras[faceKey] = {
-                tipo: faceKey,
-                abreviatura: faceKey,
-                nombre: Hallazgos.find(h => h.tipo === prev.activeDetail?.tipo)?.denominacion || faceKey,
-                color: prev.color,
-                detalle: prev.activeDetail!
-            };
-        }
-        return { ...prev, caras: newCaras };
-    });
-  }, [currentMode.activeDetail]);
-
   return (
     <div className="relative flex flex-col md:flex-row items-start gap-4 md:gap-6 p-2 md:p-4">
       {typeTooth === 'Permanent' ? (
@@ -796,8 +812,8 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
             style={{
                 position: 'fixed',
                 top: `${popoverState.position.top}px`,
-                left: `${popoverState.position.left}px`,
-                transform: 'translateY(-100%) translateX(10px)',
+                left: `${popoverState.position.left + 15}px`,
+                transform: 'translateY(-100%)',
                 zIndex: 50,
             }}
         >
@@ -857,6 +873,15 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                       />
                     </Layer>
                   </Stage>
+                </div>
+
+                <div className="mt-2 text-center text-sm text-muted-foreground">
+                  Caras seleccionadas:{" "}
+                  <span className="font-medium text-foreground">
+                    {Object.keys(currentMode.caras)
+                      .map((key) => faceNamesMap[key] || key)
+                      .join(", ") || "Ninguna"}
+                  </span>
                 </div>
                 
                 {toModal.detalle && toModal.detalle.length > 0 && (
