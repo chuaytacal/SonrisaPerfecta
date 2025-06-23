@@ -94,20 +94,22 @@ export function ToothA({
                 scaleY={rotated ? -1 : 1}
               />
           )}
-          {otherFindingsCount > 0 && (
-             <Text
-                x={130}
-                y={-380}
-                text={`+${otherFindingsCount}`}
-                fontSize={50}
-                fontFamily="Calibri"
-                fill="hsl(var(--primary))"
-                offsetX={20}
-                offsetY={30}
-                scaleY={rotated ? -1 : 1}
-              />
-          )}
       </KonvaGroup>
+      
+      {otherFindingsCount > 0 && (
+        <Text
+          x={175}
+          y={-335}
+          text={`+${otherFindingsCount}`}
+          fontSize={40}
+          fill="hsl(var(--primary))"
+          fontStyle="bold"
+          scaleY={rotated ? -1 : 1}
+          listening={false}
+          align="right"
+        />
+      )}
+      
       {/* Tooth Shapes */}
       <KonvaGroup key={`clickable-tooth-shape-${numTooth}`} onClick={onClick} onTap={onClick} >
         {typeTeeth === 1 && (
@@ -270,20 +272,22 @@ export function ToothB({
                 scaleY={rotated ? -1 : 1}
               />
           )}
-          {otherFindingsCount > 0 && (
-             <Text
-                x={130}
-                y={-380}
-                text={`+${otherFindingsCount}`}
-                fontSize={50}
-                fontFamily="Calibri"
-                fill="hsl(var(--primary))"
-                offsetX={20}
-                offsetY={30}
-                scaleY={rotated ? -1 : 1}
-              />
-          )}
       </KonvaGroup>
+
+      {otherFindingsCount > 0 && (
+        <Text
+          x={175}
+          y={-335}
+          text={`+${otherFindingsCount}`}
+          fontSize={40}
+          fill="hsl(var(--primary))"
+          fontStyle="bold"
+          scaleY={rotated ? -1 : 1}
+          listening={false}
+          align="right"
+        />
+      )}
+
       <KonvaGroup onClick={onClick} onTap={onClick}>
         {typeTeeth==1 && (
           <>

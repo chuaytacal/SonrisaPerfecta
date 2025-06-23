@@ -3,12 +3,13 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Stage, Layer, Group as KonvaGroup } from 'react-konva';
-import { ChevronDown, ChevronUp, ArrowLeft, ArrowRight, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, ArrowLeft, ArrowRight, Trash2, X, Search } from "lucide-react";
 import {ToothA, ToothB} from './Tooth';
 import { Badge } from '@/components/ui/badge';
 import { DientesMap, SettingSupperJaw, SettingsLowerJaw, SettingSupperJawPrimary, SettingsLowerJawPrimary, Hallazgos, CurrentMode, Hallazgo as HallazgoType, ToothDisplays, OpenModeal, DetalleHallazgo } from './setting';
 import { InteractiveFace } from './ToothFace';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -41,6 +42,9 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
     position: { top: number; left: number };
   } | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  
+  const [searchTerm, setSearchTerm] = useState('');
+
 
   const [currentMode, setCurrentMode] = useState<CurrentMode>({
     position: -1,
@@ -70,14 +74,15 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
       const displaysForTooth: ToothDisplays[] = [];
       for (const code in hallazgos) {
         const hallazgo = hallazgos[code];
-        if (hallazgo.abreviatura) {
-            displaysForTooth.push({ abreviatura: hallazgo.abreviatura, color: hallazgo.color });
-        }
-        if (hallazgo.detalle) {
+        
+        if (hallazgo.detalle && hallazgo.detalle.length > 0) {
             hallazgo.detalle.forEach(d => {
                 displaysForTooth.push({ abreviatura: d.abreviatura, color: hallazgo.color });
             });
+        } else if (hallazgo.abreviatura) {
+             displaysForTooth.push({ abreviatura: hallazgo.abreviatura, color: hallazgo.color });
         }
+
         if (hallazgo.cara) {
             Object.values(hallazgo.cara).forEach(c => {
                 if (c.detalle) {
@@ -522,16 +527,23 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
         {activeView === 'agregar' ? (
           <div className="text-sm p-2 border rounded-md max-h-[calc(100vh-12rem)] overflow-y-auto">
             <h3 className="font-semibold mb-2 text-muted-foreground">Hallazgos</h3>
+            <div className="relative mb-2">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder="Buscar hallazgo..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 h-8"
+                />
+            </div>
             {(() => {
-              const tiposEspeciales: [string, HallazgoType][] = [];
-              const tiposNormales: [string, HallazgoType][] = [];
-              Hallazgos.forEach((label, key) => {
-                if (['RD', 'RT', 'LCD'].includes(label.tipo)) {
-                  tiposEspeciales.push([String(key), label]);
-                } else {
-                  tiposNormales.push([String(key), label]);
-                }
-              });
+              const filteredHallazgos = Hallazgos.map((h, i) => [String(i), h] as [string, HallazgoType]).filter(([key, label]) =>
+                  label.denominacion.toLowerCase().includes(searchTerm.toLowerCase())
+              );
+
+              const tiposEspeciales = filteredHallazgos.filter(([key, label]) => ['RD', 'RT', 'LCD'].includes(label.tipo));
+              const tiposNormales = filteredHallazgos.filter(([key, label]) => !['RD', 'RT', 'LCD'].includes(label.tipo));
+              
               return (
                 <>
                   {tiposEspeciales.length > 0 && (
@@ -570,27 +582,17 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                             variant="ghost"
                             className={`w-full justify-between h-auto py-2 px-3 text-left ${currentMode?.position === Number(key) ? 'bg-accent text-accent-foreground' : ''}`}
                             onClick={() => {
-                              if (label.color === '' || (label.detalle && label.detalle.length > 0) || label.tipo === 'GI') {
-                                if (currentMode.position !== Number(key)) {
-                                    setCurrentMode(prev => ({
-                                        ...prev,
-                                        position: Number(key),
-                                        color: label.color === '' ? colorHallazgo[key] || '#0880D7' : label.color,
-                                        detalle: (label.detalle && label.detalle.length > 0) ? 0 : -1,
-                                        direccion: label.tipo === 'GI' ? 'izquierda' : undefined,
-                                        cara: undefined,
-                                    }));
-                                }
-                                toggleDetails(key);
-                              } else {
-                                setCurrentMode({
+                                setCurrentMode(prev => ({
+                                    ...prev,
                                     position: Number(key),
-                                    color: label.color,
-                                    detalle: -1,
-                                    direccion: undefined,
+                                    color: label.color === '' ? colorHallazgo[key] || '#0880D7' : label.color,
+                                    detalle: (label.detalle && label.detalle.length > 0) ? 0 : -1,
+                                    direccion: label.tipo === 'GI' ? 'izquierda' : undefined,
                                     cara: undefined,
-                                });
-                              }
+                                }));
+                                if (label.color === '' || (label.detalle && label.detalle.length > 0) || label.tipo === 'GI') {
+                                    toggleDetails(key);
+                                }
                             }}
                           >
                             <span>{label.denominacion}</span>
@@ -606,11 +608,10 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                                   <div className="flex items-center justify-start gap-2">
                                     <Button variant={currentMode?.direccion === 'izquierda' ? 'secondary' : 'outline'} size="icon" 
                                       onClick={() => {
-                                        const newActiveFinding = Hallazgos[Number(key)];
                                         setCurrentMode({
                                           position: Number(key),
-                                          color: newActiveFinding.color === '' ? colorHallazgo[key] || '#0880D7' : newActiveFinding.color,
-                                          detalle: (newActiveFinding.detalle && newActiveFinding.detalle.length > 0) ? 0 : -1,
+                                          color: label.color === '' ? colorHallazgo[key] || '#0880D7' : label.color,
+                                          detalle: (label.detalle && label.detalle.length > 0) ? 0 : -1,
                                           direccion: 'izquierda',
                                           cara: undefined,
                                         });
@@ -618,11 +619,10 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                                     ><ArrowLeft size={16}/></Button>
                                     <Button variant={currentMode?.direccion === 'derecha' ? 'secondary' : 'outline'} size="icon" 
                                       onClick={() => {
-                                        const newActiveFinding = Hallazgos[Number(key)];
                                         setCurrentMode({
                                           position: Number(key),
-                                          color: newActiveFinding.color === '' ? colorHallazgo[key] || '#0880D7' : newActiveFinding.color,
-                                          detalle: (newActiveFinding.detalle && newActiveFinding.detalle.length > 0) ? 0 : -1,
+                                          color: label.color === '' ? colorHallazgo[key] || '#0880D7' : label.color,
+                                          detalle: (label.detalle && label.detalle.length > 0) ? 0 : -1,
                                           direccion: 'derecha',
                                           cara: undefined,
                                         });
@@ -634,45 +634,42 @@ export function Teeth({ scalaTeeth, scalaTooth, typeTooth, onChangeDientes, init
                                   <div className="space-y-1">
                                     <Button variant={currentMode.color === '#E40000' && currentMode.position === Number(key) ? 'destructive' : 'outline'} size="sm" className="w-full justify-start gap-2" 
                                       onClick={() => {
-                                        const newColor = '#E40000';
-                                        const newActiveFinding = Hallazgos[Number(key)];
-                                        setColorHallazgo(prev => ({ ...prev, [key]: newColor }));
+                                        setColorHallazgo(prev => ({ ...prev, [key]: '#E40000' }));
                                         setCurrentMode({
                                           position: Number(key),
-                                          color: newColor,
-                                          detalle: (newActiveFinding.detalle && newActiveFinding.detalle.length > 0) ? 0 : -1,
-                                          direccion: newActiveFinding.tipo === 'GI' ? 'izquierda' : undefined,
+                                          color: '#E40000',
+                                          detalle: (label.detalle && label.detalle.length > 0) ? 0 : -1,
+                                          direccion: label.tipo === 'GI' ? 'izquierda' : undefined,
                                           cara: undefined,
                                         });
                                       }}
                                     ><div className="w-3 h-3 rounded-full bg-red-500"/>Mal estado</Button>
                                     <Button variant={currentMode.color === '#0880D7' && currentMode.position === Number(key) ? 'default' : 'outline'} size="sm" className="w-full justify-start gap-2" 
                                       onClick={() => {
-                                        const newColor = '#0880D7';
-                                        const newActiveFinding = Hallazgos[Number(key)];
-                                        setColorHallazgo(prev => ({ ...prev, [key]: newColor }));
+                                        setColorHallazgo(prev => ({ ...prev, [key]: '#0880D7' }));
                                         setCurrentMode({
                                           position: Number(key),
-                                          color: newColor,
-                                          detalle: (newActiveFinding.detalle && newActiveFinding.detalle.length > 0) ? 0 : -1,
-                                          direccion: newActiveFinding.tipo === 'GI' ? 'izquierda' : undefined,
+                                          color: '#0880D7',
+                                          detalle: (label.detalle && label.detalle.length > 0) ? 0 : -1,
+                                          direccion: label.tipo === 'GI' ? 'izquierda' : undefined,
                                           cara: undefined,
                                         });
                                       }}
                                     ><div className="w-3 h-3 rounded-full bg-blue-500"/>Buen estado</Button>
                                   </div>
                                 )}
-                                {label.detalle && label.detalle.length > 0 && (
+                                {label.detalle && label.detalle.length > 0 && 
+                                    (label.tipo !== 'C' || (currentMode.position === Number(key) && currentMode.color === '#E40000')) &&
+                                (
                                   <div className="flex flex-wrap gap-1">
                                     {label.detalle.map((item, idx) => (
                                       <Button key={idx} variant={currentMode?.position === Number(key) && currentMode.detalle === idx ? 'secondary': 'outline'} size="sm" className="h-auto py-0.5 px-1.5" 
                                         onClick={() => {
-                                          const newActiveFinding = Hallazgos[Number(key)];
                                           setCurrentMode({
                                             position: Number(key),
-                                            color: newActiveFinding.color === '' ? colorHallazgo[key] || '#0880D7' : newActiveFinding.color,
+                                            color: label.color === '' ? colorHallazgo[key] || '#0880D7' : label.color,
                                             detalle: idx,
-                                            direccion: newActiveFinding.tipo === 'GI' ? 'izquierda' : undefined,
+                                            direccion: label.tipo === 'GI' ? 'izquierda' : undefined,
                                             cara: undefined,
                                           });
                                         }}
