@@ -22,10 +22,11 @@ import {
 } from "@/components/ui/tooltip"
 import { DollarSign, Edit, Download, Trash2, ChevronDown, FileText, ThumbsUp, ThumbsDown, HeartOff, CheckCircle2, Circle, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { mockPresupuestosData } from '@/lib/data';
+import { mockPagosData, mockPresupuestosData } from '@/lib/data';
 import { PaymentSheet } from './PaymentSheet';
 import { useToast } from '@/hooks/use-toast';
 import { ConfirmationDialog } from '../ui/confirmation-dialog';
+import { EditServiceSheet } from './EditServiceSheet';
 
 interface BudgetCardProps {
   presupuesto: Presupuesto;
@@ -35,12 +36,12 @@ interface BudgetCardProps {
 }
 
 const statusConfig: Record<EstadoPresupuesto, { label: string; icon: React.ElementType, badgeClass: string, textClass: string, color: string, hoverBgClass: string }> = {
-  Creado: { label: 'Creado', icon: FileText, badgeClass: 'border-blue-500 text-blue-600', textClass: 'text-blue-600', color: '#3b82f6', hoverBgClass: 'hover:bg-blue-100/80' },
-  Aceptado: { label: 'Aceptado', icon: ThumbsUp, badgeClass: 'border-green-600 text-green-600', textClass: 'text-green-600', color: '#16a34a', hoverBgClass: 'hover:bg-green-100/80' },
-  Rechazado: { label: 'Rechazado', icon: ThumbsDown, badgeClass: 'border-red-600 text-red-600', textClass: 'text-red-600', color: '#dc2626', hoverBgClass: 'hover:bg-red-100/80' },
-  Abandonado: { label: 'Abandonado', icon: HeartOff, badgeClass: 'border-gray-500 text-gray-500', textClass: 'text-gray-500', color: '#6b7280', hoverBgClass: 'hover:bg-gray-100/80' },
-  Terminado: { label: 'Terminado', icon: CheckCircle2, badgeClass: 'border-purple-600 text-purple-600', textClass: 'text-purple-600', color: '#9333ea', hoverBgClass: 'hover:bg-purple-100/80' },
-  Otro: { label: 'Otro', icon: Circle, badgeClass: 'border-gray-500 text-gray-500', textClass: 'text-gray-500', color: '#6b7280', hoverBgClass: 'hover:bg-gray-100/80' },
+  Creado: { label: 'Creado', icon: FileText, badgeClass: 'border-blue-500 text-blue-600', textClass: 'text-blue-600', color: '#3b82f6', hoverBgClass: 'hover:bg-blue-500/20' },
+  Aceptado: { label: 'Aceptado', icon: ThumbsUp, badgeClass: 'border-green-600 text-green-600', textClass: 'text-green-600', color: '#16a34a', hoverBgClass: 'hover:bg-green-600/20' },
+  Rechazado: { label: 'Rechazado', icon: ThumbsDown, badgeClass: 'border-red-600 text-red-600', textClass: 'text-red-600', color: '#dc2626', hoverBgClass: 'hover:bg-red-600/20' },
+  Abandonado: { label: 'Abandonado', icon: HeartOff, badgeClass: 'border-gray-500 text-gray-500', textClass: 'text-gray-500', color: '#6b7280', hoverBgClass: 'hover:bg-gray-500/20' },
+  Terminado: { label: 'Terminado', icon: CheckCircle2, badgeClass: 'border-purple-600 text-purple-600', textClass: 'text-purple-600', color: '#9333ea', hoverBgClass: 'hover:bg-purple-600/20' },
+  Otro: { label: 'Otro', icon: Circle, badgeClass: 'border-gray-500 text-gray-500', textClass: 'text-gray-500', color: '#6b7280', hoverBgClass: 'hover:bg-gray-500/20' },
 };
 
 
@@ -54,6 +55,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
   } | null>(null);
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [editingService, setEditingService] = useState<ItemPresupuesto | null>(null);
   
   useEffect(() => {
     setPresupuesto(initialPresupuesto);
@@ -112,6 +114,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
         mockPresupuestosData.splice(budgetIndex, 1);
     }
     
+    // Find all payments related to this budget and remove them
     const paymentsToKeep = mockPagosData.filter(pago => 
         !pago.itemsPagados.some(item => item.idPresupuesto === budgetIdToDelete)
     );
@@ -137,7 +140,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
             <div className="flex items-center gap-4">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className={cn("text-xs font-semibold h-7 px-2 gap-1 group", statusConfig[estado].badgeClass)} style={{ borderColor: statusConfig[estado].color }}>
+                        <Button variant="outline" className={cn("text-xs font-semibold h-7 px-2 gap-1 group", statusConfig[estado].badgeClass, statusConfig[estado].hoverBgClass)} style={{ borderColor: statusConfig[estado].color }}>
                             <ChevronDown className="h-3 w-3" />
                             <CurrentStatusIcon className="h-4 w-4" />
                             {statusConfig[estado].label}
@@ -146,9 +149,9 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                     <DropdownMenuContent align="start">
                       <div className="p-2 font-semibold text-sm">Estado del Presupuesto</div>
                       {Object.entries(statusConfig).map(([key, config]) => (
-                        <DropdownMenuItem key={key} onClick={() => handleStateChange(key as EstadoPresupuesto)} className={cn("group", config.textClass, `focus:bg-[${config.color}]/20`)}>
+                        <DropdownMenuItem key={key} onClick={() => handleStateChange(key as EstadoPresupuesto)} className={cn("group focus:text-white", config.textClass, config.hoverBgClass)}>
                           <config.icon className={cn("mr-2 h-4 w-4", config.textClass, "group-focus:text-white")} />
-                          <span className="group-focus:text-white">{config.label}</span>
+                          <span>{config.label}</span>
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>
@@ -161,7 +164,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                 </div>
               </AccordionTrigger>
             </div>
-              <TooltipProvider>
+              <TooltipProvider delayDuration={100}>
               <div className="flex items-center gap-1.5 ml-4">
                   <Tooltip><TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePayMultiple}><DollarSign className="h-4 w-4" /></Button>
@@ -201,7 +204,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                     const isPaid = porPagar <= 0;
 
                     return (
-                      <TableRow key={item.id}>
+                      <TableRow key={item.id} onClick={() => setEditingService(item)} className="cursor-pointer hover:bg-muted/50">
                         <TableCell className="font-medium">{item.procedimiento.denominacion}</TableCell>
                         <TableCell>{item.cantidad}</TableCell>
                         <TableCell className="text-right">S/ {subtotal.toFixed(2)}</TableCell>
@@ -213,7 +216,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                                     <CheckCircle className="h-5 w-5"/>
                                 </div>
                             ) : (
-                                <Button variant="outline" size="sm" className="h-7" onClick={() => handlePayItem(item)}>Pagar</Button>
+                                <Button variant="outline" size="sm" className="h-7" onClick={(e) => { e.stopPropagation(); handlePayItem(item); }}>Pagar</Button>
                             )}
                         </TableCell>
                       </TableRow>
@@ -255,6 +258,19 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
             itemsToPay={paymentContext.items}
             title={paymentContext.title}
             onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
+      {editingService && (
+        <EditServiceSheet
+          isOpen={!!editingService}
+          onOpenChange={(open) => !open && setEditingService(null)}
+          item={editingService}
+          presupuesto={presupuesto}
+          paciente={paciente}
+          onUpdate={() => {
+              setEditingService(null); // Close sheet on update
+              onUpdate(); // Refresh parent
+          }}
         />
       )}
       <ConfirmationDialog

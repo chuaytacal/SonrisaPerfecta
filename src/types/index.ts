@@ -1,5 +1,4 @@
 
-
 import type { DientesMap } from "@/components/odontograma/setting";
 
 export type TipoDocumento = "DNI" | "EXTRANJERIA" | "PASAPORTE";
@@ -126,6 +125,7 @@ export type Personal = {
   fechaIngreso: string; // "DD/MM/YYYY" - Fecha de ingreso como personal
   estado: "Activo" | "Inactivo";
   avatarUrl?: string; // Específico del rol de personal
+  especialidad?: string;
 };
 
 export type MetodoPago = 'Efectivo' | 'Tarjeta' | 'Transferencia' | 'Otro';

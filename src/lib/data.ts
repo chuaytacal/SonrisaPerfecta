@@ -27,6 +27,7 @@ export let mockPersonalData: Personal[] = [
     fechaIngreso: "17/02/2023",
     estado: "Inactivo",
     avatarUrl: "https://placehold.co/40x40.png?text=JS",
+    especialidad: "Odontología General",
   },
   {
     id: "personal-2",
@@ -35,6 +36,7 @@ export let mockPersonalData: Personal[] = [
     fechaIngreso: "05/07/2023",
     estado: "Activo",
     avatarUrl: "https://placehold.co/40x40.png?text=PV",
+    especialidad: "Ortodoncia",
   },
   {
     id: "personal-3",
@@ -43,6 +45,7 @@ export let mockPersonalData: Personal[] = [
     fechaIngreso: "11/10/2023",
     estado: "Activo",
     avatarUrl: "https://placehold.co/40x40.png?text=CP",
+    especialidad: "Endodoncia",
   },
 ];
 

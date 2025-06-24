@@ -118,7 +118,7 @@ export default function EstadoDeCuentaPage() {
             ...originalBudget,
             nombre: data.nombre,
             doctorResponsableId: data.doctorResponsableId,
-            estado: data.estado,
+            estado: 'Creado', // Reset state on any edit
             nota: data.nota,
             items: data.items,
             montoPagado: data.items.reduce((acc, item) => acc + (item.montoPagado || 0), 0)
