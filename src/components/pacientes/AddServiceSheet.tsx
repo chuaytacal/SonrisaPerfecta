@@ -55,18 +55,23 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
   
   const [isConfirmDecreaseOpen, setIsConfirmDecreaseOpen] = useState(false);
   const [itemToDecrease, setItemToDecrease] = useState<ItemPresupuesto | null>(null);
+  
+  const [originalItems, setOriginalItems] = useState<ItemPresupuesto[]>([]);
 
 
   useEffect(() => {
     if (isOpen) {
         if (editingBudget) {
-            setSelectedItems([...editingBudget.items]); // Create a copy
+            const budgetItemsCopy = JSON.parse(JSON.stringify(editingBudget.items));
+            setSelectedItems(budgetItemsCopy);
+            setOriginalItems(budgetItemsCopy); // Store the initial state for comparison
             setNombrePresupuesto(editingBudget.nombre);
             setDoctorResponsableId(editingBudget.doctorResponsableId || '');
             setEstado(editingBudget.estado);
             setNota(editingBudget.nota || '');
         } else {
             setSelectedItems([]);
+            setOriginalItems([]);
             setNombrePresupuesto('');
             setDoctorResponsableId('');
             setEstado('Creado');
@@ -111,7 +116,7 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
   };
 
   const handleRemoveServicio = (itemToRemove: ItemPresupuesto) => {
-    if (itemToRemove.montoPagado > 0) {
+    if ((itemToRemove.montoPagado || 0) > 0) {
         setItemToDelete(itemToRemove);
         setIsConfirmDeleteOpen(true);
     } else {
@@ -132,8 +137,10 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
     if (!item) return;
 
     const newQuantity = item.cantidad + delta;
+    const originalItem = originalItems.find(original => original.id === item.id);
 
-    if (delta < 0 && newQuantity >= 1 && (item.montoPagado || 0) > 0) {
+    // Show confirmation only if reducing quantity BELOW the original quantity and there are payments.
+    if (delta < 0 && originalItem && newQuantity < originalItem.cantidad && (item.montoPagado || 0) > 0) {
         setItemToDecrease(item);
         setIsConfirmDecreaseOpen(true);
         return;
@@ -204,6 +211,15 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
     if (selectedItems.length === 0) {
         toast({ title: "Sin servicios", description: "Debe agregar al menos un servicio al presupuesto.", variant: "destructive" });
         return;
+    }
+    
+    if (editingBudget?.id) {
+        // Cascade doctor change to existing payments associated with this budget
+        mockPagosData.forEach(pago => {
+            if (pago.itemsPagados.some(itemPagado => itemPagado.idPresupuesto === editingBudget.id)) {
+                pago.doctorResponsableId = doctorResponsableId;
+            }
+        });
     }
 
     onSave({ id: editingBudget?.id, items: selectedItems, nombre: nombrePresupuesto, doctorResponsableId, estado, nota });

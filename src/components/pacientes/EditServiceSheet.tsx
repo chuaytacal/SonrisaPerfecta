@@ -126,7 +126,6 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
   };
   
   const metodoPagoOptions: MetodoPago[] = ['Efectivo', 'Tarjeta', 'Transferencia', 'Otro'];
-  const doctorOptions = mockPersonalData.filter(d => d.estado === 'Activo').map(d => ({ value: d.id, label: `${d.persona.nombre} ${d.persona.apellidoPaterno}` }));
 
   return (
     <>
@@ -167,35 +166,38 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
                   </TableHeader>
                   <TableBody>
                     {pagos.length > 0 ? (
-                      pagos.map(pago => (
-                        <TableRow key={pago.id}>
-                            <TableCell className="w-[140px]">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm" className="text-xs w-full">
-                                            {format(new Date(pago.fechaPago), 'dd/MM/yyyy')}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent><Calendar mode="single" selected={new Date(pago.fechaPago)} onSelect={(date) => handlePagoChange(pago.id, 'fechaPago', date!)} /></PopoverContent>
-                                </Popover>
-                            </TableCell>
-                            <TableCell className="w-[180px]">
-                                <Select value={pago.doctorResponsableId} onValueChange={val => handlePagoChange(pago.id, 'doctorResponsableId', val)}>
-                                    <SelectTrigger><SelectValue/></SelectTrigger>
-                                    <SelectContent>{doctorOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
-                                </Select>
-                            </TableCell>
-                            <TableCell className="w-[150px]">
-                                 <Select value={pago.metodoPago} onValueChange={val => handlePagoChange(pago.id, 'metodoPago', val as MetodoPago)}>
-                                    <SelectTrigger><SelectValue/></SelectTrigger>
-                                    <SelectContent>{metodoPagoOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
-                                </Select>
-                            </TableCell>
-                            <TableCell className="text-right w-[120px]">
-                                <Input type="number" value={pago.montoTotal} onChange={e => handlePagoChange(pago.id, 'montoTotal', parseFloat(e.target.value))} onBlur={e => handleMontoBlur(pago.id, e.target.value)} className="w-24 text-right" />
-                            </TableCell>
-                        </TableRow>
-                      ))
+                      pagos.map(pago => {
+                        const doctor = mockPersonalData.find(d => d.id === pago.doctorResponsableId);
+                        return (
+                          <TableRow key={pago.id}>
+                              <TableCell className="w-[140px]">
+                                  <Popover>
+                                      <PopoverTrigger asChild>
+                                          <Button variant="outline" size="sm" className="text-xs w-full">
+                                              {format(new Date(pago.fechaPago), 'dd/MM/yyyy')}
+                                          </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent><Calendar mode="single" selected={new Date(pago.fechaPago)} onSelect={(date) => handlePagoChange(pago.id, 'fechaPago', date!)} /></PopoverContent>
+                                  </Popover>
+                              </TableCell>
+                              <TableCell className="w-[180px]">
+                                  <Input
+                                    value={doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'N/A'}
+                                    disabled
+                                  />
+                              </TableCell>
+                              <TableCell className="w-[150px]">
+                                   <Select value={pago.metodoPago} onValueChange={val => handlePagoChange(pago.id, 'metodoPago', val as MetodoPago)}>
+                                      <SelectTrigger><SelectValue/></SelectTrigger>
+                                      <SelectContent>{metodoPagoOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
+                                  </Select>
+                              </TableCell>
+                              <TableCell className="text-right w-[120px]">
+                                  <Input type="number" value={pago.montoTotal} onChange={e => handlePagoChange(pago.id, 'montoTotal', parseFloat(e.target.value))} onBlur={e => handleMontoBlur(pago.id, e.target.value)} className="w-24 text-right" />
+                              </TableCell>
+                          </TableRow>
+                        )
+                      })
                     ) : (
                       <TableRow>
                         <TableCell colSpan={4} className="h-24 text-center">
