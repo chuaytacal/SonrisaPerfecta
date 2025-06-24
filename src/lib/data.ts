@@ -113,6 +113,22 @@ export let mockPagosData: Pago[] = [
       monto: 20,
       concepto: 'Limpieza Dental Completa'
     }]
+  },
+  {
+    id: 'pago-2',
+    idPaciente: 'paciente-1',
+    fechaPago: new Date('2024-06-20T11:00:00Z'),
+    montoTotal: 120,
+    metodoPago: 'Tarjeta',
+    tipoComprobante: 'Factura',
+    doctorResponsableId: 'personal-3',
+    descripcion: '(1) Extracción Simple',
+    itemsPagados: [{
+      idPresupuesto: 'presupuesto-2',
+      idItem: 'item-3',
+      monto: 120,
+      concepto: 'Extracción Simple'
+    }]
   }
 ];
 

@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { type Presupuesto, type MetodoPago, type ItemPresupuesto, Paciente as PacienteType, TipoComprobante, Pago } from '@/types';
 import { mockPersonalData, mockPagosData, mockPresupuestosData } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, CheckCircle, Gift, Megaphone, Wallet } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Gift, Megaphone, Wallet, ChevronRight, X } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -184,6 +184,11 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
             toast({ title: "Monto inválido", description: "Debe seleccionar ítems o ingresar un monto a cobrar.", variant: "destructive"});
             return;
         }
+        if (totalACobrar > totalPorPagar) {
+            setExceededInfo({ typed: totalACobrar, max: totalPorPagar });
+            setIsAlertOpen(true);
+            return;
+        }
         setStep(2);
     };
 
@@ -223,8 +228,8 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
         
         mockPresupuestosData[presupuestoIndex].montoPagado += totalPagadoEnEstaTransaccion;
 
-        const totalPresupuesto = mockPresupuestosData[presupuestoIndex].items.reduce((acc, item) => acc + (item.procedimiento.precioBase * item.cantidad), 0);
-        if (mockPresupuestosData[presupuestoIndex].montoPagado >= totalPresupuesto) {
+        const totalPresupuestoCalculado = mockPresupuestosData[presupuestoIndex].items.reduce((acc, item) => acc + (item.procedimiento.precioBase * item.cantidad), 0);
+        if (mockPresupuestosData[presupuestoIndex].montoPagado >= totalPresupuestoCalculado) {
           mockPresupuestosData[presupuestoIndex].estado = 'Terminado';
         }
 
@@ -232,7 +237,7 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
           id: `pago-${crypto.randomUUID()}`,
           idPaciente: paciente.id,
           fechaPago: new Date(),
-          montoTotal: totalPagadoEnEstaTransaccion,
+          montoTotal: totalACobrar,
           metodoPago,
           tipoComprobante: comprobante,
           doctorResponsableId: presupuesto.doctorResponsableId!,
@@ -253,17 +258,25 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
     ];
     
     const conceptoTexto = useMemo(() => {
-       return itemsToPay
+       const paidItemsDescription = itemsToPay
         .filter(item => selectedItems.includes(item.id) && abonos[item.id]! > 0)
         .map(item => `(${item.cantidad}) ${item.procedimiento.denominacion}`)
         .join(', ');
-    }, [selectedItems, abonos, itemsToPay]);
+        
+        if (paidItemsDescription) {
+            return paidItemsDescription;
+        }
+
+        return `Abono al presupuesto #${presupuesto.id.slice(-6)}`;
+
+    }, [selectedItems, abonos, itemsToPay, presupuesto.id]);
 
   return (
     <>
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-[65vw] p-0 flex flex-col">
         <div className="relative overflow-hidden flex-1 flex flex-col">
+            {/* Step 1: Payment Selection */}
             <div className={cn("absolute inset-0 transition-transform duration-500 ease-in-out flex flex-col", step === 1 ? "translate-x-0" : "-translate-x-full")}>
                  <SheetHeader className="p-6 border-b">
                     <SheetTitle>{title}</SheetTitle>
@@ -333,21 +346,24 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
                 </SheetFooter>
             </div>
             
+            {/* Step 2: Payment Confirmation */}
             <div className={cn("absolute inset-0 transition-transform duration-500 ease-in-out flex flex-col bg-card", step === 2 ? "translate-x-0" : "translate-x-full")}>
-                 <div className="p-6 border-b flex items-center">
+                 <div className="p-6 border-b flex items-center justify-between">
                     <button onClick={() => setStep(1)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
                         <ArrowLeft className="h-4 w-4" />
-                        <span>Volver</span>
+                        <span>Caja {'>'} Confirmar Venta</span>
                     </button>
+                    <SheetClose asChild><Button variant="ghost" size="icon" className="h-6 w-6"><X className="h-4 w-4"/></Button></SheetClose>
                 </div>
                  <ScrollArea className="flex-grow">
-                    <div className="p-6">
-                        <h2 className="text-xl font-semibold text-center mb-4">CONFIRMAR VENTA</h2>
-                        <div className="max-w-3xl mx-auto space-y-6">
-                            <div className="w-full max-w-sm mx-auto p-4 rounded-lg bg-muted/50 text-center">
+                    <div className="p-6 space-y-6">
+                        <div className="max-w-2xl mx-auto">
+                            <h2 className="text-xl font-semibold text-center mb-4">CONFIRMAR VENTA</h2>
+                            <div className="w-full max-w-sm mx-auto p-4 rounded-lg bg-muted/50 text-center mb-6">
                                 <p className="text-sm text-muted-foreground">Monto total a cobrar</p>
                                 <p className="text-3xl font-bold text-primary">S/ {totalACobrar.toFixed(2)}</p>
                             </div>
+
                             <div className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                                     <div><Label>Concepto</Label><p className="text-sm font-medium" title={conceptoTexto}>{conceptoTexto}</p></div>
@@ -355,13 +371,13 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
                                 </div>
                                 <div>
                                     <Label>Doctor relacionado a la venta</Label>
-                                    <Select value={doctor?.id} disabled>
-                                        <SelectTrigger className="w-full md:w-1/2">
-                                            <SelectValue placeholder={doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'No asignado'}/>
-                                        </SelectTrigger>
-                                    </Select>
+                                    <Input
+                                        value={doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'No asignado'}
+                                        disabled
+                                        className="w-full md:w-1/2 mt-1"
+                                    />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                                   <div>
                                       <Label>Comprobante</Label>
                                        <RadioGroup value={comprobante} onValueChange={(val) => setComprobante(val as any)} className="flex space-x-4 mt-2">
@@ -402,16 +418,16 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
     </Sheet>
      <Dialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <DialogContent className="w-[95vw] sm:w-[90vw] max-w-md p-6">
-            <div className="w-full flex justify-center">
-                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+            <div className="text-center space-y-4">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                     <Megaphone className="h-10 w-10 text-primary" />
                 </div>
-            </div>
-            <div className="text-center space-y-2">
-                <DialogTitle className="text-2xl font-semibold">Monto Excedido</DialogTitle>
-                <DialogDescription className="text-base leading-relaxed">
-                    El monto a cobrar (S/ {exceededInfo?.typed.toFixed(2)}) es mayor que el total por pagar (S/ {exceededInfo?.max.toFixed(2)}). Por favor, ajuste el monto.
-                </DialogDescription>
+                <div>
+                    <DialogTitle className="text-2xl font-semibold">Monto Excedido</DialogTitle>
+                    <DialogDescription className="text-base leading-relaxed mt-2">
+                        El monto a cobrar (S/ {exceededInfo?.typed.toFixed(2)}) es mayor que el total por pagar (S/ {exceededInfo?.max.toFixed(2)}). Por favor, ajuste el monto.
+                    </DialogDescription>
+                </div>
             </div>
             <DialogFooter className="mt-4 sm:justify-center">
                 <Button onClick={() => setIsAlertOpen(false)} className="w-auto">Entendido</Button>
