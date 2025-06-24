@@ -30,7 +30,7 @@ import { cn } from '@/lib/utils';
 import { Combobox } from '@/components/ui/combobox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { mockPacientesData, mockPersonalData, mockMotivosCita, mockProcedimientos } from '@/lib/data';
+import { mockPacientesData, mockPersonalData, mockMotivosCita, mockProcedimientos, mockUsuariosData } from '@/lib/data';
 
 
 const appointmentFormSchema = z.object({
@@ -98,19 +98,25 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAp
     },
   });
 
-  const pacienteOptions = useMemo(() => 
-    mockPacientesData.map(p => ({
-      value: p.id,
-      label: `${p.persona.nombre} ${p.persona.apellidoPaterno}`
-    })), []);
-
-  const doctorOptions = useMemo(() =>
-    mockPersonalData
+  const pacienteOptions = useMemo(() =>
+    mockPacientesData
       .filter(p => p.estado === 'Activo')
       .map(p => ({
         value: p.id,
         label: `${p.persona.nombre} ${p.persona.apellidoPaterno}`
-      })), []);
+    })), []);
+
+  const doctorOptions = useMemo(() => {
+    const activeDoctors = mockPersonalData.filter(p => {
+      if (p.estado !== 'Activo') return false;
+      const user = mockUsuariosData.find(u => u.id === p.idUsuario);
+      return user?.rol === 'Doctor';
+    });
+    return activeDoctors.map(p => ({
+      value: p.id,
+      label: `${p.persona.nombre} ${p.persona.apellidoPaterno}`
+    }));
+  }, []);
 
   const procedimientoOptions = useMemo(() =>
     mockProcedimientos.map(p => ({

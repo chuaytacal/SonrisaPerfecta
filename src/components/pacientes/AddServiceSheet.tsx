@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -15,7 +15,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { mockProcedimientos, mockPersonalData, mockPagosData } from '@/lib/data';
+import { mockProcedimientos, mockPersonalData, mockPagosData, mockUsuariosData } from '@/lib/data';
 import type { Procedimiento, Presupuesto, ItemPresupuesto } from '@/types';
 import { Combobox } from '@/components/ui/combobox';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -86,12 +86,17 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
     label: `${p.denominacion} - S/ ${p.precioBase.toFixed(2)}`,
   }));
 
-  const doctorOptions = mockPersonalData
-    .filter(p => p.estado === 'Activo')
-    .map(p => ({
+  const doctorOptions = useMemo(() => {
+    const activeDoctors = mockPersonalData.filter(p => {
+      if (p.estado !== 'Activo') return false;
+      const user = mockUsuariosData.find(u => u.id === p.idUsuario);
+      return user?.rol === 'Doctor';
+    });
+    return activeDoctors.map(p => ({
       value: p.id,
-      label: `${p.persona.nombre} ${p.persona.apellidoPaterno}`,
+      label: `${p.persona.nombre} ${p.persona.apellidoPaterno}`
     }));
+  }, []);
 
   const estadoOptions: { label: string, value: Presupuesto['estado'], icon: React.ElementType }[] = [
     { label: 'Creado', value: 'Creado', icon: FileText },

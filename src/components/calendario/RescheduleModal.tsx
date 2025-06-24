@@ -10,7 +10,7 @@ import { es } from 'date-fns/locale';
 import { startOfDay } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Combobox } from '@/components/ui/combobox';
-import { mockPersonalData } from '@/lib/data';
+import { mockPersonalData, mockUsuariosData } from '@/lib/data';
 import { Globe } from 'lucide-react';
 
 interface RescheduleModalProps {
@@ -25,13 +25,17 @@ export function RescheduleModal({ isOpen, onClose, onNext, appointment }: Resche
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>(appointment.idDoctor);
 
-  const doctorOptions = useMemo(() =>
-    mockPersonalData
-      .filter(p => p.estado === 'Activo')
-      .map(p => ({
-        value: p.id,
-        label: `${p.persona.nombre} ${p.persona.apellidoPaterno} (${p.especialidad})`
-      })), []);
+  const doctorOptions = useMemo(() => {
+    const activeDoctors = mockPersonalData.filter(p => {
+      if (p.estado !== 'Activo') return false;
+      const user = mockUsuariosData.find(u => u.id === p.idUsuario);
+      return user?.rol === 'Doctor';
+    });
+    return activeDoctors.map(p => ({
+      value: p.id,
+      label: `${p.persona.nombre} ${p.persona.apellidoPaterno} (${p.especialidad})`
+    }));
+  }, []);
 
   const availableTimes = useMemo(() => {
     // In a real app, this would check doctor's availability
