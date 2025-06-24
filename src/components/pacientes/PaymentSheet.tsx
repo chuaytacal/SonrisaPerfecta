@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetFooter,
@@ -15,11 +14,11 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { type Presupuesto, type MetodoPago, type ItemPresupuesto, Paciente as PacienteType } from '@/types';
-import { mockPersonalData } from '@/lib/data';
+import { type Presupuesto, type MetodoPago, type ItemPresupuesto, Paciente as PacienteType, TipoComprobante, Pago } from '@/types';
+import { mockPersonalData, mockPagosData, mockPresupuestosData } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, Check, CheckCircle, ChevronRight, Circle, DollarSign, FileText, Gift, Megaphone, Percent, User, Wallet, X } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { ArrowLeft, Check, CheckCircle, Gift, Megaphone, Wallet, X } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
@@ -35,7 +34,7 @@ interface PaymentSheetProps {
   paciente: PacienteType;
   itemsToPay: ItemPresupuesto[];
   title: string;
-  onPaymentSuccess: (amount: number) => void;
+  onPaymentSuccess: () => void;
 }
 
 export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, itemsToPay, title, onPaymentSuccess }: PaymentSheetProps) {
@@ -45,18 +44,18 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
     const [abonos, setAbonos] = useState<Record<string, number | ''>>({});
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [metodoPago, setMetodoPago] = useState<MetodoPago | ''>('');
-    const [comprobante, setComprobante] = useState<'Boleta' | 'Factura' | 'Otro' | 'Recibo' | ''>('');
+    const [comprobante, setComprobante] = useState<TipoComprobante | ''>('');
     
     const [isAlertOpen, setIsAlertOpen] = useState(false);
     const [exceededInfo, setExceededInfo] = useState<{ typed: number, max: number } | null>(null);
 
-    
     const doctor = useMemo(() => mockPersonalData.find(d => d.id === presupuesto.doctorResponsableId), [presupuesto.doctorResponsableId]);
     
     const totalPorPagar = useMemo(() => {
         return itemsToPay.reduce((acc, item) => {
             const itemTotal = item.procedimiento.precioBase * item.cantidad;
-            return acc + itemTotal;
+            const porPagarItem = itemTotal - (item.montoPagado || 0);
+            return acc + porPagarItem;
         }, 0); 
     }, [itemsToPay]);
 
@@ -77,7 +76,6 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
       if (abonoManual !== '' && typeof abonoManual === 'number') {
         return abonoManual;
       }
-      
       return selectedItems.reduce((acc, itemId) => {
               const abono = abonos[itemId];
               return acc + (typeof abono === 'number' ? abono : 0);
@@ -86,27 +84,29 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
 
     const handleItemAbonoChange = (itemId: string, value: string) => {
       let newAbonoNum = value === '' ? 0 : parseFloat(value);
-      const newAbonoStr = value === '' ? '' : value;
+      const itemData = itemsToPay.find(i => i.id === itemId);
+      if (!itemData) return;
 
-      const itemTotal = itemsToPay.find(i => i.id === itemId)!.procedimiento.precioBase * itemsToPay.find(i => i.id === itemId)!.cantidad;
+      const itemPorPagar = (itemData.procedimiento.precioBase * itemData.cantidad) - (itemData.montoPagado || 0);
 
-      if(newAbonoNum > itemTotal) {
-          setExceededInfo({ typed: newAbonoNum, max: itemTotal });
+      if(newAbonoNum > itemPorPagar) {
+          setExceededInfo({ typed: newAbonoNum, max: itemPorPagar });
           setIsAlertOpen(true);
-          newAbonoNum = itemTotal;
+          newAbonoNum = itemPorPagar;
       }
-
+      
       setAbonos(prev => ({...prev, [itemId]: newAbonoNum === 0 ? '' : newAbonoNum }));
       setAbonoManual('');
 
       if (newAbonoNum > 0 && !selectedItems.includes(itemId)) {
         setSelectedItems(prev => [...prev, itemId]);
+      } else if (newAbonoNum <= 0 && selectedItems.includes(itemId)) {
+        setSelectedItems(prev => prev.filter(id => id !== itemId));
       }
     };
 
     const handleCobrarClick = () => {
       let amountToDistribute = typeof abonoManual === 'number' ? abonoManual : 0;
-  
       if (amountToDistribute <= 0) return;
   
       if (amountToDistribute > totalPorPagar) {
@@ -118,22 +118,25 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
       
       const newAbonos: Record<string, number | ''> = {};
       let remainingAmount = amountToDistribute;
+      const itemsConAbono: string[] = [];
   
       for (const item of itemsToPay) {
-          if (remainingAmount <= 0) {
-              newAbonos[item.id] = '';
-              continue;
-          };
+        if (remainingAmount <= 0) {
+            newAbonos[item.id] = '';
+            continue;
+        }
   
-          const itemPorPagar = item.procedimiento.precioBase * item.cantidad;
-          const amountToApply = Math.min(remainingAmount, itemPorPagar);
-          
+        const itemPorPagar = (item.procedimiento.precioBase * item.cantidad) - (item.montoPagado || 0);
+        const amountToApply = Math.min(remainingAmount, itemPorPagar);
+        
+        if (amountToApply > 0) {
           newAbonos[item.id] = amountToApply;
-          remainingAmount -= amountToApply;
+          itemsConAbono.push(item.id);
+        }
+        remainingAmount -= amountToApply;
       }
   
       setAbonos(newAbonos);
-      const itemsConAbono = Object.keys(newAbonos).filter(key => newAbonos[key]! > 0);
       setSelectedItems(itemsConAbono);
     };
 
@@ -143,18 +146,15 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
 
         if (checked) {
             const newAbonos: Record<string, number> = {};
-            let totalSum = 0;
             itemsToPay.forEach(item => {
-                const itemTotal = item.procedimiento.precioBase * item.cantidad;
-                newAbonos[item.id] = itemTotal;
-                totalSum += itemTotal;
+                const itemPorPagar = (item.procedimiento.precioBase * item.cantidad) - (item.montoPagado || 0);
+                newAbonos[item.id] = itemPorPagar;
             });
             setAbonos(newAbonos);
-            setAbonoManual(totalSum);
         } else {
             setAbonos({});
-            setAbonoManual('');
         }
+        setAbonoManual('');
     };
 
     const handleSelectItem = (itemId: string, checked: boolean) => {
@@ -165,8 +165,8 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
         if(checked) {
            const item = itemsToPay.find(i => i.id === itemId);
            if (item) {
-              const itemTotal = item.procedimiento.precioBase * item.cantidad;
-              setAbonos(prevAbonos => ({ ...prevAbonos, [itemId]: itemTotal }));
+              const itemPorPagar = (item.procedimiento.precioBase * item.cantidad) - (item.montoPagado || 0);
+              setAbonos(prevAbonos => ({ ...prevAbonos, [itemId]: itemPorPagar }));
            }
         } else {
             setAbonos(prevAbonos => {
@@ -181,7 +181,7 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
     
     const handleNextStep = () => {
         if (totalACobrar <= 0) {
-            toast({ title: "Monto inválido", description: "Debe seleccionar items o ingresar un monto a cobrar.", variant: "destructive"});
+            toast({ title: "Monto inválido", description: "Debe seleccionar ítems o ingresar un monto a cobrar.", variant: "destructive"});
             return;
         }
         setStep(2);
@@ -197,8 +197,52 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
             return;
         }
         
+        const presupuestoIndex = mockPresupuestosData.findIndex(p => p.id === presupuesto.id);
+        if (presupuestoIndex === -1) return;
+
+        let totalPagadoEnEstaTransaccion = 0;
+        const itemsPagadosParaRegistro: Pago['itemsPagados'] = [];
+        
+        for (const itemId of selectedItems) {
+            const abono = abonos[itemId];
+            if (typeof abono !== 'number' || abono <= 0) continue;
+
+            totalPagadoEnEstaTransaccion += abono;
+            
+            const itemIndex = mockPresupuestosData[presupuestoIndex].items.findIndex(i => i.id === itemId);
+            if (itemIndex > -1) {
+              mockPresupuestosData[presupuestoIndex].items[itemIndex].montoPagado += abono;
+              itemsPagadosParaRegistro.push({
+                idPresupuesto: presupuesto.id,
+                idItem: itemId,
+                monto: abono,
+                concepto: mockPresupuestosData[presupuestoIndex].items[itemIndex].procedimiento.denominacion,
+              });
+            }
+        }
+        
+        mockPresupuestosData[presupuestoIndex].montoPagado += totalPagadoEnEstaTransaccion;
+
+        const totalPresupuesto = mockPresupuestosData[presupuestoIndex].items.reduce((acc, item) => acc + (item.procedimiento.precioBase * item.cantidad), 0);
+        if (mockPresupuestosData[presupuestoIndex].montoPagado >= totalPresupuesto) {
+          mockPresupuestosData[presupuestoIndex].estado = 'Terminado';
+        }
+
+        const newPago: Pago = {
+          id: `pago-${crypto.randomUUID()}`,
+          idPaciente: paciente.id,
+          fechaPago: new Date(),
+          montoTotal: totalPagadoEnEstaTransaccion,
+          metodoPago,
+          tipoComprobante: comprobante,
+          doctorResponsableId: presupuesto.doctorResponsableId!,
+          descripcion: conceptoTexto,
+          itemsPagados: itemsPagadosParaRegistro,
+        };
+        mockPagosData.push(newPago);
+
         toast({ title: "Pago Registrado", description: `Se registró un pago de S/ ${totalACobrar.toFixed(2)} con ${metodoPago}.`});
-        onPaymentSuccess(totalACobrar);
+        onPaymentSuccess();
     }
     
     const metodoPagoOptions: { value: MetodoPago, label: string, icon: React.ElementType }[] = [
@@ -209,14 +253,11 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
     ];
     
     const conceptoTexto = useMemo(() => {
-      if (abonoManual !== '' && typeof abonoManual === 'number' && abonoManual > 0) {
-        return `Abono al presupuesto #${presupuesto.id.slice(-6)}`;
-      }
        return itemsToPay
         .filter(item => selectedItems.includes(item.id) && abonos[item.id]! > 0)
         .map(item => `(${item.cantidad}) ${item.procedimiento.denominacion}`)
         .join(', ');
-    }, [abonoManual, selectedItems, abonos, itemsToPay, presupuesto.id]);
+    }, [selectedItems, abonos, itemsToPay]);
 
   return (
     <>
@@ -237,7 +278,7 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
                             </div>
                             <Button variant="default" className="bg-primary" onClick={handleCobrarClick}>Cobrar</Button>
                         </div>
-                         <p className="text-sm text-muted-foreground">Opción 2: Si no tienes un monto definido, puedes seleccionar los items que deseas cobrar y si deseas también puedes editar el monto.</p>
+                         <p className="text-sm text-muted-foreground">Opción 2: Si no tienes un monto definido, puedes seleccionar los ítems que deseas cobrar y si deseas también puedes editar el monto.</p>
                         <div className="border rounded-lg">
                             <Table>
                                 <TableHeader>
@@ -245,14 +286,15 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
                                         <TableHead className="w-[50px]">
                                             <Checkbox checked={itemsToPay.length > 0 && selectedItems.length === itemsToPay.length} onCheckedChange={(checked) => handleSelectAll(Boolean(checked))} />
                                         </TableHead>
-                                        <TableHead>Item</TableHead>
+                                        <TableHead>Ítem</TableHead>
                                         <TableHead className="text-right">Por Pagar</TableHead>
                                         <TableHead className="text-right">Abono</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {itemsToPay.map(item => {
-                                        const porPagarItem = item.procedimiento.precioBase * item.cantidad;
+                                        const itemTotal = item.procedimiento.precioBase * item.cantidad;
+                                        const porPagarItem = itemTotal - (item.montoPagado || 0);
                                         return (
                                         <TableRow key={item.id} data-state={selectedItems.includes(item.id) ? "selected" : "unselected"}>
                                             <TableCell>
@@ -300,34 +342,33 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
                     <SheetClose asChild><Button variant="ghost" size="icon" className="h-6 w-6"><X className="h-4 w-4"/></Button></SheetClose>
                 </div>
                  <ScrollArea className="flex-grow">
-                    <div className="p-6 space-y-6">
-                        <h2 className="text-lg font-semibold text-foreground text-center">CONFIRMAR VENTA</h2>
-                        <div className="w-full max-w-sm mx-auto p-4 rounded-lg bg-muted/50 text-center">
-                            <p className="text-sm text-muted-foreground">Monto total a cobrar</p>
-                            <p className="text-3xl font-bold text-primary">S/ {totalACobrar.toFixed(2)}</p>
-                        </div>
+                    <div className="p-6">
                         <div className="space-y-4 max-w-2xl mx-auto">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><Label>Concepto</Label><p className="text-sm font-medium" title={conceptoTexto}>{conceptoTexto}</p></div>
-                                <div><Label>Paciente</Label><p className="text-sm font-medium">{paciente.persona.nombre} {paciente.persona.apellidoPaterno}</p></div>
+                            <div className="w-full max-w-sm mx-auto p-4 rounded-lg bg-muted/50 text-center">
+                                <p className="text-sm text-muted-foreground">Monto total a cobrar</p>
+                                <p className="text-3xl font-bold text-primary">S/ {totalACobrar.toFixed(2)}</p>
                             </div>
-                            <div>
-                                <Label>Doctor relacionado a la venta</Label>
-                                <Select value={doctor?.id} disabled>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'No asignado'}/>
-                                    </SelectTrigger>
-                                </Select>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <Label>Comprobante</Label>
-                                     <RadioGroup value={comprobante} onValueChange={(val) => setComprobante(val as any)} className="flex space-x-4 mt-2">
-                                        <div className="flex items-center space-x-2"><RadioGroupItem value="Boleta" id="r-boleta" /><Label htmlFor="r-boleta" className="font-normal">Boleta</Label></div>
-                                        <div className="flex items-center space-x-2"><RadioGroupItem value="Factura" id="r-factura" /><Label htmlFor="r-factura" className="font-normal">Factura</Label></div>
-                                        <div className="flex items-center space-x-2"><RadioGroupItem value="Otro" id="r-otro" /><Label htmlFor="r-otro" className="font-normal">Otro</Label></div>
-                                        <div className="flex items-center space-x-2"><RadioGroupItem value="Recibo" id="r-recibo" /><Label htmlFor="r-recibo" className="font-normal">Recibo</Label></div>
-                                    </RadioGroup>
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                                    <div><Label>Concepto</Label><p className="text-sm font-medium" title={conceptoTexto}>{conceptoTexto}</p></div>
+                                    <div><Label>Paciente</Label><p className="text-sm font-medium">{paciente.persona.nombre} {paciente.persona.apellidoPaterno}</p></div>
+                                    <div>
+                                        <Label>Doctor relacionado a la venta</Label>
+                                        <Select value={doctor?.id} disabled>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder={doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'No asignado'}/>
+                                            </SelectTrigger>
+                                        </Select>
+                                    </div>
+                                    <div>
+                                        <Label>Comprobante</Label>
+                                         <RadioGroup value={comprobante} onValueChange={(val) => setComprobante(val as any)} className="flex space-x-4 mt-2">
+                                            <div className="flex items-center space-x-2"><RadioGroupItem value="Boleta" id="r-boleta" /><Label htmlFor="r-boleta" className="font-normal">Boleta</Label></div>
+                                            <div className="flex items-center space-x-2"><RadioGroupItem value="Factura" id="r-factura" /><Label htmlFor="r-factura" className="font-normal">Factura</Label></div>
+                                            <div className="flex items-center space-x-2"><RadioGroupItem value="Otro" id="r-otro" /><Label htmlFor="r-otro" className="font-normal">Otro</Label></div>
+                                            <div className="flex items-center space-x-2"><RadioGroupItem value="Recibo" id="r-recibo" /><Label htmlFor="r-recibo" className="font-normal">Recibo</Label></div>
+                                        </RadioGroup>
+                                    </div>
                                 </div>
                                 <div>
                                     <Label>Medio de pago</Label>
@@ -337,7 +378,7 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
                                             {metodoPagoOptions.map(opt => (
                                                 <SelectItem key={opt.value} value={opt.value}>
                                                     <div className="flex items-center gap-2">
-                                                        <opt.icon className="h-4 w-4" />
+                                                        <opt.icon className="h-4 w-4" style={{color: 'currentColor'}}/>
                                                         <span>{opt.label}</span>
                                                     </div>
                                                 </SelectItem>

@@ -1,5 +1,5 @@
 
-import type { MotivoCita, Procedimiento, Persona, Paciente, Personal, AntecedentesMedicosData, Presupuesto, ItemPresupuesto } from '@/types';
+import type { MotivoCita, Procedimiento, Persona, Paciente, Personal, AntecedentesMedicosData, Presupuesto, ItemPresupuesto, Pago } from '@/types';
 import type { Appointment } from '@/types/calendar';
 import { addDays, setHours, setMinutes } from 'date-fns';
 import type { DientesMap } from '@/components/odontograma/setting';
@@ -97,6 +97,8 @@ export const mockEtiquetas: string[] = [
     "Alergia a Penicilina", "Diabético", "Menor de Edad", "Fumador", "Hipertenso", "Covid+", "Postquirúrgico", "Anciano", "Nuevo Tag Ejemplo"
 ];
 
+export let mockPagosData: Pago[] = [];
+
 export let mockPresupuestosData: Presupuesto[] = [
     {
       id: 'presupuesto-1',
@@ -106,8 +108,8 @@ export let mockPresupuestosData: Presupuesto[] = [
       estado: 'Creado',
       montoPagado: 20,
       items: [
-        { id: 'item-1', procedimiento: mockProcedimientos.find(p => p.id === 'proc-1')!, cantidad: 1 },
-        { id: 'item-2', procedimiento: mockProcedimientos.find(p => p.id === 'proc-3')!, cantidad: 1 },
+        { id: 'item-1', procedimiento: mockProcedimientos.find(p => p.id === 'proc-1')!, cantidad: 1, montoPagado: 20 },
+        { id: 'item-2', procedimiento: mockProcedimientos.find(p => p.id === 'proc-3')!, cantidad: 1, montoPagado: 0 },
       ],
       doctorResponsableId: 'personal-2',
       nota: 'Presupuesto inicial para revisión y limpieza.',
@@ -120,7 +122,7 @@ export let mockPresupuestosData: Presupuesto[] = [
       estado: 'Terminado',
       montoPagado: 120,
       items: [
-        { id: 'item-3', procedimiento: mockProcedimientos.find(p => p.id === 'proc-5')!, cantidad: 1 },
+        { id: 'item-3', procedimiento: mockProcedimientos.find(p => p.id === 'proc-5')!, cantidad: 1, montoPagado: 120 },
       ],
       doctorResponsableId: 'personal-3',
     },

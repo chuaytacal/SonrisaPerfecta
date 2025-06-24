@@ -20,7 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { DollarSign, Edit, Download, Trash2, ChevronDown, FileText, ThumbsUp, ThumbsDown, HeartOff, CheckCircle2, Circle } from 'lucide-react';
+import { DollarSign, Edit, Download, Trash2, ChevronDown, FileText, ThumbsUp, ThumbsDown, HeartOff, CheckCircle2, Circle, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { mockPresupuestosData } from '@/lib/data';
 import { PaymentSheet } from './PaymentSheet';
@@ -54,7 +54,6 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
   const { estado, id, nombre, fechaCreacion, items, montoPagado, nota } = presupuesto;
 
   const totalPresupuesto = items.reduce((acc, item) => acc + item.procedimiento.precioBase * item.cantidad, 0);
-  const porPagar = totalPresupuesto - montoPagado;
   
   const CurrentStatusIcon = statusConfig[estado].icon;
   
@@ -67,14 +66,11 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
     }
   };
   
-  const handlePaymentSuccess = (paidAmount: number) => {
-    const index = mockPresupuestosData.findIndex(p => p.id === id);
-    if (index > -1) {
-      mockPresupuestosData[index].montoPagado += paidAmount;
-    }
-    setPresupuesto(prev => ({ ...prev, montoPagado: prev.montoPagado + paidAmount }));
+  const handlePaymentSuccess = () => {
+    // onUpdate will be called from the parent, which will cause this component to receive a new 'presupuesto' prop
+    // so we just need to close the sheet.
     setPaymentContext(null); // Close the sheet
-    onUpdate();
+    onUpdate(); // Trigger parent re-render
   };
 
   const handlePayItem = (item: ItemPresupuesto) => {
@@ -85,9 +81,19 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
   };
 
   const handlePayMultiple = () => {
+    const itemsPorPagar = items.filter(item => {
+      const subtotal = item.procedimiento.precioBase * item.cantidad;
+      return item.montoPagado < subtotal;
+    });
+
+    if (itemsPorPagar.length === 0) {
+      toast({ title: "Sin Deudas", description: "Este presupuesto ya ha sido pagado en su totalidad."});
+      return;
+    }
+
     setPaymentContext({
         title: 'Registrar Varios Pagos',
-        items: presupuesto.items
+        items: itemsPorPagar,
     });
   };
 
@@ -109,7 +115,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                       <div className="p-2 font-semibold text-sm">Estado del Presupuesto</div>
                       {Object.entries(statusConfig).map(([key, config]) => (
                         <DropdownMenuItem key={key} onClick={() => handleStateChange(key as EstadoPresupuesto)} className={cn("focus:text-white", config.textClass, `focus:bg-[${config.color}]`)}>
-                          <config.icon className="mr-2 h-4 w-4"/>
+                          <config.icon className="mr-2 h-4 w-4" style={{ color: 'currentColor' }}/>
                           <span>{config.label}</span>
                         </DropdownMenuItem>
                       ))}
@@ -123,7 +129,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                 </div>
               </AccordionTrigger>
             </div>
-              <TooltipProvider delayDuration={100}>
+              <TooltipProvider>
               <div className="flex items-center gap-1.5 ml-4">
                   <Tooltip><TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePayMultiple}><DollarSign className="h-4 w-4" /></Button>
@@ -157,18 +163,30 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.procedimiento.denominacion}</TableCell>
-                      <TableCell>{item.cantidad}</TableCell>
-                      <TableCell className="text-right">S/ {(item.procedimiento.precioBase * item.cantidad).toFixed(2)}</TableCell>
-                      <TableCell className="text-right text-green-600">S/ 0.00</TableCell>
-                      <TableCell className="text-right text-red-600">S/ {(item.procedimiento.precioBase * item.cantidad).toFixed(2)}</TableCell>
-                      <TableCell className="text-right">
-                          <Button variant="outline" size="sm" className="h-7" onClick={() => handlePayItem(item)}>Pagar</Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {items.map((item) => {
+                    const subtotal = item.procedimiento.precioBase * item.cantidad;
+                    const porPagar = subtotal - item.montoPagado;
+                    const isPaid = porPagar <= 0;
+
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.procedimiento.denominacion}</TableCell>
+                        <TableCell>{item.cantidad}</TableCell>
+                        <TableCell className="text-right">S/ {subtotal.toFixed(2)}</TableCell>
+                        <TableCell className="text-right text-green-600">S/ {item.montoPagado.toFixed(2)}</TableCell>
+                        <TableCell className="text-right text-red-600">S/ {porPagar.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">
+                            {isPaid ? (
+                                <div className="flex justify-end items-center gap-1 text-green-600">
+                                    <CheckCircle className="h-5 w-5"/>
+                                </div>
+                            ) : (
+                                <Button variant="outline" size="sm" className="h-7" onClick={() => handlePayItem(item)}>Pagar</Button>
+                            )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
                 <TableFooter>
                   <TableRow>
@@ -183,7 +201,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                   </TableRow>
                    <TableRow>
                       <TableCell colSpan={4} className="text-right font-bold text-red-700">Por Pagar</TableCell>
-                      <TableCell className="text-right font-bold text-red-700">S/ {porPagar.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-bold text-red-700">S/ {(totalPresupuesto - montoPagado).toFixed(2)}</TableCell>
                       <TableCell />
                   </TableRow>
                 </TableFooter>

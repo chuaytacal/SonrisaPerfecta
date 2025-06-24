@@ -1,4 +1,5 @@
 
+
 import type { DientesMap } from "@/components/odontograma/setting";
 
 export type TipoDocumento = "DNI" | "EXTRANJERIA" | "PASAPORTE";
@@ -49,6 +50,7 @@ export interface ItemPresupuesto {
   procedimiento: Procedimiento;
   cantidad: number;
   comentario?: string;
+  montoPagado: number;
 }
 
 export interface Presupuesto {
@@ -127,15 +129,21 @@ export type Personal = {
 };
 
 export type MetodoPago = 'Efectivo' | 'Tarjeta' | 'Transferencia' | 'Otro';
-export type EstadoPago = 'Creado' | 'Pagado' | 'Anulado';
+export type TipoComprobante = 'Boleta' | 'Factura' | 'Otro' | 'Recibo';
 
 export interface Pago {
   id: string;
-  idPresupuesto: string;
-  monto: number;
+  idPaciente: string;
   fechaPago: Date;
-  metodoPago: MetodoPago | '';
-  descripcion?: string;
-  estado: EstadoPago;
-  itemsPagados: { idItem: string, monto: number }[];
+  montoTotal: number;
+  metodoPago: MetodoPago;
+  tipoComprobante: TipoComprobante;
+  doctorResponsableId: string;
+  descripcion: string;
+  itemsPagados: {
+    idPresupuesto: string;
+    idItem: string;
+    monto: number;
+    concepto: string;
+  }[];
 }

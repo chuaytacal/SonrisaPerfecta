@@ -5,8 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, PlusCircle } from 'lucide-react';
-import { mockPacientesData, mockPresupuestosData } from '@/lib/data';
-import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto } from '@/types';
+import { mockPacientesData, mockPresupuestosData, mockPagosData, mockPersonalData } from '@/lib/data';
+import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto, Pago } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,6 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BudgetCard } from '@/components/pacientes/BudgetCard';
 import { AddServiceSheet } from '@/components/pacientes/AddServiceSheet';
 import { useToast } from '@/hooks/use-toast';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
     <svg
@@ -43,6 +46,7 @@ export default function EstadoDeCuentaPage() {
   const [persona, setPersona] = useState<Persona | null>(null);
   const [loading, setLoading] = useState(true);
   const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
+  const [pagos, setPagos] = useState<Pago[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   useEffect(() => {
@@ -50,11 +54,13 @@ export default function EstadoDeCuentaPage() {
     if (foundPaciente) {
       setPaciente(foundPaciente);
       setPersona(foundPaciente.persona);
-      setPresupuestos(foundPaciente.presupuestos || []);
+      setPresupuestos(mockPresupuestosData.filter(p => p.idPaciente === patientId));
+      setPagos(mockPagosData.filter(p => p.idPaciente === patientId));
     } else {
       setPaciente(null);
       setPersona(null);
       setPresupuestos([]);
+      setPagos([]);
     }
     setLoading(false);
   }, [patientId]);
@@ -79,19 +85,15 @@ export default function EstadoDeCuentaPage() {
         id: `item-${crypto.randomUUID()}`,
         procedimiento: item.procedimiento,
         cantidad: item.cantidad,
+        montoPagado: 0,
       })),
       doctorResponsableId: data.doctorResponsableId,
       nota: data.nota,
     };
 
     mockPresupuestosData.push(newBudget);
-
-    const patientIndex = mockPacientesData.findIndex(p => p.id === paciente.id);
-    if (patientIndex > -1) {
-      mockPacientesData[patientIndex].presupuestos = [...(mockPacientesData[patientIndex].presupuestos || []), newBudget];
-    }
-
-    setPresupuestos(prev => [newBudget, ...prev]);
+    refreshBudgets();
+    
     setIsSheetOpen(false);
     toast({
         title: "Presupuesto Creado",
@@ -102,7 +104,8 @@ export default function EstadoDeCuentaPage() {
   const refreshBudgets = () => {
     const foundPaciente = mockPacientesData.find(p => p.id === patientId);
     if (foundPaciente) {
-        setPresupuestos([...(foundPaciente.presupuestos || [])]);
+        setPresupuestos([...mockPresupuestosData.filter(p => p.idPaciente === patientId)]);
+        setPagos([...mockPagosData.filter(p => p.idPaciente === patientId)])
     }
   };
 
@@ -169,8 +172,41 @@ export default function EstadoDeCuentaPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Historial de Pagos</CardTitle>
-                        <CardDescription>Próximamente...</CardDescription>
+                        <CardDescription>Lista de todos los pagos registrados para este paciente.</CardDescription>
                     </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Fecha</TableHead>
+                            <TableHead>Doctor</TableHead>
+                            <TableHead>Concepto</TableHead>
+                            <TableHead>Medio de Pago</TableHead>
+                            <TableHead className="text-right">Monto</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {pagos.length > 0 ? (
+                            pagos.map(pago => {
+                              const doctor = mockPersonalData.find(d => d.id === pago.doctorResponsableId);
+                              return (
+                                <TableRow key={pago.id}>
+                                  <TableCell>{format(new Date(pago.fechaPago), 'dd/MM/yyyy')}</TableCell>
+                                  <TableCell>{doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'N/A'}</TableCell>
+                                  <TableCell>{pago.descripcion}</TableCell>
+                                  <TableCell>{pago.metodoPago}</TableCell>
+                                  <TableCell className="text-right">S/ {pago.monto.toFixed(2)}</TableCell>
+                                </TableRow>
+                              )
+                            })
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center h-24">No hay pagos registrados.</TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
                 </Card>
             </TabsContent>
         </Tabs>
