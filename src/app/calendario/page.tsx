@@ -11,7 +11,7 @@ import getDay from 'date-fns/getDay';
 import es from 'date-fns/locale/es';
 import { addMinutes, startOfDay } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Plus, ChevronLeft, ChevronRight, CalendarDays, ListFilter, LayoutGrid, Rows3, Megaphone } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, CalendarDays, ListFilter, LayoutGrid, Rows3, Megaphone, Filter } from 'lucide-react';
 import { AppointmentModal } from '@/components/calendario/AppointmentModal';
 import { AppointmentPopoverContent } from '@/components/calendario/AppointmentPopoverContent';
 import { RescheduleModal } from '@/components/calendario/RescheduleModal';
@@ -26,6 +26,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import type { Personal } from '@/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 
 const locales = {
@@ -82,6 +83,7 @@ export default function CalendarioPage() {
 
   const [doctorFilter, setDoctorFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<AppointmentState | 'all'>('all');
+  const [motivoFilter, setMotivoFilter] = useState<string>('all');
 
   useEffect(() => {
     setCurrentDate(new Date());
@@ -104,13 +106,19 @@ export default function CalendarioPage() {
       { value: 'Reprogramada', label: 'Reprogramada' },
   ];
   
+  const motivoOptions = useMemo(() => [
+    { value: 'all', label: 'Todos los motivos' },
+    ...mockMotivosCita.map(m => ({ value: m.id, label: m.nombre }))
+  ], []);
+
   const filteredAppointments = useMemo(() => {
     return appointments.filter(appointment => {
         const doctorMatch = doctorFilter === 'all' || appointment.idDoctor === doctorFilter;
         const statusMatch = statusFilter === 'all' || appointment.estado === statusFilter;
-        return doctorMatch && statusMatch;
+        const motivoMatch = motivoFilter === 'all' || appointment.idMotivoCita === motivoFilter;
+        return doctorMatch && statusMatch && motivoMatch;
     });
-  }, [appointments, doctorFilter, statusFilter]);
+  }, [appointments, doctorFilter, statusFilter, motivoFilter]);
 
   const handleSelectSlot = useCallback(({ start, end }: { start: Date; end: Date }) => {
     if (start < new Date()) {
@@ -392,33 +400,60 @@ export default function CalendarioPage() {
         <p className="text-muted-foreground">Gestiona y visualiza todas las citas programadas en la clínica.</p>
       </div>
 
-       <div className="flex flex-col sm:flex-row gap-4 mb-4 p-4 border rounded-lg bg-card shadow-sm">
-        <div className="space-y-2">
-            <Label htmlFor="doctor-filter">Filtrar por Doctor</Label>
-            <Select value={doctorFilter} onValueChange={setDoctorFilter}>
-                <SelectTrigger id="doctor-filter" className="w-full sm:w-[250px]">
-                    <SelectValue placeholder="Seleccionar doctor..." />
-                </SelectTrigger>
-                <SelectContent>
-                    {doctorOptions.map(option => (
-                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
-        <div className="space-y-2">
-            <Label htmlFor="status-filter">Filtrar por Estado</Label>
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as AppointmentState | 'all')}>
-                <SelectTrigger id="status-filter" className="w-full sm:w-[250px]">
-                    <SelectValue placeholder="Seleccionar estado..." />
-                </SelectTrigger>
-                <SelectContent>
-                    {statusOptions.map(option => (
-                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
+       <div className="mb-4 p-0 border rounded-lg bg-card shadow-sm">
+        <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="item-1" className="border-none">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                        <Filter className="h-5 w-5 text-primary" />
+                        <span className="font-semibold text-foreground">Filtros de Búsqueda</span>
+                    </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4 pt-0">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="doctor-filter">Doctor</Label>
+                            <Select value={doctorFilter} onValueChange={setDoctorFilter}>
+                                <SelectTrigger id="doctor-filter">
+                                    <SelectValue placeholder="Seleccionar..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {doctorOptions.map(option => (
+                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="status-filter">Estado</Label>
+                            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as AppointmentState | 'all')}>
+                                <SelectTrigger id="status-filter">
+                                    <SelectValue placeholder="Seleccionar..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {statusOptions.map(option => (
+                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="motivo-filter">Motivo de Cita</Label>
+                            <Select value={motivoFilter} onValueChange={setMotivoFilter}>
+                                <SelectTrigger id="motivo-filter">
+                                    <SelectValue placeholder="Seleccionar..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {motivoOptions.map(option => (
+                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                </AccordionContent>
+            </AccordionItem>
+        </Accordion>
       </div>
 
       <div className="flex-grow relative">
