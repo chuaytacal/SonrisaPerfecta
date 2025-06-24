@@ -20,7 +20,7 @@ import type { Procedimiento, Presupuesto } from '@/types';
 import { Combobox } from '@/components/ui/combobox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trash2, PlusCircle, MinusCircle, Plus, FileText, ThumbsUp, ThumbsDown, HeartOff, CheckCircle2, Circle } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AddProcedimientoModal } from '@/components/catalogo/AddProcedimientoModal';
 import { useToast } from '@/hooks/use-toast';
@@ -148,7 +148,7 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave }: AddServiceShee
         </SheetHeader>
         <ScrollArea className="flex-grow">
           <div className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                  <div>
                     <Label htmlFor="nombre-presupuesto">Nombre del Presupuesto (Opcional)</Label>
                     <Input id="nombre-presupuesto" value={nombrePresupuesto} onChange={(e) => setNombrePresupuesto(e.target.value)} placeholder="Ej: Plan de Ortodoncia"/>
@@ -157,16 +157,15 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave }: AddServiceShee
                     <Label>Doctor responsable</Label>
                     <Combobox options={doctorOptions} value={doctorResponsableId} onChange={setDoctorResponsableId} placeholder="Seleccionar doctor..."/>
                   </div>
-            </div>
-
-            <div>
-              <Label>Estado</Label>
-              <Select value={estado} onValueChange={(val) => setEstado(val as Presupuesto['estado'])}>
-                  <SelectTrigger><SelectValue/></SelectTrigger>
-                  <SelectContent>
-                      {estadoOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                  </SelectContent>
-              </Select>
+                 <div>
+                    <Label>Estado</Label>
+                    <Select value={estado} onValueChange={(val) => setEstado(val as Presupuesto['estado'])}>
+                        <SelectTrigger><SelectValue/></SelectTrigger>
+                        <SelectContent>
+                            {estadoOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                 </div>
             </div>
             
             <div className="space-y-2">
@@ -244,11 +243,11 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave }: AddServiceShee
                         <span>S/ {total.toFixed(2)}</span>
                     </div>
                 </div>
-                <div>
-                  <Label htmlFor="nota-pago">Nota de Pago</Label>
-                  <Textarea id="nota-pago" value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Añadir comentario..."/>
-                </div>
               </div>
+            </div>
+            <div>
+              <Label htmlFor="nota-pago">Nota de Pago</Label>
+              <Textarea id="nota-pago" value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Añadir comentario..."/>
             </div>
           </div>
         </ScrollArea>

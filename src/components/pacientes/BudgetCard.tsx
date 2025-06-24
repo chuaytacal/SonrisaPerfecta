@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import type { Presupuesto, EstadoPresupuesto } from '@/types';
+import type { Presupuesto, EstadoPresupuesto, ItemPresupuesto, Paciente as PacienteType } from '@/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -24,27 +24,34 @@ import { DollarSign, Edit, Download, Trash2, ChevronDown, FileText, ThumbsUp, Th
 import { cn } from '@/lib/utils';
 import { mockPresupuestosData } from '@/lib/data';
 import { PaymentSheet } from './PaymentSheet';
+import { useToast } from '@/hooks/use-toast';
 
 interface BudgetCardProps {
   presupuesto: Presupuesto;
+  paciente: PacienteType;
   onUpdate: () => void;
 }
 
 const statusConfig: Record<EstadoPresupuesto, { label: string; icon: React.ElementType, badgeClass: string, textClass: string, color: string }> = {
-  Creado: { label: 'Creado', icon: FileText, badgeClass: 'border-blue-500 text-blue-600', textClass: 'text-blue-600', color: '#3b82f6' },
-  Aceptado: { label: 'Aceptado', icon: ThumbsUp, badgeClass: 'border-green-600 text-green-600', textClass: 'text-green-600', color: '#16a34a' },
-  Rechazado: { label: 'Rechazado', icon: ThumbsDown, badgeClass: 'border-red-600 text-red-600', textClass: 'text-red-600', color: '#dc2626' },
-  Abandonado: { label: 'Abandonado', icon: HeartOff, badgeClass: 'border-gray-500 text-gray-500', textClass: 'text-gray-500', color: '#6b7280' },
-  Terminado: { label: 'Terminado', icon: CheckCircle2, badgeClass: 'border-purple-600 text-purple-600', textClass: 'text-purple-600', color: '#9333ea' },
-  Otro: { label: 'Otro', icon: Circle, badgeClass: 'border-gray-500 text-gray-500', textClass: 'text-gray-500', color: '#6b7280' },
+  Creado: { label: 'Creado', icon: FileText, badgeClass: 'border-blue-500 text-blue-600', textClass: 'text-blue-600 focus:text-blue-600 focus:bg-blue-50', color: '#3b82f6' },
+  Aceptado: { label: 'Aceptado', icon: ThumbsUp, badgeClass: 'border-green-600 text-green-600', textClass: 'text-green-600 focus:text-green-600 focus:bg-green-50', color: '#16a34a' },
+  Rechazado: { label: 'Rechazado', icon: ThumbsDown, badgeClass: 'border-red-600 text-red-600', textClass: 'text-red-600 focus:text-red-600 focus:bg-red-50', color: '#dc2626' },
+  Abandonado: { label: 'Abandonado', icon: HeartOff, badgeClass: 'border-gray-500 text-gray-500', textClass: 'text-gray-500 focus:text-gray-500 focus:bg-gray-100', color: '#6b7280' },
+  Terminado: { label: 'Terminado', icon: CheckCircle2, badgeClass: 'border-purple-600 text-purple-600', textClass: 'text-purple-600 focus:text-purple-600 focus:bg-purple-50', color: '#9333ea' },
+  Otro: { label: 'Otro', icon: Circle, badgeClass: 'border-gray-500 text-gray-500', textClass: 'text-gray-500 focus:text-gray-500 focus:bg-gray-100', color: '#6b7280' },
 };
 
 
-export function BudgetCard({ presupuesto: initialPresupuesto, onUpdate }: BudgetCardProps) {
+export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate }: BudgetCardProps) {
   const [presupuesto, setPresupuesto] = useState(initialPresupuesto);
-  const [isPaymentSheetOpen, setIsPaymentSheetOpen] = useState(false);
+  const { toast } = useToast();
   
-  const { estado, id, nombre, fechaCreacion, items, montoPagado } = presupuesto;
+  const [paymentContext, setPaymentContext] = useState<{
+    title: string;
+    items: ItemPresupuesto[];
+  } | null>(null);
+
+  const { estado, id, nombre, fechaCreacion, items, montoPagado, nota } = presupuesto;
 
   const totalPresupuesto = items.reduce((acc, item) => acc + item.procedimiento.precioBase * item.cantidad, 0);
   const porPagar = totalPresupuesto - montoPagado;
@@ -55,8 +62,9 @@ export function BudgetCard({ presupuesto: initialPresupuesto, onUpdate }: Budget
     const index = mockPresupuestosData.findIndex(p => p.id === id);
     if (index > -1) {
       mockPresupuestosData[index].estado = newState;
+      setPresupuesto(mockPresupuestosData[index]);
+      toast({ title: "Estado Actualizado", description: `El presupuesto ahora está "${newState}".`})
     }
-    setPresupuesto({ ...presupuesto, estado: newState });
   };
   
   const handlePaymentSuccess = (paidAmount: number) => {
@@ -65,8 +73,22 @@ export function BudgetCard({ presupuesto: initialPresupuesto, onUpdate }: Budget
       mockPresupuestosData[index].montoPagado += paidAmount;
     }
     setPresupuesto(prev => ({ ...prev, montoPagado: prev.montoPagado + paidAmount }));
-    setIsPaymentSheetOpen(false);
+    setPaymentContext(null); // Close the sheet
     onUpdate();
+  };
+
+  const handlePayItem = (item: ItemPresupuesto) => {
+    setPaymentContext({
+        title: 'Registrar Pago',
+        items: [item]
+    });
+  };
+
+  const handlePayMultiple = () => {
+    setPaymentContext({
+        title: 'Registrar Varios Pagos',
+        items: presupuesto.items
+    });
   };
 
   return (
@@ -86,7 +108,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, onUpdate }: Budget
                     <DropdownMenuContent align="start">
                       <div className="p-2 font-semibold text-sm">Estado del Presupuesto</div>
                       {Object.entries(statusConfig).map(([key, config]) => (
-                        <DropdownMenuItem key={key} onClick={() => handleStateChange(key as EstadoPresupuesto)} className={cn("focus:text-accent-foreground", config.textClass)}>
+                        <DropdownMenuItem key={key} onClick={() => handleStateChange(key as EstadoPresupuesto)} className={cn("focus:text-white", config.textClass, `focus:bg-[${config.color}]`)}>
                           <config.icon className="mr-2 h-4 w-4"/>
                           <span>{config.label}</span>
                         </DropdownMenuItem>
@@ -101,10 +123,10 @@ export function BudgetCard({ presupuesto: initialPresupuesto, onUpdate }: Budget
                 </div>
               </AccordionTrigger>
             </div>
-              <TooltipProvider>
+              <TooltipProvider delayDuration={100}>
               <div className="flex items-center gap-1.5 ml-4">
                   <Tooltip><TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8"><DollarSign className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePayMultiple}><DollarSign className="h-4 w-4" /></Button>
                   </TooltipTrigger><TooltipContent><p>Cobrar varios servicios</p></TooltipContent></Tooltip>
                   
                   <Tooltip><TooltipTrigger asChild>
@@ -122,7 +144,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, onUpdate }: Budget
               </TooltipProvider>
           </div>
           <AccordionContent className="px-4 pb-4 pt-0">
-            <div className="border-t">
+            <div className="border-t pt-4">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -143,7 +165,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, onUpdate }: Budget
                       <TableCell className="text-right text-green-600">S/ 0.00</TableCell>
                       <TableCell className="text-right text-red-600">S/ {(item.procedimiento.precioBase * item.cantidad).toFixed(2)}</TableCell>
                       <TableCell className="text-right">
-                          <Button variant="outline" size="sm" className="h-7" onClick={() => setIsPaymentSheetOpen(true)}>Pagar</Button>
+                          <Button variant="outline" size="sm" className="h-7" onClick={() => handlePayItem(item)}>Pagar</Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -166,19 +188,25 @@ export function BudgetCard({ presupuesto: initialPresupuesto, onUpdate }: Budget
                   </TableRow>
                 </TableFooter>
               </Table>
-              <div className="text-xs text-muted-foreground mt-4 px-1">
-                Creado el: {format(new Date(fechaCreacion), "dd MMM yyyy", { locale: es })}
+              <div className="text-xs text-muted-foreground mt-4 px-1 space-y-1">
+                  {nota && <p><strong>Nota:</strong> {nota}</p>}
+                  <p>Creado el: {format(new Date(fechaCreacion), "dd MMM yyyy 'a las' HH:mm", { locale: es })}</p>
               </div>
             </div>
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-      <PaymentSheet 
-        isOpen={isPaymentSheetOpen}
-        onOpenChange={setIsPaymentSheetOpen}
-        presupuesto={presupuesto}
-        onPaymentSuccess={handlePaymentSuccess}
-      />
+      {paymentContext && (
+        <PaymentSheet 
+            isOpen={!!paymentContext}
+            onOpenChange={(open) => !open && setPaymentContext(null)}
+            presupuesto={presupuesto}
+            paciente={paciente}
+            itemsToPay={paymentContext.items}
+            title={paymentContext.title}
+            onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
     </>
   );
 }

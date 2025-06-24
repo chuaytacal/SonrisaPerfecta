@@ -12,13 +12,13 @@ import {
   SheetFooter,
   SheetClose,
 } from '@/components/ui/sheet';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { type Presupuesto, type MetodoPago } from '@/types';
+import { type Presupuesto, type MetodoPago, type ItemPresupuesto, Paciente as PacienteType } from '@/types';
 import { mockPersonalData } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, Check, CheckCircle, ChevronRight, Circle, DollarSign, FileText, Gift, Percent, Wallet } from 'lucide-react';
+import { ArrowLeft, Check, CheckCircle, ChevronRight, Circle, DollarSign, FileText, Gift, Percent, User, Wallet } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
@@ -31,78 +31,97 @@ interface PaymentSheetProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   presupuesto: Presupuesto;
+  paciente: PacienteType;
+  itemsToPay: ItemPresupuesto[];
+  title: string;
   onPaymentSuccess: (amount: number) => void;
 }
 
-export function PaymentSheet({ isOpen, onOpenChange, presupuesto, onPaymentSuccess }: PaymentSheetProps) {
+export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, itemsToPay, title, onPaymentSuccess }: PaymentSheetProps) {
     const { toast } = useToast();
     const [step, setStep] = useState(1);
-    const [montoAbono, setMontoAbono] = useState<number | ''>('');
+    const [abonoManual, setAbonoManual] = useState<number | ''>('');
+    const [abonos, setAbonos] = useState<Record<string, number | ''>>({});
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [metodoPago, setMetodoPago] = useState<MetodoPago | ''>('');
+    const [comprobante, setComprobante] = useState<'Boleta' | 'Factura' | ''>('');
+    const [isAlertOpen, setIsAlertOpen] = useState(false);
     
     const doctor = useMemo(() => mockPersonalData.find(d => d.id === presupuesto.doctorResponsableId), [presupuesto.doctorResponsableId]);
     
     useEffect(() => {
         if (isOpen) {
             setStep(1);
-            setMontoAbono('');
-            setSelectedItems([]);
+            setAbonoManual('');
+            setAbonos({});
+            const initialSelected = itemsToPay.map(item => item.id);
+            setSelectedItems(initialSelected);
             setMetodoPago('');
+            setComprobante('');
+            
+            const initialAbonos: Record<string, number> = {};
+            itemsToPay.forEach(item => {
+                const porPagarItem = item.procedimiento.precioBase * item.cantidad; // Simplified for now
+                initialAbonos[item.id] = porPagarItem;
+            });
+            setAbonos(initialAbonos);
+
         }
-    }, [isOpen]);
+    }, [isOpen, itemsToPay]);
 
     const totalPorPagar = useMemo(() => {
-        return presupuesto.items.reduce((acc, item) => {
+        return itemsToPay.reduce((acc, item) => {
             const itemTotal = item.procedimiento.precioBase * item.cantidad;
-            // En una app real, aquí se restaría lo ya pagado por este item específico.
             return acc + itemTotal;
-        }, 0) - presupuesto.montoPagado;
-    }, [presupuesto]);
+        }, 0); // Simplified: Should consider partial payments per item in a real app
+    }, [itemsToPay]);
     
     const totalACobrar = useMemo(() => {
-        if (montoAbono !== '') {
-            return montoAbono;
-        }
-        return presupuesto.items
+        if (abonoManual !== '') return abonoManual;
+        
+        return itemsToPay
             .filter(item => selectedItems.includes(item.id))
-            .reduce((acc, item) => acc + (item.procedimiento.precioBase * item.cantidad), 0);
-    }, [montoAbono, selectedItems, presupuesto.items]);
+            .reduce((acc, item) => {
+                const abono = abonos[item.id];
+                return acc + (typeof abono === 'number' ? abono : 0);
+            }, 0);
+    }, [abonoManual, selectedItems, abonos, itemsToPay]);
 
     const handleSelectAll = (checked: boolean) => {
-        if (checked) {
-            setSelectedItems(presupuesto.items.map(item => item.id));
-        } else {
-            setSelectedItems([]);
-        }
+        const allItemIds = itemsToPay.map(item => item.id);
+        setSelectedItems(checked ? allItemIds : []);
     };
     
     const handleNextStep = () => {
         if (totalACobrar <= 0) {
-            toast({
-                title: "Monto inválido",
-                description: "Debe seleccionar items o ingresar un monto a cobrar.",
-                variant: "destructive",
-            });
+            toast({ title: "Monto inválido", description: "Debe seleccionar items o ingresar un monto a cobrar.", variant: "destructive"});
             return;
         }
         setStep(2);
     };
+    
+    const handleCobrarManual = () => {
+        const monto = Number(abonoManual);
+        if (monto > totalPorPagar) {
+            setIsAlertOpen(true);
+            return;
+        }
+        if (monto > 0) {
+            setStep(2);
+        }
+    };
 
     const handleConfirmPayment = () => {
         if (!metodoPago) {
-            toast({
-                title: "Falta método de pago",
-                description: "Por favor, seleccione un método de pago.",
-                variant: "destructive"
-            });
+            toast({ title: "Falta método de pago", description: "Por favor, seleccione un método de pago.", variant: "destructive"});
+            return;
+        }
+        if (!comprobante) {
+            toast({ title: "Falta comprobante", description: "Por favor, seleccione un tipo de comprobante.", variant: "destructive"});
             return;
         }
         
-        toast({
-            title: "Pago Registrado",
-            description: `Se registró un pago de S/ ${totalACobrar.toFixed(2)} con ${metodoPago}.`
-        });
+        toast({ title: "Pago Registrado", description: `Se registró un pago de S/ ${totalACobrar.toFixed(2)} con ${metodoPago}.`});
         onPaymentSuccess(totalACobrar);
     }
     
@@ -113,14 +132,23 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, onPaymentSucce
         { value: 'Otro', label: 'Otro', icon: Gift },
     ];
     
+    const conceptoTexto = useMemo(() => {
+       if (abonoManual !== '') return `Abono al presupuesto #${presupuesto.id.slice(-6)}`;
+       return itemsToPay
+        .filter(item => selectedItems.includes(item.id))
+        .map(item => `(${item.cantidad}) ${item.procedimiento.denominacion}`)
+        .join(', ');
+    }, [abonoManual, selectedItems, itemsToPay, presupuesto.id]);
+
   return (
+    <>
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-[65vw] p-0 flex flex-col">
         <div className="relative overflow-x-hidden flex-1 flex flex-col">
             {/* Step 1: Register Payment */}
             <div className={cn("absolute inset-0 transition-transform duration-500 ease-in-out flex flex-col", step === 1 ? "translate-x-0" : "-translate-x-full")}>
                  <SheetHeader className="p-6 border-b">
-                    <SheetTitle>Registrar Varios Pagos</SheetTitle>
+                    <SheetTitle>{title}</SheetTitle>
                  </SheetHeader>
                  <ScrollArea className="flex-grow">
                     <div className="p-6 space-y-4">
@@ -128,9 +156,12 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, onPaymentSucce
                         <div className="flex items-center gap-2">
                              <div className="relative w-40">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">S/</span>
-                                <Input type="number" placeholder="0.00" value={montoAbono} onChange={e => setMontoAbono(e.target.value === '' ? '' : parseFloat(e.target.value))} className="pl-8"/>
+                                <Input type="number" placeholder="0.00" value={abonoManual} onChange={e => {
+                                    setAbonoManual(e.target.value === '' ? '' : parseFloat(e.target.value));
+                                    setSelectedItems([]);
+                                }} className="pl-8"/>
                             </div>
-                            <Button disabled>Cobrar</Button>
+                            <Button onClick={handleCobrarManual} disabled={!abonoManual}>Cobrar</Button>
                         </div>
                          <p className="text-sm text-muted-foreground">Opción 2: Si no tienes un monto definido, puedes seleccionar los items que deseas cobrar y si deseas también puedes editar el monto.</p>
                         <div className="border rounded-lg">
@@ -138,38 +169,49 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, onPaymentSucce
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-[50px]">
-                                            <Checkbox checked={selectedItems.length === presupuesto.items.length} onCheckedChange={handleSelectAll} />
+                                            <Checkbox checked={selectedItems.length === itemsToPay.length && itemsToPay.length > 0} onCheckedChange={handleSelectAll} />
                                         </TableHead>
                                         <TableHead>Item</TableHead>
-                                        <TableHead className="text-right">Subtotal</TableHead>
-                                        <TableHead className="text-right">Pagado</TableHead>
                                         <TableHead className="text-right">Por Pagar</TableHead>
                                         <TableHead className="text-right">Abono</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {presupuesto.items.map(item => (
-                                        <TableRow key={item.id}>
+                                    {itemsToPay.map(item => {
+                                        const porPagarItem = item.procedimiento.precioBase * item.cantidad; // Simplified
+                                        return (
+                                        <TableRow key={item.id} data-state={selectedItems.includes(item.id) && "selected"}>
                                             <TableCell>
                                                 <Checkbox 
                                                     checked={selectedItems.includes(item.id)} 
                                                     onCheckedChange={(checked) => {
-                                                        setSelectedItems(prev => checked ? [...prev, item.id] : prev.filter(id => id !== item.id))
+                                                        const newSelected = checked ? [...selectedItems, item.id] : selectedItems.filter(id => id !== item.id);
+                                                        setSelectedItems(newSelected);
+                                                        if (checked) {
+                                                            setAbonos(prev => ({...prev, [item.id]: porPagarItem}));
+                                                        }
+                                                        setAbonoManual('');
                                                     }}
                                                 />
                                             </TableCell>
                                             <TableCell>{item.procedimiento.denominacion}</TableCell>
-                                            <TableCell className="text-right">S/ {(item.procedimiento.precioBase * item.cantidad).toFixed(2)}</TableCell>
-                                            <TableCell className="text-right">S/ 0.00</TableCell>
-                                            <TableCell className="text-right">S/ {(item.procedimiento.precioBase * item.cantidad).toFixed(2)}</TableCell>
+                                            <TableCell className="text-right">S/ {porPagarItem.toFixed(2)}</TableCell>
                                             <TableCell className="w-[120px]">
                                                 <div className="relative">
                                                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">S/</span>
-                                                  <Input type="number" className="pl-7" />
+                                                  <Input type="number" className="pl-7" 
+                                                    value={abonos[item.id] ?? ''}
+                                                    onChange={e => {
+                                                        setAbonos(prev => ({...prev, [item.id]: e.target.value === '' ? '' : parseFloat(e.target.value)}));
+                                                        if (!selectedItems.includes(item.id)) setSelectedItems([...selectedItems, item.id]);
+                                                        setAbonoManual('');
+                                                    }}
+                                                  />
                                                 </div>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                        )
+                                    })}
                                 </TableBody>
                             </Table>
                         </div>
@@ -186,18 +228,41 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, onPaymentSucce
                 </SheetFooter>
             </div>
             {/* Step 2: Confirm Payment */}
-            <div className={cn("absolute inset-0 transition-transform duration-500 ease-in-out flex flex-col", step === 2 ? "translate-x-0" : "translate-x-full")}>
-                 <SheetHeader className="p-6 border-b">
-                    <SheetTitle>Confirmar Pago</SheetTitle>
-                 </SheetHeader>
-                 <ScrollArea className="flex-grow">
-                    <div className="p-6 space-y-6">
-                        <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
-                           <span className="font-medium text-primary">Monto a pagar</span>
-                           <span className="text-2xl font-bold text-primary">S/ {totalACobrar.toFixed(2)}</span>
+            <div className={cn("absolute inset-0 transition-transform duration-500 ease-in-out flex flex-col justify-center items-center bg-muted/40", step === 2 ? "translate-x-0" : "translate-x-full")}>
+                 <div className="w-full max-w-md bg-card rounded-lg border shadow-lg p-6 space-y-6">
+                    <SheetHeader className="text-center space-y-2">
+                        <SheetTitle>Confirmar Pago</SheetTitle>
+                        <SheetDescription>Monto total a cobrar</SheetDescription>
+                        <div className="text-3xl font-bold text-primary">S/ {totalACobrar.toFixed(2)}</div>
+                    </SheetHeader>
+                    <div className="space-y-4">
+                        <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Concepto:</span>
+                            <span className="font-medium text-right max-w-[60%] truncate" title={conceptoTexto}>{conceptoTexto}</span>
                         </div>
-
+                         <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Paciente:</span>
+                            <span className="font-medium">{paciente.persona.nombre} {paciente.persona.apellidoPaterno}</span>
+                        </div>
+                        <div>
+                            <Label>Doctor relacionado a la venta</Label>
+                            <Select value={doctor?.id} disabled>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'No asignado'}/>
+                                </SelectTrigger>
+                            </Select>
+                        </div>
                          <div>
+                            <Label>Comprobante</Label>
+                             <Select value={comprobante} onValueChange={(val) => setComprobante(val as any)}>
+                                <SelectTrigger><SelectValue placeholder="Seleccione..."/></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Boleta">Boleta</SelectItem>
+                                    <SelectItem value="Factura">Factura</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
                             <Label>Medio de pago</Label>
                              <Select value={metodoPago} onValueChange={(val) => setMetodoPago(val as MetodoPago)}>
                                 <SelectTrigger><SelectValue placeholder="Seleccione..."/></SelectTrigger>
@@ -213,27 +278,29 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, onPaymentSucce
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div>
-                            <Label>Doctor relacionado a la venta</Label>
-                            <Select value={doctor?.id} disabled>
-                                <SelectTrigger>
-                                    <SelectValue placeholder={doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'No asignado'}/>
-                                </SelectTrigger>
-                            </Select>
-                        </div>
-                         <div>
-                            <Label>Fecha</Label>
-                            <Input value={format(new Date(), "dd 'de' MMMM, yyyy", { locale: es })} disabled/>
-                        </div>
                     </div>
-                 </ScrollArea>
-                 <SheetFooter className="p-6 border-t mt-auto">
-                    <Button variant="outline" onClick={() => setStep(1)}><ArrowLeft className="mr-2 h-4 w-4"/> Atrás</Button>
-                    <Button onClick={handleConfirmPayment}>Confirmar Pago</Button>
-                </SheetFooter>
+                     <SheetFooter className="gap-2 sm:flex-row">
+                        <Button variant="outline" onClick={() => setStep(1)} className="w-full sm:w-auto"><ArrowLeft className="mr-2 h-4 w-4"/> Atrás</Button>
+                        <Button onClick={handleConfirmPayment} className="w-full sm:w-auto">Confirmar Pago</Button>
+                    </SheetFooter>
+                 </div>
             </div>
         </div>
       </SheetContent>
     </Sheet>
+    <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Monto Excedido</AlertDialogTitle>
+            <AlertDialogDescription>
+                El monto a cobrar (S/ {abonoManual}) es mayor que el total por pagar (S/ {totalPorPagar.toFixed(2)}). Por favor, ajuste el monto.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setIsAlertOpen(false)}>Entendido</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

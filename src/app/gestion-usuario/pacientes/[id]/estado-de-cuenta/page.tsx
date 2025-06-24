@@ -154,7 +154,7 @@ export default function EstadoDeCuentaPage() {
                 <div className="space-y-4">
                     {presupuestos.length > 0 ? (
                         presupuestos.map(presupuesto => (
-                            <BudgetCard key={presupuesto.id} presupuesto={presupuesto} onUpdate={refreshBudgets}/>
+                            <BudgetCard key={presupuesto.id} presupuesto={presupuesto} paciente={paciente} onUpdate={refreshBudgets}/>
                         ))
                     ) : (
                         <Card>
