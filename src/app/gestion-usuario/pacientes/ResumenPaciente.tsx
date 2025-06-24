@@ -1,3 +1,4 @@
+
 // src/components/pacientes/ResumenPaciente.tsx
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -21,7 +22,9 @@ import type { Appointment, AppointmentFormData } from '@/types/calendar';
 interface ResumenPacienteProps {
   paciente: PacienteType;
   persona: Persona;
-  onBack?: () => void; // Make onBack optional if router.back() is primary
+  onBack?: () => void;
+  totalPagado?: number;
+  porPagar?: number;
 }
 
 // Re-define ToothIconCustom here or import if it's moved to a shared location
@@ -44,7 +47,13 @@ const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
   );
 
 
-export default function ResumenPaciente({ paciente, persona, onBack }: ResumenPacienteProps) {
+export default function ResumenPaciente({
+  paciente,
+  persona,
+  onBack,
+  totalPagado: totalPagadoProp,
+  porPagar: porPagarProp,
+}: ResumenPacienteProps) {
     const router = useRouter();
     const pathname = usePathname();
     const [age, setAge] = useState<string | number>('Calculando...');
@@ -52,8 +61,12 @@ export default function ResumenPaciente({ paciente, persona, onBack }: ResumenPa
     const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
     const { toast } = useToast();
 
-    const [totalPagado, setTotalPagado] = useState(0);
-    const [porPagar, setPorPagar] = useState(0);
+    const [totalPagadoLocal, setTotalPagadoLocal] = useState(0);
+    const [porPagarLocal, setPorPagarLocal] = useState(0);
+
+    const totalPagado = totalPagadoProp !== undefined ? totalPagadoProp : totalPagadoLocal;
+    const porPagar = porPagarProp !== undefined ? porPagarProp : porPagarLocal;
+
 
     useEffect(() => {
         if (persona) {
@@ -82,6 +95,9 @@ export default function ResumenPaciente({ paciente, persona, onBack }: ResumenPa
         }, [persona, paciente]);
 
     useEffect(() => {
+      // This effect calculates totals ONLY if they are not passed as props.
+      // This maintains functionality on other pages that don't need real-time updates.
+      if (totalPagadoProp === undefined) {
         if (paciente && paciente.idHistoriaClinica) {
             const presupuestosPaciente = mockPresupuestosData.filter(p => p.idHistoriaClinica === paciente.idHistoriaClinica);
 
@@ -92,10 +108,12 @@ export default function ResumenPaciente({ paciente, persona, onBack }: ResumenPa
 
             const totalAbonado = presupuestosPaciente.reduce((acc, presupuesto) => acc + presupuesto.montoPagado, 0);
             
-            setTotalPagado(totalAbonado);
-            setPorPagar(totalGeneral - totalAbonado);
+            setTotalPagadoLocal(totalAbonado);
+            setPorPagarLocal(totalGeneral - totalAbonado);
         }
-     }, [paciente, mockPresupuestosData, mockPagosData]);
+      }
+    }, [paciente, mockPresupuestosData, mockPagosData, totalPagadoProp]);
+
 
     const navItems = [
         { label: "Filiación", href: `/gestion-usuario/pacientes/${paciente.id}/filiacion`, icon: Users },
@@ -265,3 +283,4 @@ export default function ResumenPaciente({ paciente, persona, onBack }: ResumenPa
     </>
   );
 }
+

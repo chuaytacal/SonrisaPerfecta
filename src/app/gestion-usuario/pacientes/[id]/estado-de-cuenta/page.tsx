@@ -54,6 +54,7 @@ export default function EstadoDeCuentaPage() {
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Presupuesto | null>(null);
+  const [summaryTotals, setSummaryTotals] = useState({ pagado: 0, porPagar: 0 });
 
   // State for payment history filtering and sorting
   const [doctorFilter, setDoctorFilter] = useState('all');
@@ -113,6 +114,14 @@ export default function EstadoDeCuentaPage() {
             .filter(p => p.itemsPagados.some(ip => presupuestoIds.includes(ip.idPresupuesto)))
             .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());
         setPagos(filteredPagos);
+
+        const totalGeneral = sortedBudgets.reduce((acc, presupuesto) => {
+            const totalItems = presupuesto.items.reduce((itemAcc, item) => itemAcc + (item.procedimiento.precioBase * item.cantidad), 0);
+            return acc + totalItems;
+        }, 0);
+        const totalAbonado = sortedBudgets.reduce((acc, presupuesto) => acc + presupuesto.montoPagado, 0);
+        setSummaryTotals({ pagado: totalAbonado, porPagar: totalGeneral - totalAbonado });
+
       }
     } else {
       setPaciente(null);
@@ -120,6 +129,7 @@ export default function EstadoDeCuentaPage() {
       setHistoriaClinica(null);
       setPresupuestos([]);
       setPagos([]);
+      setSummaryTotals({ pagado: 0, porPagar: 0 });
     }
     setLoading(false);
   };
@@ -313,7 +323,13 @@ export default function EstadoDeCuentaPage() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 bg-background min-h-screen">
-      <ResumenPaciente paciente={paciente} persona={persona} onBack={() => router.push('/gestion-usuario/pacientes')} />
+      <ResumenPaciente
+        paciente={paciente}
+        persona={persona}
+        onBack={() => router.push('/gestion-usuario/pacientes')}
+        totalPagado={summaryTotals.pagado}
+        porPagar={summaryTotals.porPagar}
+      />
       <div className="flex-1">
         <EtiquetasNotasSalud
           etiquetas={displayedEtiquetas}
