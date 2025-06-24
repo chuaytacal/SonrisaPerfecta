@@ -2,12 +2,12 @@
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Mail, MessageSquare, Phone, ArrowLeft, Edit, Save, X, UserSquare, User, ClipboardList, Megaphone } from 'lucide-react';
-import { mockPacientesData, mockPersonasData, mockAppointmentsData } from '@/lib/data';
+import { Mail, MessageSquare, Phone, ArrowLeft, Edit, Save, X, UserSquare, User, ClipboardList, Megaphone, Search, ArrowUpDown, Settings2 } from 'lucide-react';
+import { mockPacientesData, mockPersonasData, mockAppointmentsData, emptyAntecedentesMedicosData, mockPersonalData } from '@/lib/data';
 import type { Paciente as PacienteType, Persona, AntecedentesMedicosData, EtiquetaPaciente } from '@/types';
 import { format, differenceInYears, parse as parseDate } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -21,6 +21,8 @@ import { Badge } from '@/components/ui/badge';
 import type { Appointment } from '@/types/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { AddPacienteForm } from '@/components/pacientes/AddPacienteForm';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
 import {
   Select,
   SelectContent,
@@ -60,23 +62,9 @@ const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
 
 const getPatientAppointments = (patientId: string | undefined): Appointment[] => {
     if (!patientId) return [];
-    // Filter the global mockAppointmentsData by patient ID
-    return mockAppointmentsData.filter(appt => appt.idPaciente === patientId).slice(0, 5);
+    return mockAppointmentsData.filter(appt => appt.idPaciente === patientId);
 };
 
-
-const initialAntecedentesState: AntecedentesMedicosData = {
-  q1_hospitalizado: "No", q1_porque: "N/A", q1_donde: "N/A",
-  q2_atencionMedica: "Sí", q2_porque: "Control de rutina", q2_donde: "Clínica Local",
-  q3_alergico: "Sí", q3_cuales: "Penicilina",
-  q4_hemorragia: "No",
-  q5_enfermedades: ["Hipertensión arterial"],
-  q6_otraEnfermedad: "No", q6_cual: "N/A",
-  q7_medicacionActual: "Sí", q7_cual: "Losartán para la presión",
-  q8_embarazada: "No", q8_semanas: "N/A",
-  q9_hipertenso: "Sí",
-  q10_ultimaConsultaDental: "Hace 6 meses",
-};
 
 export default function FiliacionPage() {
   const params = useParams();
@@ -93,7 +81,7 @@ export default function FiliacionPage() {
   const [patientAppointments, setPatientAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [antecedentesForm, setAntecedentesForm] = useState<AntecedentesMedicosData>(initialAntecedentesState);
+  const [antecedentesForm, setAntecedentesForm] = useState<AntecedentesMedicosData>(emptyAntecedentesMedicosData);
   const [isAddPacienteFormOpen, setIsAddPacienteFormOpen] = useState(false);
 
   // States for EtiquetasNotasSalud to receive as props
@@ -101,6 +89,17 @@ export default function FiliacionPage() {
   const [displayedEtiquetas, setDisplayedEtiquetas] = useState<EtiquetaPaciente[]>([]);
   const [displayedAlergias, setDisplayedAlergias] = useState<string[]>([]);
   const [displayedEnfermedades, setDisplayedEnfermedades] = useState<string[]>([]);
+  
+  // New states for the appointments table
+  const [appointmentSortConfig, setAppointmentSortConfig] = useState<{ key: keyof Appointment; direction: 'asc' | 'desc' }>({ key: 'start', direction: 'desc' });
+  const [appointmentDoctorFilter, setAppointmentDoctorFilter] = useState('all');
+  const [appointmentMotiveFilter, setAppointmentMotiveFilter] = useState('');
+  const [appointmentColumnVisibility, setAppointmentColumnVisibility] = useState<Record<string, boolean>>({
+    start: true,
+    doctor: true,
+    title: true,
+    estado: true,
+  });
 
   const deriveAlergiasFromAntecedentes = (antecedentes?: AntecedentesMedicosData): string[] => {
     if (antecedentes && antecedentes.q3_cuales && antecedentes.q3_alergico === "Sí") {
@@ -129,11 +128,11 @@ export default function FiliacionPage() {
       }
 
       const initialFormStateFromData = {
-        ...initialAntecedentesState,
-        ...(foundPaciente.antecedentesMedicos || {}),
+        ...emptyAntecedentesMedicosData, // Start with a clean slate
+        ...(foundPaciente.antecedentesMedicos || {}), // Override with patient's data if it exists
       };
       if (!Array.isArray(initialFormStateFromData.q5_enfermedades)) {
-        initialFormStateFromData.q5_enfermedades = foundPaciente.antecedentesMedicos?.q5_enfermedades ? [foundPaciente.antecedentesMedicos.q5_enfermedades as unknown as string] : [];
+        initialFormStateFromData.q5_enfermedades = [];
       }
       setAntecedentesForm(initialFormStateFromData);
       
@@ -150,6 +149,7 @@ export default function FiliacionPage() {
       setDisplayedEtiquetas([]);
       setDisplayedAlergias([]);
       setDisplayedEnfermedades([]);
+      setAntecedentesForm(emptyAntecedentesMedicosData);
     }
     setLoading(false);
   }, [patientId]);
@@ -281,6 +281,57 @@ export default function FiliacionPage() {
     });
   };
 
+  const appointmentDoctorOptions = useMemo(() => {
+    const uniqueDoctors = new Map<string, any>();
+    patientAppointments.forEach(appt => {
+        if (appt.doctor) {
+            uniqueDoctors.set(appt.doctor.id, appt.doctor);
+        }
+    });
+    return [{ value: 'all', label: 'Todos los Doctores' }, ...Array.from(uniqueDoctors.values()).map(d => ({ value: d.id, label: `${d.persona.nombre} ${d.persona.apellidoPaterno}` }))];
+  }, [patientAppointments]);
+
+  const requestAppointmentSort = (key: keyof Appointment) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (appointmentSortConfig.key === key && appointmentSortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setAppointmentSortConfig({ key, direction });
+  };
+  
+  const filteredAndSortedAppointments = useMemo(() => {
+    let filtered = [...patientAppointments];
+
+    if (appointmentDoctorFilter !== 'all') {
+      filtered = filtered.filter(appt => appt.idDoctor === appointmentDoctorFilter);
+    }
+    if (appointmentMotiveFilter) {
+      filtered = filtered.filter(appt =>
+        appt.title.toLowerCase().includes(appointmentMotiveFilter.toLowerCase())
+      );
+    }
+    
+    filtered.sort((a, b) => {
+        const aValue = a[appointmentSortConfig.key as 'start'];
+        const bValue = b[appointmentSortConfig.key as 'start'];
+
+        if (aValue instanceof Date && bValue instanceof Date) {
+            return appointmentSortConfig.direction === 'asc' ? aValue.getTime() - bValue.getTime() : bValue.getTime() - aValue.getTime();
+        }
+        
+        return 0; // Fallback for non-date fields
+    });
+    return filtered;
+  }, [patientAppointments, appointmentDoctorFilter, appointmentMotiveFilter, appointmentSortConfig]);
+
+  const appointmentColumnNames: Record<string, string> = {
+    start: 'Fecha y Hora',
+    doctor: 'Doctor',
+    title: 'Servicio/Motivo',
+    estado: 'Estado',
+  };
+  const visibleAppointmentColumnsCount = Object.values(appointmentColumnVisibility).filter(Boolean).length;
+
 
   if (loading) return <div className="flex justify-center items-center h-screen"><p>Cargando datos de filiación...</p></div>;
   if (!paciente || !persona) {
@@ -304,8 +355,8 @@ export default function FiliacionPage() {
                 <SelectContent><SelectItem value="Sí">Sí</SelectItem><SelectItem value="No">No</SelectItem></SelectContent>
             </Select>
         </div>
-        <div className="md:col-span-2"><Label htmlFor="q1_porque">¿Por qué?</Label><Input id="q1_porque" value={antecedentesForm.q1_porque || ""} onChange={(e) => handleAntecedentesChange('q1_porque', e.target.value)} /></div>
-        <div className="md:col-span-3"><Label htmlFor="q1_donde">¿Dónde?</Label><Textarea id="q1_donde" value={antecedentesForm.q1_donde || ""} onChange={(e) => handleAntecedentesChange('q1_donde', e.target.value)} /></div>
+        <div className="md:col-span-2"><Label htmlFor="q1_porque">¿Por qué?</Label><Input id="q1_porque" value={antecedentesForm.q1_porque || ""} onChange={(e) => handleAntecedentesChange('q1_porque', e.target.value)} disabled={antecedentesForm.q1_hospitalizado !== 'Sí'} /></div>
+        <div className="md:col-span-3"><Label htmlFor="q1_donde">¿Dónde?</Label><Textarea id="q1_donde" value={antecedentesForm.q1_donde || ""} onChange={(e) => handleAntecedentesChange('q1_donde', e.target.value)} disabled={antecedentesForm.q1_hospitalizado !== 'Sí'} /></div>
       </div>
       <Separator />
        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -316,8 +367,8 @@ export default function FiliacionPage() {
                 <SelectContent><SelectItem value="Sí">Sí</SelectItem><SelectItem value="No">No</SelectItem></SelectContent>
             </Select>
         </div>
-        <div className="md:col-span-2"><Label htmlFor="q2_porque">¿Por qué?</Label><Input id="q2_porque" value={antecedentesForm.q2_porque || ""} onChange={(e) => handleAntecedentesChange('q2_porque', e.target.value)} /></div>
-        <div className="md:col-span-3"><Label htmlFor="q2_donde">¿Dónde?</Label><Textarea id="q2_donde" value={antecedentesForm.q2_donde || ""} onChange={(e) => handleAntecedentesChange('q2_donde', e.target.value)} /></div>
+        <div className="md:col-span-2"><Label htmlFor="q2_porque">¿Por qué?</Label><Input id="q2_porque" value={antecedentesForm.q2_porque || ""} onChange={(e) => handleAntecedentesChange('q2_porque', e.target.value)} disabled={antecedentesForm.q2_atencionMedica !== 'Sí'}/></div>
+        <div className="md:col-span-3"><Label htmlFor="q2_donde">¿Dónde?</Label><Textarea id="q2_donde" value={antecedentesForm.q2_donde || ""} onChange={(e) => handleAntecedentesChange('q2_donde', e.target.value)} disabled={antecedentesForm.q2_atencionMedica !== 'Sí'}/></div>
       </div>
       <Separator />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -328,7 +379,7 @@ export default function FiliacionPage() {
                 <SelectContent><SelectItem value="Sí">Sí</SelectItem><SelectItem value="No">No</SelectItem></SelectContent>
             </Select>
         </div>
-        <div className="md:col-span-2"><Label htmlFor="q3_cuales">¿Cuáles?</Label><Input id="q3_cuales" value={antecedentesForm.q3_cuales || ""} onChange={(e) => handleAntecedentesChange('q3_cuales', e.target.value)} placeholder="Ej: Penicilina, Aspirina"/></div>
+        <div className="md:col-span-2"><Label htmlFor="q3_cuales">¿Cuáles?</Label><Input id="q3_cuales" value={antecedentesForm.q3_cuales || ""} onChange={(e) => handleAntecedentesChange('q3_cuales', e.target.value)} placeholder="Ej: Penicilina, Aspirina" disabled={antecedentesForm.q3_alergico !== 'Sí'}/></div>
       </div>
       <Separator />
       <div>
@@ -370,7 +421,7 @@ export default function FiliacionPage() {
                 <SelectContent><SelectItem value="Sí">Sí</SelectItem><SelectItem value="No">No</SelectItem></SelectContent>
             </Select>
         </div>
-        <div className="md:col-span-2"><Label htmlFor="q6_cual">¿Cuál?</Label><Input id="q6_cual" value={antecedentesForm.q6_cual || ""} onChange={(e) => handleAntecedentesChange('q6_cual', e.target.value)} /></div>
+        <div className="md:col-span-2"><Label htmlFor="q6_cual">¿Cuál?</Label><Input id="q6_cual" value={antecedentesForm.q6_cual || ""} onChange={(e) => handleAntecedentesChange('q6_cual', e.target.value)} disabled={antecedentesForm.q6_otraEnfermedad !== 'Sí'}/></div>
       </div>
       <Separator />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -381,7 +432,7 @@ export default function FiliacionPage() {
                 <SelectContent><SelectItem value="Sí">Sí</SelectItem><SelectItem value="No">No</SelectItem></SelectContent>
             </Select>
         </div>
-        <div className="md:col-span-2"><Label htmlFor="q7_cual">¿Cuál?</Label><Input id="q7_cual" value={antecedentesForm.q7_cual || ""} onChange={(e) => handleAntecedentesChange('q7_cual', e.target.value)} /></div>
+        <div className="md:col-span-2"><Label htmlFor="q7_cual">¿Cuál?</Label><Input id="q7_cual" value={antecedentesForm.q7_cual || ""} onChange={(e) => handleAntecedentesChange('q7_cual', e.target.value)} disabled={antecedentesForm.q7_medicacionActual !== 'Sí'}/></div>
       </div>
       <Separator />
       {persona?.sexo === 'F' && (
@@ -394,7 +445,7 @@ export default function FiliacionPage() {
                     <SelectContent><SelectItem value="Sí">Sí</SelectItem><SelectItem value="No">No</SelectItem></SelectContent>
                 </Select>
             </div>
-            <div className="md:col-span-2"><Label htmlFor="q8_semanas">¿Cuántas semanas?</Label><Input id="q8_semanas" value={antecedentesForm.q8_semanas || ""} onChange={(e) => handleAntecedentesChange('q8_semanas', e.target.value)} /></div>
+            <div className="md:col-span-2"><Label htmlFor="q8_semanas">¿Cuántas semanas?</Label><Input id="q8_semanas" value={antecedentesForm.q8_semanas || ""} onChange={(e) => handleAntecedentesChange('q8_semanas', e.target.value)} disabled={antecedentesForm.q8_embarazada !== 'Sí'}/></div>
         </div>
         <Separator />
         </>
@@ -408,6 +459,8 @@ export default function FiliacionPage() {
       </div>
       <Separator />
       <div><Label htmlFor="q10_ultimaConsultaDental">10. Última consulta dental:</Label><Input id="q10_ultimaConsultaDental" value={antecedentesForm.q10_ultimaConsultaDental || ""} onChange={(e) => handleAntecedentesChange('q10_ultimaConsultaDental', e.target.value)} /></div>
+      <Separator />
+      <div><Label htmlFor="q11_motivoConsulta">11. Motivo actual de la consulta:</Label><Input id="q11_motivoConsulta" value={antecedentesForm.q11_motivoConsulta || ""} onChange={(e) => handleAntecedentesChange('q11_motivoConsulta', e.target.value)} /></div>
       <div className="flex justify-end mt-6">
         <Button onClick={handleSaveAntecedentes}><Save className="mr-2 h-4 w-4"/> Guardar Cambios</Button>
       </div>
@@ -519,25 +572,68 @@ export default function FiliacionPage() {
           <TabsContent value="antecedentesMedicos"><Card><CardHeader><CardTitle>Cuestionario de Salud (Antecedentes)</CardTitle><CardDescription>Respuestas del paciente al cuestionario de salud.</CardDescription></CardHeader><CardContent>{renderAntecedentesMedicos()}</CardContent></Card></TabsContent>
           <TabsContent value="historialCitas">
             <Card>
-              <CardHeader><CardTitle>Resumen de Historial de Citas</CardTitle><CardDescription>Listado de las últimas citas del paciente.</CardDescription></CardHeader>
+              <CardHeader>
+                <CardTitle>Resumen de Historial de Citas</CardTitle>
+                <CardDescription>Listado de las últimas citas del paciente.</CardDescription>
+              </CardHeader>
               <CardContent>
-                {patientAppointments.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <Table><TableHeader><TableRow><TableHead>Fecha</TableHead><TableHead>Hora</TableHead><TableHead>Profesional</TableHead><TableHead>Servicio/Motivo</TableHead><TableHead className="text-right">Estado</TableHead></TableRow></TableHeader>
+                <div className="flex flex-col sm:flex-row items-center gap-2 mb-4">
+                  <div className="relative w-full sm:w-auto flex-grow">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                          placeholder="Buscar por servicio/motivo..."
+                          value={appointmentMotiveFilter}
+                          onChange={(e) => setAppointmentMotiveFilter(e.target.value)}
+                          className="pl-8 w-full"
+                      />
+                  </div>
+                  <Select value={appointmentDoctorFilter} onValueChange={setAppointmentDoctorFilter}>
+                      <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Filtrar por doctor..." /></SelectTrigger>
+                      <SelectContent>{appointmentDoctorOptions.map(option => (<SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>))}</SelectContent>
+                  </Select>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="w-full sm:w-auto"><Settings2 className="mr-2 h-4 w-4" /> Columnas</Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                    {Object.keys(appointmentColumnVisibility).map((key) => (
+                        <DropdownMenuCheckboxItem key={key} className="capitalize" checked={appointmentColumnVisibility[key]} onCheckedChange={(value) => setAppointmentColumnVisibility((prev) => ({ ...prev, [key]: !!value }))}>
+                            {appointmentColumnNames[key]}
+                        </DropdownMenuCheckboxItem>
+                    ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <div className="border rounded-lg overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {appointmentColumnVisibility.start && (
+                            <TableHead>
+                              <Button variant="ghost" onClick={() => requestAppointmentSort('start')} className="px-1">
+                                  Fecha y Hora <ArrowUpDown className="ml-2 h-4 w-4" />
+                              </Button>
+                            </TableHead>
+                          )}
+                          {appointmentColumnVisibility.doctor && <TableHead>Doctor</TableHead>}
+                          {appointmentColumnVisibility.title && <TableHead>Servicio/Motivo</TableHead>}
+                          {appointmentColumnVisibility.estado && <TableHead className="text-right">Estado</TableHead>}
+                        </TableRow>
+                      </TableHeader>
                       <TableBody>
-                        {patientAppointments.map(cita => (
-                          <TableRow key={cita.id}>
-                            <TableCell>{cita.start ? format(cita.start, 'dd/MM/yyyy', { locale: es }) : 'N/A'}</TableCell>
-                            <TableCell>{cita.start ? format(cita.start, 'HH:mm a', { locale: es }) : 'N/A'}</TableCell>
-                            <TableCell>{cita.doctor ? `${cita.doctor.persona.nombre} ${cita.doctor.persona.apellidoPaterno}` : 'N/A'}</TableCell>
-                            <TableCell>{cita.title}</TableCell>
-                            <TableCell className="text-right"><Badge variant={cita.end && new Date(cita.end) < new Date() ? 'outline' : 'default' }>{cita.estado}</Badge></TableCell>
-                          </TableRow>
-                        ))}
+                        {filteredAndSortedAppointments.length > 0 ? (
+                          filteredAndSortedAppointments.map(cita => (
+                            <TableRow key={cita.id}>
+                               {appointmentColumnVisibility.start && <TableCell>{cita.start ? format(cita.start, 'dd/MM/yyyy HH:mm a', { locale: es }) : 'N/A'}</TableCell>}
+                               {appointmentColumnVisibility.doctor && <TableCell>{cita.doctor ? `${cita.doctor.persona.nombre} ${cita.doctor.persona.apellidoPaterno}` : 'N/A'}</TableCell>}
+                               {appointmentColumnVisibility.title && <TableCell>{cita.title}</TableCell>}
+                               {appointmentColumnVisibility.estado && <TableCell className="text-right"><Badge variant={cita.estado === 'Cancelada' || cita.estado === 'Reprogramada' ? 'outline' : 'default' }>{cita.estado}</Badge></TableCell>}
+                            </TableRow>
+                          ))
+                        ) : <TableRow><TableCell colSpan={visibleAppointmentColumnsCount} className="text-muted-foreground text-center h-24">No hay citas registradas para este paciente.</TableCell></TableRow>}
                       </TableBody>
                     </Table>
-                  </div>
-                ) : <p className="text-muted-foreground text-center py-4">No hay citas registradas para este paciente.</p>}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

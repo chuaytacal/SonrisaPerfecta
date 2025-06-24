@@ -49,6 +49,20 @@ export let mockPersonalData: Personal[] = [
   },
 ];
 
+export const emptyAntecedentesMedicosData: AntecedentesMedicosData = {
+  q1_hospitalizado: "No", q1_porque: "N/A", q1_donde: "N/A",
+  q2_atencionMedica: "No", q2_porque: "N/A", q2_donde: "N/A",
+  q3_alergico: "No", q3_cuales: "N/A",
+  q4_hemorragia: "No",
+  q5_enfermedades: [],
+  q6_otraEnfermedad: "No", q6_cual: "N/A",
+  q7_medicacionActual: "No", q7_cual: "N/A",
+  q8_embarazada: "No", q8_semanas: "N/A",
+  q9_hipertenso: "No",
+  q10_ultimaConsultaDental: "N/A",
+  q11_motivoConsulta: ""
+};
+
 export const initialAntecedentesExample: AntecedentesMedicosData = {
   q1_hospitalizado: "No", q1_porque: "N/A", q1_donde: "N/A",
   q2_atencionMedica: "Sí", q2_porque: "Control de rutina", q2_donde: "Clínica Local",
@@ -60,6 +74,7 @@ export const initialAntecedentesExample: AntecedentesMedicosData = {
   q8_embarazada: "No", q8_semanas: "N/A",
   q9_hipertenso: "Sí",
   q10_ultimaConsultaDental: "Hace 6 meses",
+  q11_motivoConsulta: "Dolor en molar superior."
 };
 
 const sampleOdontogramaPermanente: DientesMap = {

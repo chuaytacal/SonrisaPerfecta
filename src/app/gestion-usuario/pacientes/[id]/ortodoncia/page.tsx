@@ -192,38 +192,42 @@ export default function OrtodonciaPage() {
             <CardDescription>Resumen de los tratamientos y cuotas de ortodoncia del paciente.</CardDescription>
           </CardHeader>
           <CardContent>
-              <div className="flex flex-col sm:flex-row items-center gap-2 mb-4">
-                  <Select value={doctorFilter} onValueChange={setDoctorFilter}>
-                      <SelectTrigger className="w-full sm:w-[200px]">
-                          <SelectValue placeholder="Filtrar por doctor..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                          {doctorOptions.map(option => (
-                              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                          ))}
-                      </SelectContent>
-                  </Select>
-                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full sm:w-auto">
-                            <Settings2 className="mr-2 h-4 w-4" /> Columnas
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                    {Object.keys(columnVisibility).map((key) => (
-                        <DropdownMenuCheckboxItem
-                            key={key}
-                            className="capitalize"
-                            checked={columnVisibility[key]}
-                            onCheckedChange={(value) =>
-                                setColumnVisibility((prev) => ({ ...prev, [key]: !!value }))
-                            }
-                        >
-                            {columnNames[key]}
-                        </DropdownMenuCheckboxItem>
-                    ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mb-4">
+                  <div className="w-full sm:w-auto">
+                    <Select value={doctorFilter} onValueChange={setDoctorFilter}>
+                        <SelectTrigger className="w-full sm:w-[200px]">
+                            <SelectValue placeholder="Filtrar por doctor..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {doctorOptions.map(option => (
+                                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-full sm:w-auto">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="w-full sm:w-auto">
+                              <Settings2 className="mr-2 h-4 w-4" /> Columnas
+                          </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                      {Object.keys(columnVisibility).map((key) => (
+                          <DropdownMenuCheckboxItem
+                              key={key}
+                              className="capitalize"
+                              checked={columnVisibility[key]}
+                              onCheckedChange={(value) =>
+                                  setColumnVisibility((prev) => ({ ...prev, [key]: !!value }))
+                              }
+                          >
+                              {columnNames[key]}
+                          </DropdownMenuCheckboxItem>
+                      ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               <div className="border rounded-lg overflow-hidden">
                     <Table>

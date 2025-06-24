@@ -39,6 +39,7 @@ export interface AntecedentesMedicosData {
   q8_semanas?: string;
   q9_hipertenso?: "Sí" | "No" | string;
   q10_ultimaConsultaDental?: string;
+  q11_motivoConsulta?: string;
 }
 
 export type EstadoPresupuesto = 'Creado' | 'Aceptado' | 'Rechazado' | 'Abandonado' | 'Terminado' | 'Otro';
