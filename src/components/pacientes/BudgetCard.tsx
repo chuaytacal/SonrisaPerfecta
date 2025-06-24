@@ -36,12 +36,12 @@ interface BudgetCardProps {
 }
 
 const statusConfig: Record<EstadoPresupuesto, { label: string; icon: React.ElementType, badgeClass: string, textClass: string, color: string, hoverFocusClass: string }> = {
-  Creado: { label: 'Creado', icon: FileText, badgeClass: 'border-blue-500 text-blue-600', textClass: 'text-blue-600', color: '#3b82f6', hoverFocusClass: 'hover:bg-blue-500/20 hover:text-blue-600 focus:bg-blue-500/20 focus:text-blue-600' },
-  Aceptado: { label: 'Aceptado', icon: ThumbsUp, badgeClass: 'border-green-600 text-green-600', textClass: 'text-green-600', color: '#16a34a', hoverFocusClass: 'hover:bg-green-600/20 hover:text-green-600 focus:bg-green-600/20 focus:text-green-600' },
-  Rechazado: { label: 'Rechazado', icon: ThumbsDown, badgeClass: 'border-red-600 text-red-600', textClass: 'text-red-600', color: '#dc2626', hoverFocusClass: 'hover:bg-red-600/20 hover:text-red-600 focus:bg-red-600/20 focus:text-red-600' },
-  Abandonado: { label: 'Abandonado', icon: HeartOff, badgeClass: 'border-gray-500 text-gray-500', textClass: 'text-gray-500', color: '#6b7280', hoverFocusClass: 'hover:bg-gray-500/20 hover:text-gray-500 focus:bg-gray-500/20 focus:text-gray-500' },
-  Terminado: { label: 'Terminado', icon: CheckCircle2, badgeClass: 'border-purple-600 text-purple-600', textClass: 'text-purple-600', color: '#9333ea', hoverFocusClass: 'hover:bg-purple-600/20 hover:text-purple-600 focus:bg-purple-600/20 focus:text-purple-600' },
-  Otro: { label: 'Otro', icon: Circle, badgeClass: 'border-gray-500 text-gray-500', textClass: 'text-gray-500', color: '#6b7280', hoverFocusClass: 'hover:bg-gray-500/20 hover:text-gray-500 focus:bg-gray-500/20 focus:text-gray-500' },
+  Creado: { label: 'Creado', icon: FileText, badgeClass: 'border-blue-500 text-blue-600', textClass: 'text-blue-600', color: '#3b82f6', hoverFocusClass: 'hover:bg-blue-500/10 focus:bg-blue-500/20' },
+  Aceptado: { label: 'Aceptado', icon: ThumbsUp, badgeClass: 'border-green-600 text-green-600', textClass: 'text-green-600', color: '#16a34a', hoverFocusClass: 'hover:bg-green-600/10 focus:bg-green-600/20' },
+  Rechazado: { label: 'Rechazado', icon: ThumbsDown, badgeClass: 'border-red-600 text-red-600', textClass: 'text-red-600', color: '#dc2626', hoverFocusClass: 'hover:bg-red-600/10 focus:bg-red-600/20' },
+  Abandonado: { label: 'Abandonado', icon: HeartOff, badgeClass: 'border-gray-500 text-gray-500', textClass: 'text-gray-500', color: '#6b7280', hoverFocusClass: 'hover:bg-gray-500/10 focus:bg-gray-500/20' },
+  Terminado: { label: 'Terminado', icon: CheckCircle2, badgeClass: 'border-purple-600 text-purple-600', textClass: 'text-purple-600', color: '#9333ea', hoverFocusClass: 'hover:bg-purple-600/10 focus:bg-purple-600/20' },
+  Otro: { label: 'Otro', icon: Circle, badgeClass: 'border-gray-500 text-gray-500', textClass: 'text-gray-500', color: '#6b7280', hoverFocusClass: 'hover:bg-gray-500/10 focus:bg-gray-500/20' },
 };
 
 
@@ -62,7 +62,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
   }, [initialPresupuesto]);
 
 
-  const { estado, id, nombre, fechaCreacion, items, montoPagado, nota } = presupuesto;
+  const { estado, id, nombre, fechaCreacion, items, montoPagado, nota, fechaAtencion } = presupuesto;
 
   const totalPresupuesto = items.reduce((acc, item) => acc + item.procedimiento.precioBase * item.cantidad, 0);
   
@@ -130,7 +130,10 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
     onUpdate();
     setIsConfirmOpen(false);
   };
-
+  
+  const displayName = nombre 
+    ? `${nombre} - (${format(new Date(fechaAtencion), 'dd/MM/yyyy')})`
+    : `Presupuesto del ${format(new Date(fechaCreacion), 'dd/MM/yyyy')}`;
 
   return (
     <>
@@ -159,8 +162,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
 
               <AccordionTrigger className="p-0 flex-1 hover:no-underline [&>svg]:ml-4 justify-start">
                 <div className="flex items-center gap-4">
-                  <div className="font-semibold text-foreground">#{id.slice(-6)}</div>
-                  <div className="text-muted-foreground">{nombre}</div>
+                  <div className="font-semibold text-foreground text-left">{displayName}</div>
                 </div>
               </AccordionTrigger>
             </div>

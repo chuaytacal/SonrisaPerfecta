@@ -61,8 +61,10 @@ export interface HistoriaClinica {
 export interface Presupuesto {
   id: string;
   idHistoriaClinica: string;
+  idCita?: string;
   nombre: string;
   fechaCreacion: Date;
+  fechaAtencion: Date;
   estado: EstadoPresupuesto;
   items: ItemPresupuesto[];
   montoPagado: number;

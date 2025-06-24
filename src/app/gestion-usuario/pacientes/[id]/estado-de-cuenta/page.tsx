@@ -148,8 +148,9 @@ export default function EstadoDeCuentaPage() {
         const newBudget: Presupuesto = {
           id: `presupuesto-${crypto.randomUUID()}`,
           idHistoriaClinica: historiaClinica.id,
-          nombre: data.nombre || 'Presupuesto sin nombre',
+          nombre: data.nombre || '',
           fechaCreacion: new Date(),
+          fechaAtencion: new Date(),
           estado: data.estado,
           montoPagado: 0,
           items: data.items.map(item => ({

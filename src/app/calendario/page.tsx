@@ -21,7 +21,7 @@ import type { Appointment, AppointmentFormData, AppointmentState, RescheduleData
 import type { Presupuesto } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { mockPacientesData, mockPersonalData, mockMotivosCita, mockAppointmentsData, mockPresupuestosData } from '@/lib/data';
+import { mockPacientesData, mockPersonalData, mockMotivosCita, mockAppointmentsData, mockPresupuestosData, mockPagosData } from '@/lib/data';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { Personal } from '@/types';
@@ -188,6 +188,25 @@ export default function CalendarioPage() {
 
   const confirmDelete = () => {
     if(!appointmentToAction) return;
+
+    // Find and delete associated budget and payments
+    const budgetToDelete = mockPresupuestosData.find(b => b.idCita === appointmentToAction.id);
+    if (budgetToDelete) {
+        // Find all payments related to this budget and remove them
+        const paymentsToKeep = mockPagosData.filter(pago => 
+            !pago.itemsPagados.some(item => item.idPresupuesto === budgetToDelete.id)
+        );
+        mockPagosData.length = 0;
+        Array.prototype.push.apply(mockPagosData, paymentsToKeep);
+
+        // Delete the budget
+        const budgetIndex = mockPresupuestosData.findIndex(p => p.id === budgetToDelete.id);
+        if (budgetIndex > -1) {
+            mockPresupuestosData.splice(budgetIndex, 1);
+        }
+    }
+    
+    // Delete the appointment
     const indexToDelete = mockAppointmentsData.findIndex(app => app.id === appointmentToAction.id);
     if (indexToDelete > -1) {
         mockAppointmentsData.splice(indexToDelete, 1);
@@ -196,7 +215,7 @@ export default function CalendarioPage() {
 
     toast({
       title: "Cita Eliminada",
-      description: `La cita "${appointmentToAction?.title || 'seleccionada'}" ha sido eliminada.`,
+      description: `La cita y su presupuesto asociado (si existía) han sido eliminados.`,
       variant: 'destructive' 
     });
     setIsConfirmDeleteDialogOpen(false);
@@ -252,8 +271,10 @@ export default function CalendarioPage() {
       const newBudget: Presupuesto = {
         id: `presupuesto-${crypto.randomUUID()}`,
         idHistoriaClinica: paciente.idHistoriaClinica,
-        nombre: `Tratamiento Cita - ${format(startDateTime, 'dd/MM/yyyy')}`,
+        idCita: appointmentToSave.id,
+        nombre: motivoCita.nombre,
         fechaCreacion: new Date(),
+        fechaAtencion: startDateTime,
         estado: 'Creado',
         montoPagado: 0,
         items: formData.procedimientos.map(p => ({
@@ -262,8 +283,9 @@ export default function CalendarioPage() {
           cantidad: 1,
           montoPagado: 0,
         })),
+        doctorResponsableId: doctor.id
       };
-      mockPresupuestosData.push(newBudget);
+      mockPresupuestosData.unshift(newBudget);
     }
 
 
@@ -586,7 +608,14 @@ export default function CalendarioPage() {
         onOpenChange={setIsConfirmDeleteDialogOpen}
         onConfirm={confirmDelete}
         title="Confirmar Eliminación"
-        description={`¿Estás seguro de que deseas eliminar la cita para ${appointmentToAction?.paciente?.persona.nombre}?`}
+        description={
+            <div>
+                <p>¿Estás seguro de que deseas eliminar la cita para <strong>{appointmentToAction?.paciente?.persona.nombre}</strong>?</p>
+                <p className="mt-2 text-sm text-destructive">
+                    Si esta cita generó un presupuesto, este también será eliminado junto con sus pagos asociados.
+                </p>
+            </div>
+        }
         confirmButtonText="Eliminar"
         confirmButtonVariant="destructive"
     />

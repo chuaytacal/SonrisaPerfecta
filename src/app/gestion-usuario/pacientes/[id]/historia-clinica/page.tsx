@@ -5,8 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { mockPacientesData, mockAppointmentsData } from '@/lib/data';
-import type { Paciente as PacienteType, Persona, EtiquetaPaciente } from '@/types';
+import { mockPacientesData, mockAppointmentsData, mockPresupuestosData, mockPersonalData } from '@/lib/data';
+import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Personal } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -35,6 +35,7 @@ const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
 
 interface ClinicalHistoryItem {
   fecha: Date;
+  doctor?: Personal;
   tratamiento: string;
   notas: string;
   honorarios: number;
@@ -64,25 +65,25 @@ export default function HistoriaClinicaPage() {
   
   useEffect(() => {
     if (paciente) {
-        const patientAppointments = mockAppointmentsData.filter(
-            (appt) => appt.idPaciente === paciente.id
-        );
-
+        const historiaClinicaId = paciente.idHistoriaClinica;
+        const budgetsForPatient = mockPresupuestosData.filter(p => p.idHistoriaClinica === historiaClinicaId);
+        
         const historyItems: ClinicalHistoryItem[] = [];
-        patientAppointments.forEach((appt) => {
-            if (appt.procedimientos && appt.procedimientos.length > 0) {
-                appt.procedimientos.forEach((proc) => {
-                    historyItems.push({
-                        fecha: appt.start,
-                        tratamiento: proc.denominacion,
-                        notas: appt.notas || 'Sin notas para esta cita.',
-                        honorarios: proc.precioBase,
-                    });
+
+        budgetsForPatient.forEach(budget => {
+            const doctor = mockPersonalData.find(d => d.id === budget.doctorResponsableId);
+            budget.items.forEach(item => {
+                historyItems.push({
+                    fecha: new Date(budget.fechaAtencion),
+                    doctor: doctor,
+                    tratamiento: item.procedimiento.denominacion,
+                    notas: budget.nota || 'Sin notas para este presupuesto.',
+                    honorarios: item.procedimiento.precioBase * item.cantidad,
                 });
-            }
+            });
         });
         
-        historyItems.sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
+        historyItems.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 
         setClinicalHistory(historyItems);
     }
@@ -125,7 +126,7 @@ export default function HistoriaClinicaPage() {
         <Card>
             <CardHeader>
                 <CardTitle>Historia Clínica de Tratamientos</CardTitle>
-                <CardDescription>Resumen de los procedimientos y pagos del paciente, extraídos de sus citas.</CardDescription>
+                <CardDescription>Resumen de los procedimientos y pagos del paciente, extraídos de sus presupuestos.</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="border rounded-lg overflow-hidden">
@@ -133,6 +134,7 @@ export default function HistoriaClinicaPage() {
                         <TableHeader>
                             <TableRow>
                             <TableHead className="w-[120px]">FECHA</TableHead>
+                            <TableHead className="w-[200px]">DOCTOR</TableHead>
                             <TableHead>TRATAMIENTO</TableHead>
                             <TableHead>NOTAS</TableHead>
                             <TableHead className="text-right w-[120px]">HONORARIOS</TableHead>
@@ -143,6 +145,7 @@ export default function HistoriaClinicaPage() {
                             clinicalHistory.map((item, index) => (
                                 <TableRow key={index}>
                                 <TableCell>{format(item.fecha, 'dd/MM/yyyy', { locale: es })}</TableCell>
+                                <TableCell>{item.doctor ? `${item.doctor.persona.nombre} ${item.doctor.persona.apellidoPaterno}` : 'N/A'}</TableCell>
                                 <TableCell className="font-medium">{item.tratamiento}</TableCell>
                                 <TableCell className="text-muted-foreground">{item.notas}</TableCell>
                                 <TableCell className="text-right font-mono">S/ {item.honorarios.toFixed(2)}</TableCell>
@@ -150,8 +153,8 @@ export default function HistoriaClinicaPage() {
                             ))
                             ) : (
                             <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                                No se encontraron tratamientos registrados en las citas del paciente.
+                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                No se encontraron tratamientos registrados en los presupuestos del paciente.
                                 </TableCell>
                             </TableRow>
                             )}

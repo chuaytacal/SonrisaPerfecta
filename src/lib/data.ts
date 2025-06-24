@@ -145,6 +145,7 @@ export let mockPresupuestosData: Presupuesto[] = [
       idHistoriaClinica: 'hc-1',
       nombre: 'Tratamiento Inicial',
       fechaCreacion: new Date('2024-05-15'),
+      fechaAtencion: new Date('2024-05-15'),
       estado: 'Creado',
       montoPagado: 20,
       items: [
@@ -159,6 +160,7 @@ export let mockPresupuestosData: Presupuesto[] = [
       idHistoriaClinica: 'hc-1',
       nombre: 'Control General',
       fechaCreacion: new Date('2024-06-20'),
+      fechaAtencion: new Date('2024-06-20'),
       estado: 'Terminado',
       montoPagado: 120,
       items: [
