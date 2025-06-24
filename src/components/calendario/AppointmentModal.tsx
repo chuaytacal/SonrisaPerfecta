@@ -53,9 +53,10 @@ interface AppointmentModalProps {
   onDelete?: (appointmentId: string) => void;
   existingAppointment?: Appointment | null;
   selectedSlot?: { start: Date; end: Date } | null;
+  defaultPatientId?: string;
 }
 
-export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAppointment, selectedSlot }: AppointmentModalProps) {
+export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAppointment, selectedSlot, defaultPatientId }: AppointmentModalProps) {
   const [procedimientosSeleccionados, setProcedimientosSeleccionados] = useState<Procedimiento[]>([]);
   
   const duracionOptions = useMemo(() => {
@@ -162,9 +163,12 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAp
         };
         setProcedimientosSeleccionados([]);
       }
+      if (defaultPatientId) {
+        defaultValues.idPaciente = defaultPatientId;
+      }
       form.reset(defaultValues);
     }
-  }, [isOpen, existingAppointment, selectedSlot, form]);
+  }, [isOpen, existingAppointment, selectedSlot, form, defaultPatientId]);
 
   const handleSubmit = (data: AppointmentFormData) => {
     onSave({ ...data, procedimientos: procedimientosSeleccionados });
@@ -210,10 +214,11 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAp
                         <FormItem>
                             <FormLabel>Paciente</FormLabel>
                             <Combobox
-                            options={pacienteOptions}
-                            value={field.value}
-                            onChange={field.onChange}
-                            placeholder="Buscar paciente..."
+                              options={pacienteOptions}
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder="Buscar paciente..."
+                              disabled={!!defaultPatientId}
                             />
                             <FormMessage />
                         </FormItem>
