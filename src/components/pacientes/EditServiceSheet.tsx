@@ -25,6 +25,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '../ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { ConfirmationDialog } from '../ui/confirmation-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Megaphone } from 'lucide-react';
+
 
 interface EditServiceSheetProps {
   isOpen: boolean;
@@ -40,6 +43,9 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [paymentToDelete, setPaymentToDelete] = useState<Pago | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isExceededAlertOpen, setIsExceededAlertOpen] = useState(false);
+  const [exceededInfo, setExceededInfo] = useState<{ typed: number, max: number } | null>(null);
+
 
   useEffect(() => {
     if (isOpen) {
@@ -55,14 +61,30 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
   const porPagar = subtotal - pagado;
 
   const handlePagoChange = (pagoId: string, field: keyof Omit<Pago, 'id' | 'idPaciente' | 'itemsPagados'>, value: any) => {
+    let finalValue = value;
+    if (field === 'montoTotal') {
+        const newMonto = parseFloat(value) || 0;
+        const otrosPagosMonto = pagos
+            .filter(p => p.id !== pagoId)
+            .reduce((acc, p) => acc + p.montoTotal, 0);
+        
+        const maxPermitido = parseFloat((subtotal - otrosPagosMonto).toFixed(2));
+
+        if (newMonto > maxPermitido) {
+            setExceededInfo({ typed: newMonto, max: maxPermitido });
+            setIsExceededAlertOpen(true);
+            finalValue = maxPermitido;
+        }
+    }
+    
     setPagos(prev =>
-      prev.map(p => (p.id === pagoId ? { ...p, [field]: value } : p))
+      prev.map(p => (p.id === pagoId ? { ...p, [field]: field === 'montoTotal' ? finalValue : value } : p))
     );
   };
   
   const handleMontoBlur = (pagoId: string, currentMontoStr: string) => {
       const currentMonto = parseFloat(currentMontoStr) || 0;
-      if (currentMonto <= 0) {
+      if(currentMonto <= 0) {
           const p = pagos.find(p => p.id === pagoId);
           if(p) {
             setPaymentToDelete(p);
@@ -193,7 +215,7 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
                                   </Select>
                               </TableCell>
                               <TableCell className="text-right w-[120px]">
-                                  <Input type="number" value={pago.montoTotal} onChange={e => handlePagoChange(pago.id, 'montoTotal', parseFloat(e.target.value))} onBlur={e => handleMontoBlur(pago.id, e.target.value)} className="w-24 text-right" />
+                                  <Input type="number" value={pago.montoTotal} onChange={e => handlePagoChange(pago.id, 'montoTotal', e.target.value)} onBlur={e => handleMontoBlur(pago.id, e.target.value)} className="w-24 text-right" />
                               </TableCell>
                           </TableRow>
                         )
@@ -226,6 +248,24 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
         confirmButtonText="Sí, eliminar"
         confirmButtonVariant="destructive"
       />
+    <Dialog open={isExceededAlertOpen} onOpenChange={setIsExceededAlertOpen}>
+        <DialogContent className="w-[90vw] md:w-[40vw] max-w-xl p-6">
+            <div className="text-center space-y-4">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                    <Megaphone className="h-10 w-10 text-primary" />
+                </div>
+                <div>
+                    <DialogTitle className="text-2xl font-semibold">Monto Excedido</DialogTitle>
+                    <DialogDescription className="text-base leading-relaxed mt-2">
+                        El monto ingresado (S/ {exceededInfo?.typed.toFixed(2)}) es mayor que el saldo pendiente para este servicio (S/ {exceededInfo?.max.toFixed(2)}). Se ha ajustado al máximo permitido.
+                    </DialogDescription>
+                </div>
+            </div>
+            <DialogFooter className="mt-4 sm:justify-center">
+                <Button onClick={() => setIsExceededAlertOpen(false)} className="w-auto">Entendido</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
     </>
   );
 }

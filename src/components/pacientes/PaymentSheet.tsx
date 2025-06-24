@@ -273,7 +273,7 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
   return (
     <>
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-3xl p-0 flex flex-col">
+      <SheetContent className="w-full sm:max-w-[65vw] p-0 flex flex-col">
         <div className="relative overflow-hidden flex-1 flex flex-col">
             {/* Step 1: Payment Selection */}
             <div className={cn("absolute inset-0 transition-transform duration-500 ease-in-out flex flex-col", step === 1 ? "translate-x-0" : "-translate-x-full")}>
@@ -347,13 +347,12 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
             
             {/* Step 2: Payment Confirmation */}
             <div className={cn("absolute inset-0 transition-transform duration-500 ease-in-out flex flex-col bg-card", step === 2 ? "translate-x-0" : "translate-x-full")}>
-                 <SheetHeader className="p-4 border-b flex flex-row items-center justify-between">
-                    <Button variant="ghost" onClick={() => setStep(1)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                 <SheetHeader className="p-4 border-b relative">
+                    <Button variant="ghost" onClick={() => setStep(1)} className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 text-sm h-auto p-1">
                         <ArrowLeft className="h-4 w-4" />
                         <span>Atrás</span>
                     </Button>
                     <SheetTitle className="text-center">CONFIRMAR VENTA</SheetTitle>
-                    <SheetClose asChild><Button variant="ghost" size="icon" className="h-6 w-6"><X className="h-4 w-4"/></Button></SheetClose>
                 </SheetHeader>
                  <ScrollArea className="flex-grow">
                     <div className="p-6 space-y-6">
