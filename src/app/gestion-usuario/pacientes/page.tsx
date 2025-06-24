@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight, Eye } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight, Eye, ArrowUpDown } from "lucide-react";
 import { AddPacienteForm } from "@/components/pacientes/AddPacienteForm"; 
 import { SelectPersonaModal } from "@/components/personal/SelectPersonaModal"; 
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -238,7 +238,7 @@ const columns: ColumnDef<Paciente>[] = [
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Nombre
-          <MoreHorizontal className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
     },
@@ -303,7 +303,7 @@ const columns: ColumnDef<Paciente>[] = [
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Fecha de Ingreso
-          <MoreHorizontal className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
     },
