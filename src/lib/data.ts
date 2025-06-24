@@ -109,6 +109,8 @@ export let mockPresupuestosData: Presupuesto[] = [
         { id: 'item-1', procedimiento: mockProcedimientos.find(p => p.id === 'proc-1')!, cantidad: 1 },
         { id: 'item-2', procedimiento: mockProcedimientos.find(p => p.id === 'proc-3')!, cantidad: 1 },
       ],
+      doctorResponsableId: 'personal-2',
+      nota: 'Presupuesto inicial para revisión y limpieza.',
     },
     {
       id: 'presupuesto-2',
@@ -120,6 +122,7 @@ export let mockPresupuestosData: Presupuesto[] = [
       items: [
         { id: 'item-3', procedimiento: mockProcedimientos.find(p => p.id === 'proc-5')!, cantidad: 1 },
       ],
+      doctorResponsableId: 'personal-3',
     },
 ];
 

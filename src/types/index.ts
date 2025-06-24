@@ -41,7 +41,8 @@ export interface AntecedentesMedicosData {
   q10_ultimaConsultaDental?: string;
 }
 
-export type EstadoPresupuesto = 'Creado' | 'Aprobado' | 'Rechazado' | 'Terminado';
+export type EstadoPresupuesto = 'Creado' | 'Aceptado' | 'Rechazado' | 'Abandonado' | 'Terminado' | 'Otro';
+
 
 export interface ItemPresupuesto {
   id: string;
@@ -58,6 +59,8 @@ export interface Presupuesto {
   estado: EstadoPresupuesto;
   items: ItemPresupuesto[];
   montoPagado: number;
+  doctorResponsableId?: string;
+  nota?: string;
 }
 
 

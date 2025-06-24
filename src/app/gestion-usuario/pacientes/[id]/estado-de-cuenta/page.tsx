@@ -5,8 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, PlusCircle } from 'lucide-react';
-import { mockPacientesData, mockPresupuestosData } from '@/lib/data';
-import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto, Procedimiento } from '@/types';
+import { mockPacientesData, mockPresupuestosData, mockPersonalData } from '@/lib/data';
+import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto, Procedimiento, Personal } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -59,21 +59,29 @@ export default function EstadoDeCuentaPage() {
     setLoading(false);
   }, [patientId]);
 
-  const handleSaveService = (items: { procedimiento: Procedimiento; cantidad: number }[], nombre: string) => {
+  const handleSaveService = (data: {
+    items: { procedimiento: Procedimiento; cantidad: number }[],
+    nombre: string,
+    doctorResponsableId: string,
+    estado: Presupuesto['estado'],
+    nota?: string
+  }) => {
     if (!paciente) return;
 
     const newBudget: Presupuesto = {
       id: `presupuesto-${crypto.randomUUID()}`,
       idPaciente: paciente.id,
-      nombre: nombre || 'Presupuesto sin nombre',
+      nombre: data.nombre || 'Presupuesto sin nombre',
       fechaCreacion: new Date(),
-      estado: 'Creado',
+      estado: data.estado,
       montoPagado: 0,
-      items: items.map(item => ({
+      items: data.items.map(item => ({
         id: `item-${crypto.randomUUID()}`,
         procedimiento: item.procedimiento,
         cantidad: item.cantidad,
       })),
+      doctorResponsableId: data.doctorResponsableId,
+      nota: data.nota,
     };
 
     mockPresupuestosData.push(newBudget);
@@ -128,7 +136,6 @@ export default function EstadoDeCuentaPage() {
                 <TabsList>
                     <TabsTrigger value="presupuestos">Presupuestos</TabsTrigger>
                     <TabsTrigger value="historial">Historial de pagos</TabsTrigger>
-                    <TabsTrigger value="ordenes">Órdenes de Lab.</TabsTrigger>
                 </TabsList>
                 <Button onClick={() => setIsSheetOpen(true)}>
                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -154,14 +161,6 @@ export default function EstadoDeCuentaPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Historial de Pagos</CardTitle>
-                        <CardDescription>Próximamente...</CardDescription>
-                    </CardHeader>
-                </Card>
-            </TabsContent>
-            <TabsContent value="ordenes">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Órdenes de Laboratorio</CardTitle>
                         <CardDescription>Próximamente...</CardDescription>
                     </CardHeader>
                 </Card>
