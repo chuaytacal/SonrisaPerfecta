@@ -200,7 +200,7 @@ export default function CatalogoPage() {
     if (modalType === 'procedimiento') {
       return (
         <Form {...formProcedimiento}>
-          <form onSubmit={formProcedimiento.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={formProcedimiento.handleSubmit(onSubmit)} className="space-y-4 px-6 pb-6 pt-2">
             <FormField control={formProcedimiento.control} name="denominacion" render={({ field }) => ( <FormItem><FormLabel>Denominación</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
             <FormField control={formProcedimiento.control} name="descripcion" render={({ field }) => ( <FormItem><FormLabel>Descripción</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )}/>
             <FormField
@@ -239,7 +239,7 @@ export default function CatalogoPage() {
     const form = modalType === 'motivo' ? formMotivo : formEtiqueta;
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-6 pb-6 pt-2">
                 <FormField control={form.control} name="nombre" render={({ field }) => ( <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
                 <DialogFooter className="pt-4">
                     <Button type="button" variant="outline" onClick={handleCloseModal}>Cancelar</Button>
@@ -307,14 +307,12 @@ export default function CatalogoPage() {
       </Tabs>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="w-[95vw] sm:w-[90vw] max-w-lg p-6">
-            <DialogHeader>
+        <DialogContent className="w-[95vw] sm:w-[90vw] max-w-lg p-0">
+            <DialogHeader className="p-6 pb-2">
                 <DialogTitle>{getTitle()}</DialogTitle>
             </DialogHeader>
             <ScrollArea className="max-h-[60vh] -mr-4 pr-5">
-              <div className="py-2">
-                {renderForm()}
-              </div>
+              {renderForm()}
             </ScrollArea>
         </DialogContent>
       </Dialog>
