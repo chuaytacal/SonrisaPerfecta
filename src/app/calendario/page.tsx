@@ -588,8 +588,8 @@ export default function CalendarioPage() {
       
     <Dialog open={isPastDateWarningOpen} onOpenChange={setIsPastDateWarningOpen}>
         <DialogContent className="w-[90vw] md:w-[40vw] max-w-xl p-6">
-            <DialogHeader>
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+            <DialogHeader className="flex flex-col items-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4">
                     <Megaphone className="h-10 w-10 text-primary" />
                 </div>
                 <DialogTitle className="text-center text-2xl font-semibold">Estás en una fecha pasada</DialogTitle>

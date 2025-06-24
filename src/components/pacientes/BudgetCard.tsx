@@ -131,7 +131,9 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
     setIsConfirmOpen(false);
   };
   
-  const displayName = nombre || `Presupuesto del ${format(new Date(fechaCreacion), 'dd/MM/yyyy')}`;
+  const displayName = nombre 
+    ? `${nombre} - (${format(new Date(fechaAtencion), "dd/MM/yyyy")})` 
+    : format(new Date(fechaAtencion), "dd MMMM yyyy", { locale: es });
 
   return (
     <>
@@ -150,8 +152,18 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                     <DropdownMenuContent align="start">
                       <div className="p-2 font-semibold text-sm">Estado del Presupuesto</div>
                       {Object.entries(statusConfig).map(([key, config]) => (
-                        <DropdownMenuItem key={key} onClick={() => handleStateChange(key as EstadoPresupuesto)} className={cn("group", config.textClass, config.hoverBgClass, `hover:${config.textClass}`)}>
-                          <config.icon className={cn("mr-2 h-4 w-4", config.textClass)} />
+                        <DropdownMenuItem
+                          key={key}
+                          onClick={() => handleStateChange(key as EstadoPresupuesto)}
+                          className={cn(
+                            "group",
+                            config.textClass,
+                            config.hoverFocusClass,
+                            `hover:${config.textClass}`,
+                            `focus:${config.textClass}`
+                          )}
+                        >
+                          <config.icon className={cn("mr-2 h-4 w-4")} />
                           <span>{config.label}</span>
                         </DropdownMenuItem>
                       ))}

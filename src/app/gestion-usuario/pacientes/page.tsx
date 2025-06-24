@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight, Eye, ArrowUpDown } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight, Eye, ArrowUpDown, PlusCircle } from "lucide-react";
 import { AddPacienteForm } from "@/components/pacientes/AddPacienteForm"; 
 import { SelectPersonaModal } from "@/components/personal/SelectPersonaModal"; 
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -28,9 +28,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Persona, Paciente, HistoriaClinica } from "@/types"; 
-import { mockPacientesData, mockPersonasData, mockHistoriasClinicasData } from "@/lib/data";
+import type { Persona, Paciente, HistoriaClinica, Presupuesto, ItemPresupuesto } from "@/types"; 
+import { mockPacientesData, mockPersonasData, mockHistoriasClinicasData, mockPresupuestosData } from "@/lib/data";
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
+import { AddServiceSheet } from '@/components/pacientes/AddServiceSheet';
 
 
 export default function PacientesPage() {
@@ -54,6 +55,10 @@ export default function PacientesPage() {
   });
   const [sortBy, setSortBy] = React.useState<string>("");
   const [sorting, setSorting] = React.useState<SortingState>([])
+  
+  const [isAddServiceSheetOpen, setIsAddServiceSheetOpen] = React.useState(false);
+  const [selectedPatientForService, setSelectedPatientForService] = React.useState<Paciente | null>(null);
+
 
   React.useEffect(() => {
     if (sortBy) {
@@ -89,7 +94,12 @@ export default function PacientesPage() {
     }
 
     // 3. Create or Update HistoriaClinica
-    const historiaClinicaId = savedPaciente.idHistoriaClinica;
+    let historiaClinicaId = savedPaciente.idHistoriaClinica;
+    if (!historiaClinicaId) {
+        historiaClinicaId = `hc-${crypto.randomUUID()}`;
+        savedPaciente.idHistoriaClinica = historiaClinicaId;
+    }
+
     const nuevaHistoriaClinica: HistoriaClinica = {
       id: historiaClinicaId,
       idPaciente: savedPaciente.id,
@@ -133,6 +143,50 @@ export default function PacientesPage() {
     setSelectedPersonaToPreload(null);
     setIsCreatingNewPersonaFlow(false);
     setIsSelectPersonaModalOpen(true);
+  };
+  
+  const handleOpenAddServiceSheet = (paciente: Paciente) => {
+    setSelectedPatientForService(paciente);
+    setIsAddServiceSheetOpen(true);
+  };
+
+  const handleSaveService = (data: {
+    items: ItemPresupuesto[],
+    nombre: string,
+    doctorResponsableId: string,
+    estado: Presupuesto['estado'],
+    nota?: string
+  }) => {
+    if (!selectedPatientForService) return;
+  
+    const historiaClinica = mockHistoriasClinicasData.find(hc => hc.id === selectedPatientForService.idHistoriaClinica);
+    if (!historiaClinica) {
+        toast({ title: "Error", description: "El paciente no tiene una historia clínica asociada.", variant: "destructive" });
+        return;
+    }
+  
+    const newBudget: Presupuesto = {
+      id: `presupuesto-${crypto.randomUUID()}`,
+      idHistoriaClinica: historiaClinica.id,
+      nombre: data.nombre || '',
+      fechaCreacion: new Date(),
+      fechaAtencion: new Date(),
+      estado: data.estado,
+      montoPagado: 0,
+      items: data.items.map(item => ({
+        id: `item-${crypto.randomUUID()}`,
+        procedimiento: item.procedimiento,
+        cantidad: item.cantidad,
+        montoPagado: 0,
+      })),
+      doctorResponsableId: data.doctorResponsableId,
+      nota: data.nota,
+    };
+    mockPresupuestosData.unshift(newBudget);
+    toast({ title: "Presupuesto Creado", description: "El nuevo presupuesto ha sido añadido." });
+    
+    setIsAddServiceSheetOpen(false);
+    setSelectedPatientForService(null);
   };
 
   const handleSelectPersona = (persona: Persona) => {
@@ -363,20 +417,21 @@ const columns: ColumnDef<Paciente>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-            <DropdownMenuItem onSelect={() => navigator.clipboard.writeText(paciente.idPersona)}>
-              Copiar ID Persona
+            <DropdownMenuItem onSelect={() => handleViewDetails(paciente.id)}>
+                <Eye className="mr-2 h-4 w-4" /> Ver Detalles
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => handleOpenAddServiceSheet(paciente)}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Añadir servicio
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => openEditModal(paciente)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => handleDelete(paciente)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-              <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-            </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => handleToggleStatus(paciente)}>
               {paciente.estado === "Activo" ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
               {paciente.estado === "Activo" ? "Desactivar" : "Activar"}
             </DropdownMenuItem>
-             <DropdownMenuItem onSelect={() => handleViewDetails(paciente.id)}>
-                <Eye className="mr-2 h-4 w-4" /> Ver Detalles
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => handleDelete(paciente)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+              <Trash2 className="mr-2 h-4 w-4" /> Eliminar
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -458,6 +513,14 @@ const columns: ColumnDef<Paciente>[] = [
         onPacienteSaved={handleSavePaciente}
         pacienteList={pacienteList}
       />
+
+      <AddServiceSheet 
+        isOpen={isAddServiceSheetOpen}
+        onOpenChange={setIsAddServiceSheetOpen}
+        onSave={handleSaveService}
+        // No editingBudget here since we are creating a new one
+      />
+
       {pacienteToAction && confirmAction && (
         <ConfirmationDialog
             isOpen={isConfirmDeleteDialogOpen}
