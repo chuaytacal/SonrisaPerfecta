@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -43,12 +43,25 @@ import { CalendarIcon, User, ClipboardList, Eye, EyeOff, KeyRound } from "lucide
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { mockPersonasData } from "@/lib/data";
+import { mockPersonasData, mockUsuariosData } from "@/lib/data";
 import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{5,30}$/;
 
-const personalFormSchema = z.object({
+type PersonalFormValues = z.infer<ReturnType<typeof createPersonalFormSchema>>;
+
+interface AddPersonalFormProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onStaffSaved: (staff: Personal, user: Usuario) => void;
+  initialPersonalData?: Personal | null; 
+  initialUsuarioData?: Usuario | null;
+  selectedPersonaToPreload?: Persona | null; 
+  isCreatingNewPersonaFlow?: boolean; 
+  personalList: Personal[];
+}
+
+const createPersonalFormSchema = (initialUsuarioData?: Usuario | null) => z.object({
   // Persona fields
   tipoDocumento: z.enum(["DNI", "EXTRANJERIA", "PASAPORTE"], { required_error: "Seleccione un tipo de documento." }),
   numeroDocumento: z.string().min(1, { message: "El número de documento es requerido." }),
@@ -86,20 +99,20 @@ const personalFormSchema = z.object({
           ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Debe tener 5-30 caracteres, incl. mayúscula, minúscula y número.", path: ["contrasena"] });
         }
     }
+
+    const userExists = mockUsuariosData.some(
+      user => user.usuario.toLowerCase() === data.usuario.toLowerCase() && user.id !== initialUsuarioData?.id
+    );
+
+    if (userExists) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Este nombre de usuario ya está en uso.",
+        path: ["usuario"],
+      });
+    }
 });
 
-type PersonalFormValues = z.infer<typeof personalFormSchema>;
-
-interface AddPersonalFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onStaffSaved: (staff: Personal, user: Usuario) => void;
-  initialPersonalData?: Personal | null; 
-  initialUsuarioData?: Usuario | null;
-  selectedPersonaToPreload?: Persona | null; 
-  isCreatingNewPersonaFlow?: boolean; 
-  personalList: Personal[];
-}
 
 export function AddPersonalForm({
     open,
@@ -114,6 +127,8 @@ export function AddPersonalForm({
   const isEditMode = !!initialPersonalData; 
   const [showPassword, setShowPassword] = useState(false);
   const [isUsernameManuallyEdited, setIsUsernameManuallyEdited] = useState(false);
+
+  const personalFormSchema = useMemo(() => createPersonalFormSchema(initialUsuarioData), [initialUsuarioData]);
 
   const form = useForm<PersonalFormValues>({
     resolver: zodResolver(personalFormSchema),

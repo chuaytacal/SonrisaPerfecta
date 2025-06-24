@@ -259,20 +259,6 @@ const columns: ColumnDef<Personal>[] = [
     }
   },
   {
-    id: 'rol',
-    header: 'Rol',
-    cell: ({ row }) => {
-      const personal = row.original;
-      const usuario = mockUsuariosData.find(u => u.id === personal.idUsuario);
-      return usuario ? <Badge variant="outline">{usuario.rol}</Badge> : <span className="text-xs text-muted-foreground">Sin rol</span>;
-    },
-    filterFn: (row, id, value) => {
-      const personal = row.original;
-      const usuario = mockUsuariosData.find(u => u.id === personal.idUsuario);
-      return usuario?.rol.toLowerCase().includes(String(value).toLowerCase());
-    }
-  },
-  {
     accessorKey: "persona.telefono",
     header: "Teléfono",
     cell: ({ row }) => {
@@ -289,6 +275,20 @@ const columns: ColumnDef<Personal>[] = [
         } catch (error) {
         }
         return <span>{phone}</span>;
+    }
+  },
+  {
+    id: 'rol',
+    header: 'Rol',
+    cell: ({ row }) => {
+      const personal = row.original;
+      const usuario = mockUsuariosData.find(u => u.id === personal.idUsuario);
+      return usuario ? <Badge variant="secondary">{usuario.rol}</Badge> : <span className="text-xs text-muted-foreground">Sin rol</span>;
+    },
+    filterFn: (row, id, value) => {
+      const personal = row.original;
+      const usuario = mockUsuariosData.find(u => u.id === personal.idUsuario);
+      return usuario?.rol.toLowerCase().includes(String(value).toLowerCase());
     }
   },
   {
