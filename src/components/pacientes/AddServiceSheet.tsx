@@ -15,7 +15,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { mockProcedimientos, mockPersonalData } from '@/lib/data';
+import { mockProcedimientos, mockPersonalData, mockPagosData } from '@/lib/data';
 import type { Procedimiento, Presupuesto, ItemPresupuesto } from '@/types';
 import { Combobox } from '@/components/ui/combobox';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -52,6 +52,10 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
 
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<ItemPresupuesto | null>(null);
+  
+  const [isConfirmDecreaseOpen, setIsConfirmDecreaseOpen] = useState(false);
+  const [itemToDecrease, setItemToDecrease] = useState<ItemPresupuesto | null>(null);
+
 
   useEffect(() => {
     if (isOpen) {
@@ -124,13 +128,54 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
 
 
   const handleUpdateCantidad = (procedimientoId: string, delta: number) => {
-    setSelectedItems(prev =>
-      prev.map(item =>
-        item.procedimiento.id === procedimientoId
-          ? { ...item, cantidad: Math.max(1, item.cantidad + delta) }
-          : item
-      )
+    const item = selectedItems.find(i => i.procedimiento.id === procedimientoId);
+    if (!item) return;
+
+    const newQuantity = item.cantidad + delta;
+
+    if (delta < 0 && newQuantity >= 1 && (item.montoPagado || 0) > 0) {
+        setItemToDecrease(item);
+        setIsConfirmDecreaseOpen(true);
+        return;
+    }
+    
+    if (newQuantity >= 1) {
+        setSelectedItems(prev =>
+          prev.map(i =>
+            i.procedimiento.id === procedimientoId
+              ? { ...i, cantidad: newQuantity }
+              : i
+          )
+        );
+    }
+  };
+  
+  const confirmDecreaseQuantity = () => {
+    if (!itemToDecrease) return;
+
+    const newQuantity = itemToDecrease.cantidad - 1;
+
+    // 1. Find and delete associated payments from the master data
+    const paymentsToKeep = mockPagosData.filter(pago => 
+        !pago.itemsPagados.some(itemPagado => 
+            itemPagado.idPresupuesto === editingBudget?.id && itemPagado.idItem === itemToDecrease.id
+        )
     );
+    mockPagosData.length = 0;
+    Array.prototype.push.apply(mockPagosData, paymentsToKeep);
+
+    // 2. Update the item in the local sheet state
+    setSelectedItems(prev => prev.map(i =>
+        i.id === itemToDecrease.id
+            ? { ...i, cantidad: newQuantity, montoPagado: 0 } // Reset montoPagado
+            : i
+    ));
+    
+    toast({ title: "Pagos eliminados", description: `Los pagos asociados a ${itemToDecrease.procedimiento.denominacion} han sido eliminados.`, variant: "destructive" });
+
+    // 3. Close modal
+    setIsConfirmDecreaseOpen(false);
+    setItemToDecrease(null);
   };
   
   const handleSaveProcedimiento = (procedimiento: Procedimiento) => {
@@ -302,6 +347,15 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
             </>
         }
         confirmButtonText="Sí, eliminar"
+        confirmButtonVariant="destructive"
+    />
+     <ConfirmationDialog
+        isOpen={isConfirmDecreaseOpen}
+        onOpenChange={setIsConfirmDecreaseOpen}
+        onConfirm={confirmDecreaseQuantity}
+        title="Confirmar Reducción de Cantidad"
+        description={<>Este servicio ya tiene pagos registrados. Si reduce la cantidad, <strong>todos los pagos asociados se eliminarán</strong>. ¿Está seguro?</>}
+        confirmButtonText="Sí, reducir y eliminar pagos"
         confirmButtonVariant="destructive"
     />
     <AddProcedimientoModal
