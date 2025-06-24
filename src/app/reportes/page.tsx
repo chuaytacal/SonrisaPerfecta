@@ -265,7 +265,7 @@ export default function ReportesPage() {
             <ChartContainer config={{}} className="h-[300px] w-full">
               <PieChart>
                 <Tooltip content={<ChartTooltipContent />} />
-                <Pie data={distribucionServicios} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} labelLine={false} label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
+                <Pie data={distribucionServicios} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} labelLine={false}>
                   {distribucionServicios.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}

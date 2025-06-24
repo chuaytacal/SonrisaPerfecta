@@ -74,8 +74,11 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">Dashboard Principal</h1>
-      <p className="text-muted-foreground">Resumen general de la actividad de la clínica.</p>
+      <div> 
+        <h1 className="text-3xl font-bold text-foreground">Dashboard Principal</h1>
+        <p className="text-muted-foreground">Resumen general de la actividad de la clínica.</p>
+      </div>
+      
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -171,7 +174,7 @@ export default function DashboardPage() {
                 <ChartContainer config={{}} className="w-full h-full">
                   <PieChart>
                     <Tooltip content={<ChartTooltipContent />} />
-                    <Pie data={appointmentStatusChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}>
+                    <Pie data={appointmentStatusChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false}>
                       {appointmentStatusChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as AppointmentState]} />
                       ))}
