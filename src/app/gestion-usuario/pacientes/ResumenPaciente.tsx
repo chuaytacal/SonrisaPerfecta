@@ -1,4 +1,3 @@
-
 // src/components/pacientes/ResumenPaciente.tsx
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -15,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AppointmentModal } from '@/components/calendario/AppointmentModal';
 import { useToast } from '@/hooks/use-toast';
-import { mockAppointmentsData, mockMotivosCita, mockPersonalData, mockPresupuestosData } from '@/lib/data';
+import { mockAppointmentsData, mockMotivosCita, mockPersonalData, mockPresupuestosData, mockPagosData } from '@/lib/data';
 import type { Appointment, AppointmentFormData } from '@/types/calendar';
 
 
@@ -266,4 +265,3 @@ export default function ResumenPaciente({ paciente, persona, onBack }: ResumenPa
     </>
   );
 }
-
