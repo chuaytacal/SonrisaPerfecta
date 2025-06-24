@@ -3,13 +3,13 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart, Calendar, Users, DollarSign, Award } from "lucide-react";
+import { BarChart, Calendar, Users, DollarSign, Award, CheckCircle2, AlertTriangle } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { addDays, startOfDay, endOfDay, isWithinInterval, format } from 'date-fns';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Pago, Appointment, Paciente, Personal } from '@/types';
-import { mockPagosData, mockAppointmentsData, mockPacientesData, mockPersonalData } from '@/lib/data';
+import { mockPagosData, mockAppointmentsData, mockPacientesData, mockPersonalData, mockPresupuestosData } from '@/lib/data';
 import {
   Bar,
   XAxis,
@@ -25,6 +25,7 @@ import {
 } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { AppointmentState } from '@/types/calendar';
 
 export default function ReportesPage() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -32,6 +33,7 @@ export default function ReportesPage() {
     to: new Date(),
   });
   const [doctorFilter, setDoctorFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<AppointmentState | 'all'>('all');
 
   const {
     kpis,
@@ -42,8 +44,22 @@ export default function ReportesPage() {
     const from = dateRange?.from ? startOfDay(dateRange.from) : undefined;
     const to = dateRange?.to ? endOfDay(dateRange.to) : undefined;
 
+    // --- Global KPIs (not affected by filters) ---
+    const totalPresupuestadoGlobal = mockPresupuestosData.reduce((acc, presupuesto) => {
+      const totalItems = presupuesto.items.reduce((itemAcc, item) => itemAcc + (item.procedimiento.precioBase * item.cantidad), 0);
+      return acc + totalItems;
+    }, 0);
+    const totalPagadoGlobal = mockPresupuestosData.reduce((acc, presupuesto) => acc + presupuesto.montoPagado, 0);
+    const saldoPendienteGlobal = totalPresupuestadoGlobal - totalPagadoGlobal;
+
+
     if (!from || !to) {
-        return { kpis: { totalIngresos: 0, citasAtendidas: 0, nuevosPacientes: 0, servicioPopular: 'N/A' }, ingresosPorDia: [], distribucionServicios: [], rendimientoPorDoctor: [] };
+        return { 
+          kpis: { totalIngresos: 0, citasRegistradas: 0, nuevosPacientes: 0, servicioPopular: 'N/A', totalPagadoHistorico: totalPagadoGlobal, saldoPendienteTotal: saldoPendienteGlobal }, 
+          ingresosPorDia: [], 
+          distribucionServicios: [], 
+          rendimientoPorDoctor: [] 
+        };
     }
     
     // Filter data based on date range and doctor
@@ -56,7 +72,8 @@ export default function ReportesPage() {
     const citasEnRango: Appointment[] = mockAppointmentsData.filter(c => {
         const fechaCita = new Date(c.start);
         const doctorMatch = doctorFilter === 'all' || c.idDoctor === doctorFilter;
-        return isWithinInterval(fechaCita, { start: from, end: to });
+        const statusMatch = statusFilter === 'all' || c.estado === statusFilter;
+        return isWithinInterval(fechaCita, { start: from, end: to }) && doctorMatch && statusMatch;
     });
 
     const pacientesEnRango: Paciente[] = mockPacientesData.filter(p => {
@@ -66,7 +83,7 @@ export default function ReportesPage() {
 
     // KPI Calculations
     const totalIngresos = pagosEnRango.reduce((sum, pago) => sum + pago.montoTotal, 0);
-    const citasAtendidas = citasEnRango.filter(c => c.estado === 'Atendido').length;
+    const citasRegistradas = citasEnRango.length;
     const nuevosPacientes = pacientesEnRango.length;
 
     // Ingresos por Dia
@@ -109,17 +126,26 @@ export default function ReportesPage() {
 
 
     return {
-        kpis: { totalIngresos, citasAtendidas, nuevosPacientes, servicioPopular },
+        kpis: { totalIngresos, citasRegistradas, nuevosPacientes, servicioPopular, totalPagadoHistorico: totalPagadoGlobal, saldoPendienteTotal: saldoPendienteGlobal },
         ingresosPorDia: ingresosPorDiaArray,
         distribucionServicios: distribucionServiciosArray,
         rendimientoPorDoctor: rendimientoData,
     };
-  }, [dateRange, doctorFilter]);
+  }, [dateRange, doctorFilter, statusFilter]);
   
   const doctorOptions = useMemo(() => [
     { value: 'all', label: 'Todos los Doctores' },
     ...mockPersonalData.map(d => ({ value: d.id, label: `${d.persona.nombre} ${d.persona.apellidoPaterno}` }))
   ], []);
+  
+  const statusOptions: { value: AppointmentState | 'all', label: string }[] = [
+      { value: 'all', label: 'Todos los estados' },
+      { value: 'Pendiente', label: 'Pendiente' },
+      { value: 'Confirmada', label: 'Confirmada' },
+      { value: 'Atendido', label: 'Atendido' },
+      { value: 'Cancelada', label: 'Cancelada' },
+      { value: 'Reprogramada', label: 'Reprogramada' },
+  ];
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
@@ -136,13 +162,23 @@ export default function ReportesPage() {
             </SelectTrigger>
             <SelectContent>{doctorOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
           </Select>
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as AppointmentState | 'all')}>
+              <SelectTrigger className="w-full sm:w-[240px]">
+                  <SelectValue placeholder="Filtrar por estado..." />
+              </SelectTrigger>
+              <SelectContent>
+                  {statusOptions.map(option => (
+                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                  ))}
+              </SelectContent>
+          </Select>
         </div>
       </Card>
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Ingresos</CardTitle>
+            <CardTitle className="text-sm font-medium">Ingresos en Periodo</CardTitle>
             <DollarSign className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -152,12 +188,12 @@ export default function ReportesPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Citas Atendidas</CardTitle>
+            <CardTitle className="text-sm font-medium">Citas en Periodo</CardTitle>
             <Calendar className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpis.citasAtendidas}</div>
-             <p className="text-xs text-muted-foreground">En el período seleccionado</p>
+            <div className="text-2xl font-bold">{kpis.citasRegistradas}</div>
+             <p className="text-xs text-muted-foreground">Que coinciden con los filtros</p>
           </CardContent>
         </Card>
         <Card>
@@ -179,6 +215,26 @@ export default function ReportesPage() {
             <div className="text-xl font-bold truncate" title={kpis.servicioPopular}>{kpis.servicioPopular}</div>
             <p className="text-xs text-muted-foreground">En el período seleccionado</p>
           </CardContent>
+        </Card>
+        <Card className="md:col-span-2 lg:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Pagado (Histórico)</CardTitle>
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">S/ {kpis.totalPagadoHistorico.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">Suma de todos los pagos registrados.</p>
+            </CardContent>
+        </Card>
+        <Card className="md:col-span-2 lg:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Saldo Pendiente (Total)</CardTitle>
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">S/ {kpis.saldoPendienteTotal.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">Suma de todas las cuentas por cobrar.</p>
+            </CardContent>
         </Card>
       </div>
 
