@@ -12,13 +12,13 @@ import {
   SheetFooter,
   SheetClose,
 } from '@/components/ui/sheet';
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { type Presupuesto, type MetodoPago, type ItemPresupuesto, Paciente as PacienteType } from '@/types';
 import { mockPersonalData } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, Check, CheckCircle, ChevronRight, Circle, DollarSign, FileText, Gift, Percent, User, Wallet } from 'lucide-react';
+import { ArrowLeft, Check, CheckCircle, ChevronRight, Circle, DollarSign, FileText, Gift, Megaphone, Percent, User, Wallet } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
@@ -45,51 +45,124 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [metodoPago, setMetodoPago] = useState<MetodoPago | ''>('');
     const [comprobante, setComprobante] = useState<'Boleta' | 'Factura' | ''>('');
+    
+    // For the alert dialog
     const [isAlertOpen, setIsAlertOpen] = useState(false);
+    const [exceededInfo, setExceededInfo] = useState<{ typed: number, max: number } | null>(null);
+
     
     const doctor = useMemo(() => mockPersonalData.find(d => d.id === presupuesto.doctorResponsableId), [presupuesto.doctorResponsableId]);
     
+    const totalPorPagar = useMemo(() => {
+        return itemsToPay.reduce((acc, item) => {
+            const itemTotal = item.procedimiento.precioBase * item.cantidad;
+            return acc + itemTotal;
+        }, 0); 
+    }, [itemsToPay]);
+
     useEffect(() => {
         if (isOpen) {
             setStep(1);
             setAbonoManual('');
             setAbonos({});
-            const initialSelected = itemsToPay.map(item => item.id);
-            setSelectedItems(initialSelected);
+            setSelectedItems([]); // Start with no items selected
             setMetodoPago('');
             setComprobante('');
-            
-            const initialAbonos: Record<string, number> = {};
-            itemsToPay.forEach(item => {
-                const porPagarItem = item.procedimiento.precioBase * item.cantidad; // Simplified for now
-                initialAbonos[item.id] = porPagarItem;
-            });
-            setAbonos(initialAbonos);
-
+            setIsAlertOpen(false);
+            setExceededInfo(null);
         }
-    }, [isOpen, itemsToPay]);
-
-    const totalPorPagar = useMemo(() => {
-        return itemsToPay.reduce((acc, item) => {
-            const itemTotal = item.procedimiento.precioBase * item.cantidad;
-            return acc + itemTotal;
-        }, 0); // Simplified: Should consider partial payments per item in a real app
-    }, [itemsToPay]);
+    }, [isOpen]);
     
     const totalACobrar = useMemo(() => {
         if (abonoManual !== '') return abonoManual;
         
-        return itemsToPay
-            .filter(item => selectedItems.includes(item.id))
-            .reduce((acc, item) => {
-                const abono = abonos[item.id];
+        return selectedItems.reduce((acc, itemId) => {
+                const abono = abonos[itemId];
                 return acc + (typeof abono === 'number' ? abono : 0);
             }, 0);
-    }, [abonoManual, selectedItems, abonos, itemsToPay]);
+    }, [abonoManual, selectedItems, abonos]);
+
+    const handleManualAbonoChange = (value: string) => {
+        setSelectedItems([]); // Using manual input deselects all items
+        setAbonos({});
+
+        const numValue = value === '' ? '' : parseFloat(value);
+        
+        if (typeof numValue === 'number' && numValue > totalPorPagar) {
+            setExceededInfo({ typed: numValue, max: totalPorPagar });
+            setIsAlertOpen(true);
+            setAbonoManual(totalPorPagar); // Clamp to max value
+        } else {
+            setAbonoManual(numValue);
+        }
+    };
+    
+    const handleItemAbonoChange = (itemId: string, value: string) => {
+      const newAbono = value === '' ? '' : parseFloat(value);
+      const currentItem = itemsToPay.find(i => i.id === itemId);
+      if (!currentItem) return;
+
+      const itemPorPagar = currentItem.procedimiento.precioBase * currentItem.cantidad;
+      
+      const otherItemsTotal = selectedItems
+        .filter(id => id !== itemId)
+        .reduce((acc, id) => acc + (Number(abonos[id]) || 0), 0);
+      
+      const newTotalACobrar = otherItemsTotal + (Number(newAbono) || 0);
+
+      if (newTotalACobrar > totalPorPagar) {
+          const maxForThisItem = totalPorPagar - otherItemsTotal;
+          setExceededInfo({ typed: newTotalACobrar, max: totalPorPagar });
+          setIsAlertOpen(true);
+          setAbonos(prev => ({...prev, [itemId]: maxForThisItem < 0 ? 0 : maxForThisItem }));
+      } else {
+          setAbonos(prev => ({...prev, [itemId]: newAbono }));
+      }
+
+      setAbonoManual('');
+      if (!selectedItems.includes(itemId)) {
+          setSelectedItems(prev => [...prev, itemId]);
+      }
+    };
+
 
     const handleSelectAll = (checked: boolean) => {
         const allItemIds = itemsToPay.map(item => item.id);
         setSelectedItems(checked ? allItemIds : []);
+
+        if (checked) {
+            const newAbonos: Record<string, number> = {};
+            itemsToPay.forEach(item => {
+                newAbonos[item.id] = item.procedimiento.precioBase * item.cantidad;
+            });
+            setAbonos(newAbonos);
+        } else {
+            setAbonos({});
+        }
+        setAbonoManual('');
+    };
+
+    const handleSelectItem = (itemId: string, checked: boolean) => {
+      setAbonoManual('');
+      setSelectedItems(prev => {
+        const newSelected = checked ? [...prev, itemId] : prev.filter(id => id !== itemId);
+        
+        // Auto-fill abono when selected
+        if(checked) {
+           const item = itemsToPay.find(i => i.id === itemId);
+           if (item) {
+              const itemTotal = item.procedimiento.precioBase * item.cantidad;
+              setAbonos(prevAbonos => ({ ...prevAbonos, [itemId]: itemTotal }));
+           }
+        } else {
+            setAbonos(prevAbonos => {
+                const newAbonos = { ...prevAbonos };
+                delete newAbonos[itemId];
+                return newAbonos;
+            });
+        }
+        return newSelected;
+      });
     };
     
     const handleNextStep = () => {
@@ -98,17 +171,6 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
             return;
         }
         setStep(2);
-    };
-    
-    const handleCobrarManual = () => {
-        const monto = Number(abonoManual);
-        if (monto > totalPorPagar) {
-            setIsAlertOpen(true);
-            return;
-        }
-        if (monto > 0) {
-            setStep(2);
-        }
     };
 
     const handleConfirmPayment = () => {
@@ -156,12 +218,8 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
                         <div className="flex items-center gap-2">
                              <div className="relative w-40">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">S/</span>
-                                <Input type="number" placeholder="0.00" value={abonoManual} onChange={e => {
-                                    setAbonoManual(e.target.value === '' ? '' : parseFloat(e.target.value));
-                                    setSelectedItems([]);
-                                }} className="pl-8"/>
+                                <Input type="number" placeholder="0.00" value={abonoManual} onChange={e => handleManualAbonoChange(e.target.value)} className="pl-8"/>
                             </div>
-                            <Button onClick={handleCobrarManual} disabled={!abonoManual}>Cobrar</Button>
                         </div>
                          <p className="text-sm text-muted-foreground">Opción 2: Si no tienes un monto definido, puedes seleccionar los items que deseas cobrar y si deseas también puedes editar el monto.</p>
                         <div className="border rounded-lg">
@@ -169,7 +227,7 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-[50px]">
-                                            <Checkbox checked={selectedItems.length === itemsToPay.length && itemsToPay.length > 0} onCheckedChange={handleSelectAll} />
+                                            <Checkbox checked={itemsToPay.length > 0 && selectedItems.length === itemsToPay.length} onCheckedChange={(checked) => handleSelectAll(Boolean(checked))} />
                                         </TableHead>
                                         <TableHead>Item</TableHead>
                                         <TableHead className="text-right">Por Pagar</TableHead>
@@ -178,20 +236,13 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
                                 </TableHeader>
                                 <TableBody>
                                     {itemsToPay.map(item => {
-                                        const porPagarItem = item.procedimiento.precioBase * item.cantidad; // Simplified
+                                        const porPagarItem = item.procedimiento.precioBase * item.cantidad;
                                         return (
-                                        <TableRow key={item.id} data-state={selectedItems.includes(item.id) && "selected"}>
+                                        <TableRow key={item.id} data-state={selectedItems.includes(item.id) ? "selected" : "unselected"}>
                                             <TableCell>
                                                 <Checkbox 
                                                     checked={selectedItems.includes(item.id)} 
-                                                    onCheckedChange={(checked) => {
-                                                        const newSelected = checked ? [...selectedItems, item.id] : selectedItems.filter(id => id !== item.id);
-                                                        setSelectedItems(newSelected);
-                                                        if (checked) {
-                                                            setAbonos(prev => ({...prev, [item.id]: porPagarItem}));
-                                                        }
-                                                        setAbonoManual('');
-                                                    }}
+                                                    onCheckedChange={(checked) => handleSelectItem(item.id, Boolean(checked))}
                                                 />
                                             </TableCell>
                                             <TableCell>{item.procedimiento.denominacion}</TableCell>
@@ -201,11 +252,7 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
                                                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">S/</span>
                                                   <Input type="number" className="pl-7" 
                                                     value={abonos[item.id] ?? ''}
-                                                    onChange={e => {
-                                                        setAbonos(prev => ({...prev, [item.id]: e.target.value === '' ? '' : parseFloat(e.target.value)}));
-                                                        if (!selectedItems.includes(item.id)) setSelectedItems([...selectedItems, item.id]);
-                                                        setAbonoManual('');
-                                                    }}
+                                                    onChange={e => handleItemAbonoChange(item.id, e.target.value)}
                                                   />
                                                 </div>
                                             </TableCell>
@@ -288,19 +335,22 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
         </div>
       </SheetContent>
     </Sheet>
-    <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-            <AlertDialogTitle>Monto Excedido</AlertDialogTitle>
-            <AlertDialogDescription>
-                El monto a cobrar (S/ {abonoManual}) es mayor que el total por pagar (S/ {totalPorPagar.toFixed(2)}). Por favor, ajuste el monto.
-            </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setIsAlertOpen(false)}>Entendido</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
+     <Dialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <DialogContent className="w-[95vw] sm:w-[90vw] max-w-lg p-6">
+            <DialogHeader className="space-y-4 text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                    <Megaphone className="h-10 w-10 text-primary" />
+                </div>
+                <DialogTitle className="text-2xl font-semibold">Monto Excedido</DialogTitle>
+            </DialogHeader>
+            <DialogDescription className="mt-2 text-base text-center leading-relaxed">
+                El monto a cobrar (S/ {exceededInfo?.typed.toFixed(2)}) es mayor que el total por pagar (S/ {exceededInfo?.max.toFixed(2)}). Por favor, ajuste el monto.
+            </DialogDescription>
+            <DialogFooter className="mt-6 sm:justify-center">
+                <Button onClick={() => setIsAlertOpen(false)} className="w-auto">Entendido</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
     </>
   );
 }
