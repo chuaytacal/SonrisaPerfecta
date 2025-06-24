@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { type Presupuesto, type MetodoPago, type ItemPresupuesto, Paciente as PacienteType } from '@/types';
 import { mockPersonalData } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, Check, CheckCircle, ChevronRight, Circle, DollarSign, FileText, Gift, Megaphone, Percent, User, Wallet } from 'lucide-react';
+import { ArrowLeft, Check, CheckCircle, ChevronRight, Circle, DollarSign, FileText, Gift, Megaphone, Percent, User, Wallet, X } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -235,7 +235,7 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">S/</span>
                                 <Input type="number" placeholder="0.00" value={abonoManual} onChange={e => setAbonoManual(e.target.value === '' ? '' : parseFloat(e.target.value))} className="pl-8"/>
                             </div>
-                            <Button variant="default" onClick={handleCobrarClick}>Cobrar</Button>
+                            <Button variant="default" className="bg-primary" onClick={handleCobrarClick}>Cobrar</Button>
                         </div>
                          <p className="text-sm text-muted-foreground">Opción 2: Si no tienes un monto definido, puedes seleccionar los items que deseas cobrar y si deseas también puedes editar el monto.</p>
                         <div className="border rounded-lg">
@@ -378,4 +378,3 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
     </>
   );
 }
-
