@@ -24,6 +24,8 @@ import { mockPacientesData, mockPersonalData, mockMotivosCita, mockAppointmentsD
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { Personal } from '@/types';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const locales = {
@@ -78,10 +80,37 @@ export default function CalendarioPage() {
   const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
   const [appointmentToAction, setAppointmentToAction] = useState<Appointment | null>(null);
 
+  const [doctorFilter, setDoctorFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<AppointmentState | 'all'>('all');
+
   useEffect(() => {
     setCurrentDate(new Date());
     setAppointments([...mockAppointmentsData]);
   }, []);
+
+  const doctorOptions = useMemo(() => [
+    { value: 'all', label: 'Todos los doctores' },
+    ...mockPersonalData
+        .filter(p => p.estado === 'Activo')
+        .map(d => ({ value: d.id, label: `${d.persona.nombre} ${d.persona.apellidoPaterno}` }))
+  ], []);
+
+  const statusOptions: { value: AppointmentState | 'all', label: string }[] = [
+      { value: 'all', label: 'Todos los estados' },
+      { value: 'Pendiente', label: 'Pendiente' },
+      { value: 'Confirmada', label: 'Confirmada' },
+      { value: 'Atendido', label: 'Atendido' },
+      { value: 'Cancelada', label: 'Cancelada' },
+      { value: 'Reprogramada', label: 'Reprogramada' },
+  ];
+  
+  const filteredAppointments = useMemo(() => {
+    return appointments.filter(appointment => {
+        const doctorMatch = doctorFilter === 'all' || appointment.idDoctor === doctorFilter;
+        const statusMatch = statusFilter === 'all' || appointment.estado === statusFilter;
+        return doctorMatch && statusMatch;
+    });
+  }, [appointments, doctorFilter, statusFilter]);
 
   const handleSelectSlot = useCallback(({ start, end }: { start: Date; end: Date }) => {
     if (start < new Date()) {
@@ -358,13 +387,45 @@ export default function CalendarioPage() {
 
   return (
     <div className="flex flex-col relative h-auto">
-      <h1 className="text-3xl font-bold text-foreground mb-6">Calendario de Citas</h1>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-foreground">Calendario de Citas</h1>
+        <p className="text-muted-foreground">Gestiona y visualiza todas las citas programadas en la clínica.</p>
+      </div>
+
+       <div className="flex flex-col sm:flex-row gap-4 mb-4 p-4 border rounded-lg bg-card shadow-sm">
+        <div className="flex-1 space-y-2">
+            <Label htmlFor="doctor-filter">Filtrar por Doctor</Label>
+            <Select value={doctorFilter} onValueChange={setDoctorFilter}>
+                <SelectTrigger id="doctor-filter">
+                    <SelectValue placeholder="Seleccionar doctor..." />
+                </SelectTrigger>
+                <SelectContent>
+                    {doctorOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+        <div className="flex-1 space-y-2">
+            <Label htmlFor="status-filter">Filtrar por Estado</Label>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as AppointmentState | 'all')}>
+                <SelectTrigger id="status-filter">
+                    <SelectValue placeholder="Seleccionar estado..." />
+                </SelectTrigger>
+                <SelectContent>
+                    {statusOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+      </div>
 
       <div className="flex-grow relative">
         {currentDate ? (
           <BigCalendar
             localizer={localizer}
-            events={appointments}
+            events={filteredAppointments}
             startAccessor="start"
             endAccessor="end"
             selectable
