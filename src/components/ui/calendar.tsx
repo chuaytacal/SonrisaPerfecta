@@ -13,12 +13,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
+function capitalizeFirstLetter(string: string) {
+  if (!string) return "";
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
   ...props
 }: CalendarProps) {
+  // Use a local state for the month, initialized from props.
+  const [internalMonth, setInternalMonth] = React.useState(
+    props.month || props.defaultMonth || new Date()
+  );
+
+  // When the external month prop changes (e.g., in a controlled component), update the internal state.
+  React.useEffect(() => {
+    if (props.month && props.month.getTime() !== internalMonth.getTime()) {
+      setInternalMonth(props.month);
+    }
+  }, [props.month, internalMonth]);
+
+  const handleMonthChange = (month: Date) => {
+    // If the parent component provides an onMonthChange handler, call it.
+    if (props.onMonthChange) {
+      props.onMonthChange(month);
+    }
+    // Always update the internal state to make the calendar interactive.
+    setInternalMonth(month);
+  };
+
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
@@ -57,10 +84,13 @@ function Calendar({
         day_hidden: "invisible",
         ...classNames,
       }}
+      month={internalMonth}
+      onMonthChange={handleMonthChange}
       components={{
         IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" {...props} />,
         IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" {...props} />,
-        Caption: ({ ...props }) => <CustomCaption {...props} />
+        // Pass the current month and the handler to the custom caption
+        Caption: ({ ...captionProps }) => <CustomCaption {...captionProps} onMonthChange={handleMonthChange} fromYear={props.fromYear} toYear={props.toYear}/>
       }}
       {...props}
     />
@@ -68,8 +98,7 @@ function Calendar({
 }
 Calendar.displayName = "Calendar"
 
-function CustomCaption({ displayMonth, ...props }: CaptionProps) {
-    const { onMonthChange, fromYear, toYear } = props;
+function CustomCaption({ displayMonth, onMonthChange, fromYear, toYear }: CaptionProps & {onMonthChange: (date: Date) => void, fromYear?: number, toYear?: number}) {
     const months = Array.from({ length: 12 }, (_, i) => new Date(new Date().getFullYear(), i, 1));
     const years: number[] = [];
     const startYear = fromYear || new Date().getFullYear() - 100;
@@ -78,40 +107,40 @@ function CustomCaption({ displayMonth, ...props }: CaptionProps) {
         years.push(i);
     }
   
-    const handleMonthChange = (value: string) => {
+    const handleMonthSelectChange = (value: string) => {
       const month = parseInt(value, 10);
       const newDate = new Date(displayMonth);
       newDate.setMonth(month);
-      onMonthChange?.(newDate);
+      onMonthChange(newDate);
     };
   
-    const handleYearChange = (value: string) => {
+    const handleYearSelectChange = (value: string) => {
       const year = parseInt(value, 10);
       const newDate = new Date(displayMonth);
       newDate.setFullYear(year);
-      onMonthChange?.(newDate);
+      onMonthChange(newDate);
     };
 
     return (
       <div className="flex justify-center items-center gap-2 mb-4">
           <Select
               value={String(displayMonth.getMonth())}
-              onValueChange={handleMonthChange}
+              onValueChange={handleMonthSelectChange}
           >
               <SelectTrigger className="w-[120px] focus:ring-0">
-                  <SelectValue>{format(displayMonth, 'MMMM', { locale: es })}</SelectValue>
+                  <SelectValue>{capitalizeFirstLetter(format(displayMonth, 'MMMM', { locale: es }))}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                   {months.map((month, i) => (
                       <SelectItem key={i} value={String(i)}>
-                          {format(month, 'MMMM', { locale: es })}
+                          {capitalizeFirstLetter(format(month, 'MMMM', { locale: es }))}
                       </SelectItem>
                   ))}
               </SelectContent>
           </Select>
           <Select
               value={String(displayMonth.getFullYear())}
-              onValueChange={handleYearChange}
+              onValueChange={handleYearSelectChange}
           >
               <SelectTrigger className="w-[100px] focus:ring-0">
                   <SelectValue>{displayMonth.getFullYear()}</SelectValue>

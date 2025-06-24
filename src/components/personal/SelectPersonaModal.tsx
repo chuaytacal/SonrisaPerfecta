@@ -23,6 +23,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Persona } from '@/types';
 import { Search } from 'lucide-react';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
 interface SelectPersonaModalProps {
   isOpen: boolean;
@@ -92,7 +93,19 @@ export function SelectPersonaModal({
                     <TableRow key={persona.id}>
                       <TableCell className="whitespace-nowrap">{persona.tipoDocumento}: {persona.numeroDocumento}</TableCell>
                       <TableCell className="whitespace-nowrap">{`${persona.nombre} ${persona.apellidoPaterno} ${persona.apellidoMaterno}`}</TableCell>
-                      <TableCell className="whitespace-nowrap">{persona.telefono}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {(() => {
+                            const phone = persona.telefono;
+                            if (!phone) return <span>N/A</span>;
+                            try {
+                                const phoneNumber = parsePhoneNumberFromString(phone);
+                                if (phoneNumber) {
+                                    return <span><span className="text-muted-foreground">{`+${phoneNumber.countryCallingCode}`}</span> {phoneNumber.nationalNumber}</span>
+                                }
+                            } catch (error) {}
+                            return <span>{phone}</span>;
+                        })()}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" onClick={() => onSelectPersona(persona)}>
                           Seleccionar

@@ -52,7 +52,7 @@ export default function PacientesPage() {
     title: "",
     description: ""
   });
-  const [sortBy, setSortBy] = React.useState<string>("persona.nombre_asc");
+  const [sortBy, setSortBy] = React.useState<string>("");
   const [sorting, setSorting] = React.useState<SortingState>([])
 
   React.useEffect(() => {
@@ -65,7 +65,7 @@ export default function PacientesPage() {
   }, [sortBy]);
 
   const personasNoPacientes = React.useMemo(() => {
-    const pacientePersonaIds = new Set(mockPacientesData.map(p => p.idPersona));
+    const pacientePersonaIds = new Set(pacienteList.map(p => p.idPersona));
     return mockPersonasData.filter(persona => !pacientePersonaIds.has(persona.id));
   }, [pacienteList]);
 
@@ -440,7 +440,8 @@ const columns: ColumnDef<Paciente>[] = [
         initialApoderadoData={editingApoderado}
         selectedPersonaToPreload={selectedPersonaToPreload}
         isCreatingNewPersonaFlow={isCreatingNewPersonaFlow}
-        onPacienteSaved={handleSavePaciente} 
+        onPacienteSaved={handleSavePaciente}
+        pacienteList={pacienteList}
       />
       {pacienteToAction && confirmAction && (
         <ConfirmationDialog

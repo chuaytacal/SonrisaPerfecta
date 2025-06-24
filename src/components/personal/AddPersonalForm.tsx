@@ -43,7 +43,7 @@ import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { mockPersonasData, mockPersonalData } from "@/lib/data";
+import { mockPersonasData } from "@/lib/data";
 import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
 
 
@@ -85,6 +85,7 @@ interface AddPersonalFormProps {
   initialPersonalData?: Personal | null; 
   selectedPersonaToPreload?: Persona | null; 
   isCreatingNewPersonaFlow?: boolean; 
+  personalList: Personal[];
 }
 
 export function AddPersonalForm({
@@ -93,7 +94,8 @@ export function AddPersonalForm({
     onStaffSaved,
     initialPersonalData,
     selectedPersonaToPreload,
-    isCreatingNewPersonaFlow
+    isCreatingNewPersonaFlow,
+    personalList
 }: AddPersonalFormProps) {
   const isEditMode = !!initialPersonalData; 
 
@@ -116,6 +118,7 @@ export function AddPersonalForm({
 
   useEffect(() => {
     if (open) {
+      form.reset();
       let defaultVals: Partial<PersonalFormValues> = {
         tipoDocumento: "DNI", numeroDocumento: "", nombre: "", apellidoPaterno: "", apellidoMaterno: "",
         fechaNacimiento: new Date(), sexo: "M", direccion: "", telefono: "",
@@ -137,8 +140,6 @@ export function AddPersonalForm({
             fechaIngreso: new Date(),
             estado: "Activo",
         };
-      } else if (isCreatingNewPersonaFlow) { 
-        form.reset(defaultVals);
       }
       form.reset(defaultVals);
     }
@@ -155,7 +156,7 @@ export function AddPersonalForm({
 
     const currentNumero = form.getValues("numeroDocumento");
 
-    const staffExists = mockPersonalData.some(p => p.persona.numeroDocumento === currentNumero);
+    const staffExists = personalList.some(p => p.persona.numeroDocumento === currentNumero);
     if (staffExists) {
       form.setError("numeroDocumento", {
         type: "manual",
@@ -178,7 +179,6 @@ export function AddPersonalForm({
   async function onSubmit(values: PersonalFormValues) {
     const emailToSave = (isEditMode && initialPersonalData?.persona.email) || 
                         (selectedPersonaToPreload?.email) || 
-                        (initialPersonalData?.persona.email) || 
                         "";
 
     const personaData: Persona = { 

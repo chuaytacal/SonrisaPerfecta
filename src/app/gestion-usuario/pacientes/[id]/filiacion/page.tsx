@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select"
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
 
 const enfermedadesOptions = [
@@ -451,7 +452,22 @@ export default function FiliacionPage() {
                   <div><Label className="text-xs text-muted-foreground">N° Documento</Label><p className="font-medium">{persona.numeroDocumento}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Fecha de Nacimiento</Label><p className="font-medium">{persona.fechaNacimiento ? format(new Date(persona.fechaNacimiento), 'dd/MM/yyyy', { locale: es }) : 'N/A'}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Sexo</Label><p className="font-medium">{persona.sexo === "M" ? "Masculino" : "Femenino"}</p></div>
-                  <div><Label className="text-xs text-muted-foreground">Teléfono Celular</Label><p className="font-medium">{persona.telefono}</p></div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Teléfono Celular</Label>
+                    <p className="font-medium">
+                      {(() => {
+                          const phone = persona.telefono;
+                          if (!phone) return 'N/A';
+                          try {
+                              const phoneNumber = parsePhoneNumberFromString(phone);
+                              if (phoneNumber) {
+                                  return <span><span className="text-muted-foreground">{`+${phoneNumber.countryCallingCode}`}</span> {phoneNumber.nationalNumber}</span>
+                              }
+                          } catch (error) {}
+                          return phone;
+                      })()}
+                    </p>
+                  </div>
                   <div><Label className="text-xs text-muted-foreground">Dirección</Label><p className="font-medium">{persona.direccion}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Fecha de Ingreso (Paciente)</Label><p className="font-medium">{createdDate}</p></div>
                   <div><Label className="text-xs text-muted-foreground">N° Historia Clínica</Label><p className="font-medium">{paciente.id.substring(paciente.id.length-6).toUpperCase()}</p></div>
@@ -477,7 +493,22 @@ export default function FiliacionPage() {
                       <div><Label className="text-xs text-muted-foreground">N° Documento</Label><p className="font-medium">{apoderado.numeroDocumento}</p></div>
                       <div><Label className="text-xs text-muted-foreground">Fecha de Nacimiento</Label><p className="font-medium">{apoderado.fechaNacimiento ? format(new Date(apoderado.fechaNacimiento), 'dd/MM/yyyy', { locale: es }) : 'N/A'}</p></div>
                       <div><Label className="text-xs text-muted-foreground">Sexo</Label><p className="font-medium">{apoderado.sexo === "M" ? "Masculino" : "Femenino"}</p></div>
-                      <div><Label className="text-xs text-muted-foreground">Teléfono Celular</Label><p className="font-medium">{apoderado.telefono}</p></div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Teléfono Celular</Label>
+                        <p className="font-medium">
+                          {(() => {
+                              const phone = apoderado.telefono;
+                              if (!phone) return 'N/A';
+                              try {
+                                  const phoneNumber = parsePhoneNumberFromString(phone);
+                                  if (phoneNumber) {
+                                      return <span><span className="text-muted-foreground">{`+${phoneNumber.countryCallingCode}`}</span> {phoneNumber.nationalNumber}</span>
+                                  }
+                              } catch (error) {}
+                              return phone;
+                          })()}
+                        </p>
+                      </div>
                       <div><Label className="text-xs text-muted-foreground">Dirección</Label><p className="font-medium">{apoderado.direccion}</p></div>
                     </div>
                   </CardContent>
@@ -519,6 +550,7 @@ export default function FiliacionPage() {
             initialPacienteData={paciente} // Pass the full paciente object
             initialApoderadoData={apoderado}
             onPacienteSaved={handleSavePacienteDetails}
+            pacienteList={mockPacientesData}
         />
       )}
     </div>

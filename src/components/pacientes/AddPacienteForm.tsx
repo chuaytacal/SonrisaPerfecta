@@ -45,7 +45,7 @@ import { CalendarIcon, Tag, UserSquare, User, ClipboardList } from "lucide-react
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { mockPacientesData, mockPersonasData, mockEtiquetas } from "@/lib/data";
+import { mockPersonasData, mockEtiquetas } from "@/lib/data";
 import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
 
 
@@ -137,6 +137,7 @@ interface AddPacienteFormProps {
   initialApoderadoData?: Persona | null;
   selectedPersonaToPreload?: Persona | null; 
   isCreatingNewPersonaFlow?: boolean; 
+  pacienteList: Paciente[];
 }
 
 export function AddPacienteForm({
@@ -146,7 +147,8 @@ export function AddPacienteForm({
     initialPacienteData,
     initialApoderadoData,
     selectedPersonaToPreload,
-    isCreatingNewPersonaFlow
+    isCreatingNewPersonaFlow,
+    pacienteList
 }: AddPacienteFormProps) {
   const isEditMode = !!initialPacienteData; 
   const [isMinor, setIsMinor] = useState(false);
@@ -250,7 +252,7 @@ export function AddPacienteForm({
   
     const currentNumero = form.getValues("numeroDocumento");
   
-    const patientExists = mockPacientesData.some(p => p.persona.numeroDocumento === currentNumero);
+    const patientExists = pacienteList.some(p => p.persona.numeroDocumento === currentNumero);
     if (patientExists) {
       form.setError("numeroDocumento", {
         type: "manual",

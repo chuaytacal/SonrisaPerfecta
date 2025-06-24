@@ -50,7 +50,7 @@ export default function PersonalPage() {
     title: "",
     description: ""
   });
-  const [sortBy, setSortBy] = React.useState<string>("persona.nombre_asc");
+  const [sortBy, setSortBy] = React.useState<string>("");
   const [sorting, setSorting] = React.useState<SortingState>([])
 
   React.useEffect(() => {
@@ -63,24 +63,27 @@ export default function PersonalPage() {
   }, [sortBy]);
 
   const personasNoPersonal = React.useMemo(() => {
-    const personalPersonaIds = new Set(mockPersonalData.map(p => p.idPersona));
+    const personalPersonaIds = new Set(personalList.map(p => p.idPersona));
     return mockPersonasData.filter(persona => !personalPersonaIds.has(persona.id));
   }, [personalList]);
 
   const handleSavePersonal = (savedPersonal: Personal) => {
-    setPersonalList(prevList => {
-      const existingIndex = prevList.findIndex(p => p.id === savedPersonal.id);
-      if (existingIndex > -1) {
-        const updatedList = [...prevList];
-        updatedList[existingIndex] = savedPersonal;
-        return updatedList;
-      }
-      const personaExists = mockPersonasData.find(p => p.id === savedPersonal.idPersona);
-      if (!personaExists) {
-        mockPersonasData.push(savedPersonal.persona);
-      }
-      return [savedPersonal, ...prevList];
-    });
+    const personaIndex = mockPersonasData.findIndex(p => p.id === savedPersonal.idPersona);
+    if (personaIndex > -1) {
+      mockPersonasData[personaIndex] = savedPersonal.persona;
+    } else {
+      mockPersonasData.push(savedPersonal.persona);
+    }
+  
+    const personalIndex = mockPersonalData.findIndex(p => p.id === savedPersonal.id);
+    if (personalIndex > -1) {
+      mockPersonalData[personalIndex] = savedPersonal;
+    } else {
+      mockPersonalData.unshift(savedPersonal);
+    }
+    
+    setPersonalList([...mockPersonalData]);
+
     toast({
       title: editingPersonal ? "Personal Actualizado" : "Personal Registrado",
       description: `${savedPersonal.persona.nombre} ${savedPersonal.persona.apellidoPaterno} ha sido ${editingPersonal ? 'actualizado' : 'registrado'}.`,
@@ -386,6 +389,7 @@ const columns: ColumnDef<Personal>[] = [
         selectedPersonaToPreload={selectedPersonaToPreload}
         isCreatingNewPersonaFlow={isCreatingNewPersonaFlow}
         onStaffSaved={handleSavePersonal}
+        personalList={personalList}
       />
       {personalToAction && confirmAction && (
         <ConfirmationDialog
