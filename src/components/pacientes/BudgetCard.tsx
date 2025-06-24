@@ -32,23 +32,23 @@ export function BudgetCard({ presupuesto }: BudgetCardProps) {
   return (
     <Accordion type="single" collapsible defaultValue="item-1" className="w-full bg-card border rounded-lg shadow-sm">
       <AccordionItem value="item-1" className="border-none">
-        <AccordionTrigger className="p-4 hover:no-underline [&>svg]:ml-auto">
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-4">
-              <Badge className={cn("text-xs font-semibold", statusConfig[estado].className)}>
-                {statusConfig[estado].label}
-              </Badge>
-              <div className="font-semibold text-foreground">#{id.slice(-6)}</div>
-              <div className="text-muted-foreground">{nombre}</div>
-            </div>
-            <div className="flex items-center gap-1.5">
+        <div className="flex w-full items-center justify-between p-4">
+            <AccordionTrigger className="p-0 flex-1 hover:no-underline [&>svg]:ml-4 justify-start">
+                <div className="flex items-center gap-4">
+                    <Badge className={cn("text-xs font-semibold", statusConfig[estado].className)}>
+                        {statusConfig[estado].label}
+                    </Badge>
+                    <div className="font-semibold text-foreground">#{id.slice(-6)}</div>
+                    <div className="text-muted-foreground">{nombre}</div>
+                </div>
+            </AccordionTrigger>
+            <div className="flex items-center gap-1.5 ml-4">
               <Button variant="ghost" size="icon" className="h-8 w-8"><DollarSign className="h-4 w-4" /></Button>
               <Button variant="ghost" size="icon" className="h-8 w-8"><Edit className="h-4 w-4" /></Button>
               <Button variant="ghost" size="icon" className="h-8 w-8"><Download className="h-4 w-4" /></Button>
               <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
             </div>
-          </div>
-        </AccordionTrigger>
+        </div>
         <AccordionContent className="px-4 pb-4 pt-0">
           <div className="border-t">
             <Table>
@@ -95,7 +95,7 @@ export function BudgetCard({ presupuesto }: BudgetCardProps) {
               </TableFooter>
             </Table>
             <div className="text-xs text-muted-foreground mt-4 px-1">
-              Creado el: {format(fechaCreacion, "dd MMM yyyy", { locale: es })}
+              Creado el: {format(new Date(fechaCreacion), "dd MMM yyyy", { locale: es })}
             </div>
           </div>
         </AccordionContent>
