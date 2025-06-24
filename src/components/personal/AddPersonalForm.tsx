@@ -43,6 +43,7 @@ import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { mockPersonasData, mockPersonalData } from "@/lib/data";
 
 
 const personalFormSchema = z.object({
@@ -54,10 +55,28 @@ const personalFormSchema = z.object({
   fechaNacimiento: z.date({ required_error: "La fecha de nacimiento es requerida."}),
   sexo: z.enum(["M", "F"], { required_error: "Seleccione un sexo." }),
   direccion: z.string().min(1, {message: "La dirección es requerida."}),
-  telefono: z.string().min(9, { message: "El teléfono debe tener 9 dígitos y empezar con 9." }).regex(/^9\d{8}$/, { message: "Formato de teléfono inválido. Debe ser 9XXXXXXXX."}),
+  telefono: z.string()
+    .min(7, { message: "El teléfono debe tener al menos 7 dígitos." })
+    .max(15, { message: "El teléfono no puede exceder los 15 dígitos."})
+    .regex(/^\d+$/, { message: "El teléfono solo debe contener números." }),
   especialidad: z.string().min(1, "La especialidad es requerida."),
   fechaIngreso: z.date({ required_error: "La fecha de ingreso es requerida."}), 
   estado: z.enum(["Activo", "Inactivo"], { required_error: "Seleccione un estado." }),
+}).superRefine((data, ctx) => {
+    if (data.tipoDocumento === 'DNI' && data.numeroDocumento.length !== 8) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "El DNI debe tener 8 dígitos.",
+            path: ["numeroDocumento"],
+        });
+    }
+    if ((data.tipoDocumento === 'EXTRANJERIA' || data.tipoDocumento === 'PASAPORTE') && (data.numeroDocumento.length < 8 || data.numeroDocumento.length > 12)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Debe tener entre 8 y 12 caracteres.",
+            path: ["numeroDocumento"],
+        });
+    }
 });
 
 type PersonalFormValues = z.infer<typeof personalFormSchema>;
@@ -120,24 +139,53 @@ export function AddPersonalForm({
         defaultVals = {
             ...selectedPersonaToPreload,
             fechaNacimiento: new Date(selectedPersonaToPreload.fechaNacimiento),
-            especialidad: "", // Especialidad needs to be filled
+            especialidad: "",
             fechaIngreso: new Date(),
             estado: "Activo",
         };
       } else if (isCreatingNewPersonaFlow) { 
-        // Default values are already fine for creating a new persona
+        form.reset(defaultVals);
       }
       form.reset(defaultVals);
     }
   }, [initialPersonalData, selectedPersonaToPreload, isCreatingNewPersonaFlow, isEditMode, open, form]);
 
 
+  const handleDocumentBlur = async () => {
+    if (isEditMode || !isCreatingNewPersonaFlow) return;
+
+    form.clearErrors("numeroDocumento");
+
+    const isValid = await form.trigger("numeroDocumento");
+    if (!isValid) return;
+
+    const currentNumero = form.getValues("numeroDocumento");
+
+    const staffExists = mockPersonalData.some(p => p.persona.numeroDocumento === currentNumero);
+    if (staffExists) {
+      form.setError("numeroDocumento", {
+        type: "manual",
+        message: "Este personal ya está registrado.",
+      });
+      return;
+    }
+
+    const personaExists = mockPersonasData.find(p => p.numeroDocumento === currentNumero);
+    if (personaExists) {
+      const { id, email, ...personaFieldsToFill } = personaExists;
+      form.reset({
+        ...form.getValues(),
+        ...personaFieldsToFill,
+        fechaNacimiento: new Date(personaExists.fechaNacimiento),
+      });
+    }
+  };
+
   async function onSubmit(values: PersonalFormValues) {
-    // Ensure email from existing persona (if any) is preserved, otherwise default to empty or a new one if applicable
     const emailToSave = (isEditMode && initialPersonalData?.persona.email) || 
                         (selectedPersonaToPreload?.email) || 
-                        (initialPersonalData?.persona.email) || // Fallback to initial if editing but no persona was preloaded (shouldn't happen with current flow)
-                        ""; // Default to empty string if truly new and no email logic is present
+                        (initialPersonalData?.persona.email) || 
+                        "";
 
     const personaData: Persona = { 
         id: (isEditMode && initialPersonalData?.idPersona) || (selectedPersonaToPreload?.id) || `persona-${crypto.randomUUID()}`, 
@@ -150,11 +198,11 @@ export function AddPersonalForm({
         sexo: values.sexo,
         direccion: values.direccion,
         telefono: values.telefono,
-        email: emailToSave, // Use the determined email
+        email: emailToSave,
     };
 
     const personalOutput: Personal = {
-        id: initialPersonalData?.id || `personal-${crypto.randomUUID()}`, // Reuse existing ID if editing, else generate new
+        id: initialPersonalData?.id || `personal-${crypto.randomUUID()}`,
         idPersona: personaData.id,
         persona: personaData,
         especialidad: values.especialidad,
@@ -163,8 +211,8 @@ export function AddPersonalForm({
         avatarUrl: initialPersonalData?.avatarUrl || "",
     };
 
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
-    onStaffSaved(personalOutput); // Trigger the save callback
+    await new Promise(resolve => setTimeout(resolve, 500));
+    onStaffSaved(personalOutput);
   }
 
   const tipoDocumentoOptions: TipoDocumento[] = ["DNI", "EXTRANJERIA", "PASAPORTE"];
@@ -174,7 +222,6 @@ export function AddPersonalForm({
   const title = isEditMode ? "Editar Personal" : (isCreatingNewPersonaFlow ? "Registrar Nueva Persona y Personal" : "Asignar Rol de Personal");
   const description = isEditMode ? "Modifique los datos del miembro del personal." : (isCreatingNewPersonaFlow ? "Complete los campos para la nueva persona y su rol." : "Complete los detalles del rol para la persona seleccionada.");
 
-  // Determine if Persona fields should be disabled
   const isTipoDocNumDisabled = isEditMode || (!!selectedPersonaToPreload && !isCreatingNewPersonaFlow);
   const isOtherPersonaFieldsDisabled = (!!selectedPersonaToPreload && !isCreatingNewPersonaFlow && !isEditMode);
 
@@ -215,7 +262,7 @@ export function AddPersonalForm({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Número de Documento</FormLabel>
-                        <FormControl><Input placeholder="12345678" {...field} disabled={isTipoDocNumDisabled} /></FormControl>
+                        <FormControl><Input placeholder="12345678" {...field} onBlur={handleDocumentBlur} disabled={isTipoDocNumDisabled} /></FormControl>
                         <FormMessage />
                     </FormItem>
                     )}

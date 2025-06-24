@@ -63,8 +63,6 @@ export default function PersonalPage() {
         updatedList[existingIndex] = savedPersonal;
         return updatedList;
       }
-      // If new, ensure mockPersonasData is updated if a new Persona was created
-      // This is a simplification; in a real app, data would refetch or be managed globally
       const personaExists = mockPersonasData.find(p => p.id === savedPersonal.idPersona);
       if (!personaExists) {
         mockPersonasData.push(savedPersonal.persona);
@@ -82,7 +80,7 @@ export default function PersonalPage() {
   };
   
   const handleOpenAddPersonalFlow = () => {
-    setEditingPersonal(null); // Clear any existing edit state
+    setEditingPersonal(null); 
     setSelectedPersonaToPreload(null);
     setIsCreatingNewPersonaFlow(false);
     setIsSelectPersonaModalOpen(true);
@@ -104,8 +102,8 @@ export default function PersonalPage() {
   
   const openEditModal = (personal: Personal) => {
     setEditingPersonal(personal);
-    setSelectedPersonaToPreload(personal.persona); // Preload with existing persona data
-    setIsCreatingNewPersonaFlow(false); // Not creating a new persona, but editing
+    setSelectedPersonaToPreload(personal.persona); 
+    setIsCreatingNewPersonaFlow(false); 
     setIsAddPersonalFormOpen(true);
   };
 
@@ -186,8 +184,8 @@ const columns: ColumnDef<Personal>[] = [
      enableSorting: false,
   },
   {
-    id: "persona.nombre", // Explicitly set the ID
-    accessorKey: "persona.nombre", // Access nested property
+    id: "persona.nombre",
+    accessorKey: "persona.nombre",
     header: ({ column }) => {
       return (
         <Button
@@ -215,7 +213,7 @@ const columns: ColumnDef<Personal>[] = [
         </div>
       );
     },
-    filterFn: (row, id, value) => { // Custom filter for full name
+    filterFn: (row, id, value) => {
         const personal = row.original;
         const nombreCompleto = `${personal.persona.nombre} ${personal.persona.apellidoPaterno} ${personal.persona.apellidoMaterno}`.toLowerCase();
         const numeroDocumento = personal.persona.numeroDocumento.toLowerCase();
@@ -225,20 +223,15 @@ const columns: ColumnDef<Personal>[] = [
   },
   {
     accessorKey: "persona.telefono",
-    header: "Contacto",
+    header: "Teléfono",
     cell: ({ row }) => {
         const personal = row.original;
         return (
             <div>
                 <div>{personal.persona.telefono}</div>
-                <div className="text-xs text-muted-foreground">{personal.persona.email}</div>
             </div>
         )
     }
-  },
-  {
-    accessorKey: "especialidad",
-    header: "Especialidad",
   },
   {
     accessorKey: "fechaIngreso",
@@ -313,7 +306,7 @@ const columns: ColumnDef<Personal>[] = [
   ];
 
   const sortOptions = [
-    { label: "Nombre (A-Z)", value: "persona.nombre_asc" }, // Updated for nested property
+    { label: "Nombre (A-Z)", value: "persona.nombre_asc" },
     { label: "Nombre (Z-A)", value: "persona.nombre_desc" },
     { label: "Fecha de Ingreso (Más Reciente)", value: "fechaIngreso_desc" },
     { label: "Fecha de Ingreso (Más Antiguo)", value: "fechaIngreso_asc" },
@@ -384,7 +377,7 @@ const columns: ColumnDef<Personal>[] = [
             description={confirmDialogProps.description}
             confirmButtonText={confirmDialogProps.confirmButtonText}
             confirmButtonVariant={confirmDialogProps.confirmButtonVariant}
-            isLoading={false} // Assuming no async operation for now
+            isLoading={false}
         />
       )}
     </div>

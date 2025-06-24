@@ -58,7 +58,10 @@ const pacienteFormSchema = z.object({
   fechaNacimiento: z.date({ required_error: "La fecha de nacimiento es requerida."}),
   sexo: z.enum(["M", "F"], { required_error: "Seleccione un sexo." }),
   direccion: z.string().min(1, {message: "La dirección es requerida."}),
-  telefono: z.string().min(9, { message: "El teléfono debe tener 9 dígitos y empezar con 9." }).regex(/^9\d{8}$/, { message: "Formato de teléfono inválido. Debe ser 9XXXXXXXX."}),
+  telefono: z.string()
+    .min(7, { message: "El teléfono debe tener al menos 7 dígitos." })
+    .max(15, { message: "El teléfono no puede exceder los 15 dígitos."})
+    .regex(/^\d+$/, { message: "El teléfono solo debe contener números." }),
   
   // Paciente specific fields
   fechaIngreso: z.date({ required_error: "La fecha de ingreso es requerida."}), 
@@ -76,7 +79,6 @@ const pacienteFormSchema = z.object({
   apoderado_direccion: z.string().optional(),
   apoderado_telefono: z.string().optional(),
 }).superRefine((data, ctx) => {
-    // Validation for Document Number length based on type
     if (data.tipoDocumento === 'DNI' && data.numeroDocumento.length !== 8) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -91,7 +93,13 @@ const pacienteFormSchema = z.object({
             path: ["numeroDocumento"],
         });
     }
-    // Validation for Apoderado Document Number length
+
+    if (data.apoderado_telefono) {
+        if (!/^\d{7,15}$/.test(data.apoderado_telefono)) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Teléfono inválido (7-15 dígitos).", path: ["apoderado_telefono"] });
+        }
+    }
+    
     if (data.apoderado_tipoDocumento && data.apoderado_numeroDocumento) {
         if (data.apoderado_tipoDocumento === 'DNI' && data.apoderado_numeroDocumento.length !== 8) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, message: "El DNI debe tener 8 dígitos.", path: ["apoderado_numeroDocumento"] });
@@ -101,7 +109,6 @@ const pacienteFormSchema = z.object({
         }
     }
 
-
     if (!data.fechaNacimiento) return;
     const age = differenceInYears(new Date(), data.fechaNacimiento);
     if (age < 18) {
@@ -110,7 +117,7 @@ const pacienteFormSchema = z.object({
       if (!data.apoderado_nombre || data.apoderado_nombre.length < 2) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["apoderado_nombre"] });
       if (!data.apoderado_apellidoPaterno || data.apoderado_apellidoPaterno.length < 2) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["apoderado_apellidoPaterno"] });
       if (!data.apoderado_apellidoMaterno || data.apoderado_apellidoMaterno.length < 2) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["apoderado_apellidoMaterno"] });
-      if (!data.apoderado_telefono || !/^9\d{8}$/.test(data.apoderado_telefono)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Teléfono inválido", path: ["apoderado_telefono"] });
+      if (!data.apoderado_telefono) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Teléfono requerido.", path: ["apoderado_telefono"] });
       if (!data.apoderado_sexo) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["apoderado_sexo"] });
       if (!data.apoderado_direccion) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["apoderado_direccion"] });
 
@@ -238,21 +245,17 @@ export function AddPacienteForm({
 
 
   const handleDocumentBlur = async () => {
-    // Only run this logic if we are in a "new persona" flow and not editing.
     if (isEditMode || !isCreatingNewPersonaFlow) {
       return;
     }
   
-    // Clear previous custom errors before re-validating.
     form.clearErrors("numeroDocumento");
   
-    // Trigger validation for the field first (checks length based on type).
     const isValid = await form.trigger("numeroDocumento");
     if (!isValid) return;
   
     const currentNumero = form.getValues("numeroDocumento");
   
-    // Check if patient with this document already exists.
     const patientExists = mockPacientesData.some(p => p.persona.numeroDocumento === currentNumero);
     if (patientExists) {
       form.setError("numeroDocumento", {
@@ -262,12 +265,10 @@ export function AddPacienteForm({
       return;
     }
   
-    // Check if a persona with this document exists (but is not a patient).
     const personaExists = mockPersonasData.find(p => p.numeroDocumento === currentNumero);
     if (personaExists) {
       const { id, email, ...personaFieldsToFill } = personaExists;
   
-      // Use reset to update multiple fields. Spread current values to preserve things like `fechaIngreso`.
       form.reset({
         ...form.getValues(),
         ...personaFieldsToFill,
