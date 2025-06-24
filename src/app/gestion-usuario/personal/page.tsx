@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import type { Persona, Personal } from "@/types";
 import { mockPersonasData, mockPersonalData } from "@/lib/data";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 
 export default function PersonalPage() {
@@ -238,9 +239,16 @@ const columns: ColumnDef<Personal>[] = [
     cell: ({ row }) => {
         const phone = row.original.persona.telefono;
         if (!phone) return <span>N/A</span>;
-        const match = phone.match(/^(\+\d{1,3})(\d+)$/);
-        if (match) {
-            return <span><span className="text-muted-foreground">{match[1]}</span> {match[2]}</span>
+        
+        try {
+            const phoneNumber = parsePhoneNumberFromString(phone);
+            if (phoneNumber) {
+                const countryCode = `+${phoneNumber.countryCallingCode}`;
+                const nationalNumber = phoneNumber.nationalNumber;
+                return <span><span className="text-muted-foreground">{countryCode}</span> {nationalNumber}</span>
+            }
+        } catch (error) {
+             // Fallback for any parsing error
         }
         return <span>{phone}</span>;
     }
