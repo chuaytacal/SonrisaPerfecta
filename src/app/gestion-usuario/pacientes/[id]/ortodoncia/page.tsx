@@ -4,7 +4,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Search, ArrowUpDown } from 'lucide-react';
+import { ArrowLeft, Search, ArrowUpDown, Settings2 } from 'lucide-react';
 import { mockPacientesData, mockPersonalData, mockPresupuestosData } from '@/lib/data';
 import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Personal } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
     <svg
@@ -54,6 +55,12 @@ export default function OrtodonciaPage() {
 
   const [doctorFilter, setDoctorFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<{ key: keyof OrthoHistoryItem; direction: 'asc' | 'desc' }>({ key: 'fecha', direction: 'desc' });
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
+    doctor: true,
+    tratamiento: true,
+    notas: true,
+    honorarios: true,
+  });
 
   useEffect(() => {
     const foundPaciente = mockPacientesData.find(p => p.id === patientId);
@@ -121,10 +128,16 @@ export default function OrtodonciaPage() {
     }
 
     filtered.sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key]) {
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+
+      if (aValue === undefined || aValue === null) return 1;
+      if (bValue === undefined || bValue === null) return -1;
+      
+      if (aValue < bValue) {
         return sortConfig.direction === 'asc' ? -1 : 1;
       }
-      if (a[sortConfig.key] > b[sortConfig.key]) {
+      if (aValue > bValue) {
         return sortConfig.direction === 'asc' ? 1 : -1;
       }
       return 0;
@@ -150,6 +163,15 @@ export default function OrtodonciaPage() {
   
   const displayedAlergias = paciente.antecedentesMedicos?.q3_cuales && paciente.antecedentesMedicos?.q3_alergico === "Sí" ? paciente.antecedentesMedicos.q3_cuales.split(',').map(s => s.trim()).filter(Boolean) : [];
   const displayedEnfermedades = paciente.antecedentesMedicos?.q5_enfermedades || [];
+
+  const visibleColumnCount = 1 + Object.values(columnVisibility).filter(Boolean).length;
+  const columnNames: Record<string, string> = {
+    doctor: 'Doctor',
+    tratamiento: 'Tratamiento',
+    notas: 'Notas',
+    honorarios: 'Honorarios'
+  };
+
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 bg-background min-h-screen">
@@ -181,6 +203,27 @@ export default function OrtodonciaPage() {
                           ))}
                       </SelectContent>
                   </Select>
+                   <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="w-full sm:w-auto">
+                            <Settings2 className="mr-2 h-4 w-4" /> Columnas
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                    {Object.keys(columnVisibility).map((key) => (
+                        <DropdownMenuCheckboxItem
+                            key={key}
+                            className="capitalize"
+                            checked={columnVisibility[key]}
+                            onCheckedChange={(value) =>
+                                setColumnVisibility((prev) => ({ ...prev, [key]: !!value }))
+                            }
+                        >
+                            {columnNames[key]}
+                        </DropdownMenuCheckboxItem>
+                    ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               <div className="border rounded-lg overflow-hidden">
                     <Table>
@@ -192,10 +235,10 @@ export default function OrtodonciaPage() {
                                   <ArrowUpDown className="ml-2 h-4 w-4" />
                                 </Button>
                             </TableHead>
-                            <TableHead className="w-[200px]">DOCTOR</TableHead>
-                            <TableHead>TRATAMIENTO</TableHead>
-                            <TableHead>NOTAS</TableHead>
-                            <TableHead className="text-right w-[120px]">HONORARIOS</TableHead>
+                            {columnVisibility.doctor && <TableHead className="w-[200px]">DOCTOR</TableHead>}
+                            {columnVisibility.tratamiento && <TableHead>TRATAMIENTO</TableHead>}
+                            {columnVisibility.notas && <TableHead>NOTAS</TableHead>}
+                            {columnVisibility.honorarios && <TableHead className="text-right w-[120px]">HONORARIOS</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -203,15 +246,15 @@ export default function OrtodonciaPage() {
                             filteredAndSortedHistory.map((item, index) => (
                                 <TableRow key={index}>
                                 <TableCell>{format(item.fecha, 'dd/MM/yyyy', { locale: es })}</TableCell>
-                                <TableCell>{item.doctor ? `${item.doctor.persona.nombre} ${item.doctor.persona.apellidoPaterno}` : 'N/A'}</TableCell>
-                                <TableCell className="font-medium">{item.tratamiento}</TableCell>
-                                <TableCell className="text-muted-foreground">{item.notas}</TableCell>
-                                <TableCell className="text-right font-mono">S/ {item.honorarios.toFixed(2)}</TableCell>
+                                {columnVisibility.doctor && <TableCell>{item.doctor ? `${item.doctor.persona.nombre} ${item.doctor.persona.apellidoPaterno}` : 'N/A'}</TableCell>}
+                                {columnVisibility.tratamiento && <TableCell className="font-medium">{item.tratamiento}</TableCell>}
+                                {columnVisibility.notas && <TableCell className="text-muted-foreground">{item.notas}</TableCell>}
+                                {columnVisibility.honorarios && <TableCell className="text-right font-mono">S/ {item.honorarios.toFixed(2)}</TableCell>}
                                 </TableRow>
                             ))
                             ) : (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                <TableCell colSpan={visibleColumnCount} className="h-24 text-center text-muted-foreground">
                                 No se encontraron tratamientos de ortodoncia registrados.
                                 </TableCell>
                             </TableRow>
