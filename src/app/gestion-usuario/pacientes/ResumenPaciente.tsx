@@ -1,17 +1,22 @@
-
 // src/components/pacientes/ResumenPaciente.tsx
 import Link from 'next/link';
-import { useParams, useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { format, differenceInYears, parse as parseDate } from 'date-fns';
+import { format, differenceInYears, parse as parseDate, addMinutes } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
-import type { Paciente as PacienteType, Persona } from '@/types';
+import type { Paciente as PacienteType, Persona, Presupuesto } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Mail, MessageSquare, Phone, ArrowLeft, Users, CalendarDays as CalendarIconLucide, Smile, CircleDollarSign } from 'lucide-react';
+import { MessageSquare, ArrowLeft, Users, CalendarDays as CalendarIconLucide, Smile, CircleDollarSign, CalendarPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { AppointmentModal } from '@/components/calendario/AppointmentModal';
+import { useToast } from '@/hooks/use-toast';
+import { mockAppointmentsData, mockMotivosCita, mockPersonalData, mockPresupuestosData } from '@/lib/data';
+import type { Appointment, AppointmentFormData } from '@/types/calendar';
+
 
 interface ResumenPacienteProps {
   paciente: PacienteType;
@@ -44,6 +49,8 @@ export default function ResumenPaciente({ paciente, persona, onBack }: ResumenPa
     const pathname = usePathname();
     const [age, setAge] = useState<string | number>('Calculando...');
     const [createdDate, setCreatedDate] = useState<string>('Calculando...');
+    const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
+    const { toast } = useToast();
 
     useEffect(() => {
         if (persona) {
@@ -79,8 +86,75 @@ export default function ResumenPaciente({ paciente, persona, onBack }: ResumenPa
         { label: "Estado de cuenta", href: `/gestion-usuario/pacientes/${paciente.id}/estado-de-cuenta`, icon: CircleDollarSign },
     ];
     
+    const handleSaveAppointment = (formData: AppointmentFormData) => {
+        const startDateTime = new Date(formData.fecha);
+        const [startHours, startMinutes] = formData.horaInicio.split(':').map(Number);
+        startDateTime.setHours(startHours, startMinutes, 0, 0);
+        const endDateTime = addMinutes(startDateTime, formData.duracion);
+        
+        const doctor = mockPersonalData.find(p => p.id === formData.idDoctor);
+        const motivoCita = mockMotivosCita.find(m => m.id === formData.idMotivoCita);
+
+        if (!doctor || !motivoCita) {
+          toast({
+            title: "Error al guardar",
+            description: "No se encontró el doctor o motivo de la cita.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        const newAppointment: Appointment = {
+          id: crypto.randomUUID(),
+          title: `${motivoCita.nombre} - ${paciente.persona.nombre}`,
+          start: startDateTime,
+          end: endDateTime,
+          idPaciente: paciente.id,
+          idDoctor: doctor.id,
+          idMotivoCita: motivoCita.id,
+          paciente,
+          doctor,
+          motivoCita,
+          procedimientos: formData.procedimientos,
+          estado: 'Pendiente',
+          notas: formData.notas,
+          eventColor: 'hsl(var(--primary))'
+        };
+        
+        mockAppointmentsData.push(newAppointment);
+        
+        if (formData.procedimientos && formData.procedimientos.length > 0) {
+          const newBudget: Presupuesto = {
+            id: `presupuesto-${crypto.randomUUID()}`,
+            idHistoriaClinica: paciente.idHistoriaClinica,
+            idCita: newAppointment.id,
+            nombre: motivoCita.nombre,
+            fechaCreacion: new Date(),
+            fechaAtencion: startDateTime,
+            estado: 'Creado',
+            montoPagado: 0,
+            items: formData.procedimientos.map(p => ({
+              id: `item-${crypto.randomUUID()}`,
+              procedimiento: p,
+              cantidad: 1,
+              montoPagado: 0,
+            })),
+            doctorResponsableId: doctor.id
+          };
+          mockPresupuestosData.unshift(newBudget);
+        }
+
+        toast({
+          title: "Cita Creada",
+          description: `La cita para "${paciente.persona.nombre}" ha sido programada.`,
+        });
+        
+        setIsAppointmentModalOpen(false);
+    };
+
   return (
-    <Card className="w-full lg:w-[320px] lg:max-w-xs shrink-0 self-start sticky top-6">
+    <>
+      <Card className="w-full lg:w-[320px] lg:max-w-xs shrink-0 self-start sticky top-6">
         <CardContent className="pt-6 flex flex-col items-center text-center">
           <Button variant="ghost" onClick={onBack || (() => router.back())} className="self-start mb-2 -ml-2"><ArrowLeft className="mr-2 h-4 w-4" /> Volver</Button>
           <Avatar className="h-24 w-24 mb-4">
@@ -90,11 +164,32 @@ export default function ResumenPaciente({ paciente, persona, onBack }: ResumenPa
           <h2 className="text-xl font-semibold">{`${persona.nombre} ${persona.apellidoPaterno} ${persona.apellidoMaterno}`}</h2>
           <p className="text-sm text-muted-foreground">{age} años</p>
           <p className="text-xs text-muted-foreground mt-1">Paciente desde: {createdDate}</p>
-          <div className="flex space-x-2 mt-4">
-            <Button variant="outline" size="icon" asChild><a href={`https://wa.me/${persona.telefono.replace(/\s+/g, '')}`} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><MessageSquare className="h-4 w-4" /></a></Button>
-            <Button variant="outline" size="icon" asChild><a href={`mailto:${persona.email}`} aria-label="Email"><Mail className="h-4 w-4" /></a></Button>
-            <Button variant="outline" size="icon" onClick={() => alert(`Llamar a ${persona.telefono}`)} aria-label="Llamar"><Phone className="h-4 w-4" /></Button>
-          </div>
+          <TooltipProvider>
+              <div className="flex space-x-2 mt-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" asChild>
+                      <a href={`https://wa.me/${persona.telefono.replace(/\s+/g, '')}`} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
+                        <MessageSquare className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enviar recordatorio por WhatsApp</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={() => setIsAppointmentModalOpen(true)}>
+                      <CalendarPlus className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Agendar cita</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+          </TooltipProvider>
           <Separator className="my-6" />
           <div className="w-full space-y-1 text-left">
             {navItems.map((item) => {
@@ -116,8 +211,18 @@ export default function ResumenPaciente({ paciente, persona, onBack }: ResumenPa
                 );
             })}
           </div>
-          <Button className="mt-6 w-full" onClick={() => alert("Funcionalidad 'Comienza aquí' no implementada")}>¡Comienza aquí!</Button>
+          <Button className="mt-6 w-full" asChild>
+              <Link href={`/gestion-usuario/pacientes/${paciente.id}/filiacion`}>¡Comienza aquí!</Link>
+          </Button>
         </CardContent>
       </Card>
+      
+      <AppointmentModal
+        isOpen={isAppointmentModalOpen}
+        onClose={() => setIsAppointmentModalOpen(false)}
+        onSave={handleSaveAppointment}
+        defaultPatientId={paciente.id}
+      />
+    </>
   );
 }

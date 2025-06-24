@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useToast } from '@/hooks/use-toast';
 
 const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
     <svg
@@ -46,6 +47,7 @@ interface OrthoHistoryItem {
 export default function OrtodonciaPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const patientId = params.id as string;
 
   const [paciente, setPaciente] = useState<PacienteType | null>(null);
@@ -62,11 +64,31 @@ export default function OrtodonciaPage() {
     honorarios: true,
   });
 
+  const [displayedNotas, setDisplayedNotas] = useState<string>("Sin notas registradas.");
+  const [displayedEtiquetas, setDisplayedEtiquetas] = useState<EtiquetaPaciente[]>([]);
+  const [displayedAlergias, setDisplayedAlergias] = useState<string[]>([]);
+  const [displayedEnfermedades, setDisplayedEnfermedades] = useState<string[]>([]);
+
+  const deriveAlergiasFromAntecedentes = (antecedentes?: PacienteType['antecedentesMedicos']): string[] => {
+    if (antecedentes && antecedentes.q3_cuales && antecedentes.q3_alergico === "Sí") {
+      return antecedentes.q3_cuales.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+  };
+
+  const deriveEnfermedadesFromAntecedentes = (antecedentes?: PacienteType['antecedentesMedicos']): string[] => {
+    return antecedentes?.q5_enfermedades || [];
+  };
+
   useEffect(() => {
     const foundPaciente = mockPacientesData.find(p => p.id === patientId);
     if (foundPaciente) {
       setPaciente(foundPaciente);
       setPersona(foundPaciente.persona);
+      setDisplayedNotas(foundPaciente.notas || "Sin notas registradas.");
+      setDisplayedEtiquetas(foundPaciente.etiquetas || []);
+      setDisplayedAlergias(deriveAlergiasFromAntecedentes(foundPaciente.antecedentesMedicos));
+      setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(foundPaciente.antecedentesMedicos));
     } else {
       setPaciente(null);
       setPersona(null);
@@ -146,8 +168,34 @@ export default function OrtodonciaPage() {
     return filtered;
   }, [orthoHistory, doctorFilter, sortConfig]);
 
-  const handleDummySaveNotes = (notes: string) => { console.log("Save notes (dummy):", notes); };
-  const handleDummyAddTag = (tag: EtiquetaPaciente): boolean => { console.log("Add tag (dummy):", tag); return true; };
+  const handleUpdateNotes = (newNotes: string) => {
+    const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
+    if (pacienteIndex > -1 && paciente) {
+        const updatedPatient = { ...paciente, notas: newNotes };
+        mockPacientesData[pacienteIndex] = updatedPatient;
+        setPaciente(updatedPatient);
+        setDisplayedNotas(newNotes);
+        toast({ title: "Notas Guardadas", description: "Las notas del paciente han sido actualizadas."});
+    }
+  };
+
+  const handleAddTag = (newTag: EtiquetaPaciente): boolean => {
+    const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
+    if (pacienteIndex > -1 && paciente) {
+        if (paciente.etiquetas && paciente.etiquetas.includes(newTag)) {
+            toast({ title: "Etiqueta Duplicada", description: "Esta etiqueta ya existe para el paciente.", variant: "destructive"});
+            return false;
+        }
+        const newTags = [...(paciente.etiquetas || []), newTag];
+        const updatedPatient = { ...paciente, etiquetas: newTags };
+        mockPacientesData[pacienteIndex] = updatedPatient;
+        setPaciente(updatedPatient);
+        setDisplayedEtiquetas(newTags);
+        toast({ title: "Etiqueta Agregada", description: `Etiqueta "${newTag}" agregada al paciente.`});
+        return true;
+    }
+    return false;
+  };
 
   if (loading) return <div className="flex justify-center items-center h-screen"><p>Cargando datos de ortodoncia...</p></div>;
   if (!paciente || !persona) {
@@ -161,9 +209,6 @@ export default function OrtodonciaPage() {
     );
   }
   
-  const displayedAlergias = paciente.antecedentesMedicos?.q3_cuales && paciente.antecedentesMedicos?.q3_alergico === "Sí" ? paciente.antecedentesMedicos.q3_cuales.split(',').map(s => s.trim()).filter(Boolean) : [];
-  const displayedEnfermedades = paciente.antecedentesMedicos?.q5_enfermedades || [];
-
   const visibleColumnCount = 1 + Object.values(columnVisibility).filter(Boolean).length;
   const columnNames: Record<string, string> = {
     doctor: 'Doctor',
@@ -178,12 +223,12 @@ export default function OrtodonciaPage() {
       <ResumenPaciente paciente={paciente} persona={persona} onBack={() => router.push('/gestion-usuario/pacientes')} />
       <div className="flex-1">
         <EtiquetasNotasSalud
-          etiquetas={paciente.etiquetas || []}
-          notas={paciente.notas || "Sin notas registradas."}
+          etiquetas={displayedEtiquetas}
+          notas={displayedNotas}
           alergias={displayedAlergias}
           enfermedades={displayedEnfermedades}
-          onSaveNotes={handleDummySaveNotes}
-          onAddTag={handleDummyAddTag}
+          onSaveNotes={handleUpdateNotes}
+          onAddTag={handleAddTag}
           patientId={patientId}
         />
         <Card>
@@ -192,7 +237,7 @@ export default function OrtodonciaPage() {
             <CardDescription>Resumen de los tratamientos y cuotas de ortodoncia del paciente.</CardDescription>
           </CardHeader>
           <CardContent>
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mb-4">
+              <div className="flex flex-col sm:flex-row items-center gap-2 mb-4">
                   <div className="w-full sm:w-auto">
                     <Select value={doctorFilter} onValueChange={setDoctorFilter}>
                         <SelectTrigger className="w-full sm:w-[200px]">
@@ -205,7 +250,7 @@ export default function OrtodonciaPage() {
                         </SelectContent>
                     </Select>
                   </div>
-                  <div className="w-full sm:w-auto">
+                  <div className="w-full sm:w-auto ml-auto">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                           <Button variant="outline" className="w-full sm:w-auto">

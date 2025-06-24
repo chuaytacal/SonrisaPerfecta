@@ -2,7 +2,7 @@
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -55,6 +55,22 @@ export default function OdontogramaPage() {
   const [primariaData, setPrimariaData] = useState<DientesMap>({});
   const [activeTab, setActiveTab] = useState<OdontogramType>('Permanente');
 
+  const [displayedNotas, setDisplayedNotas] = useState<string>("Sin notas registradas.");
+  const [displayedEtiquetas, setDisplayedEtiquetas] = useState<EtiquetaPaciente[]>([]);
+  const [displayedAlergias, setDisplayedAlergias] = useState<string[]>([]);
+  const [displayedEnfermedades, setDisplayedEnfermedades] = useState<string[]>([]);
+
+  const deriveAlergiasFromAntecedentes = (antecedentes?: PacienteType['antecedentesMedicos']): string[] => {
+    if (antecedentes && antecedentes.q3_cuales && antecedentes.q3_alergico === "Sí") {
+      return antecedentes.q3_cuales.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+  };
+
+  const deriveEnfermedadesFromAntecedentes = (antecedentes?: PacienteType['antecedentesMedicos']): string[] => {
+    return antecedentes?.q5_enfermedades || [];
+  };
+
   useEffect(() => {
     const foundPaciente = mockPacientesData.find(p => p.id === patientId);
     if (foundPaciente) {
@@ -62,6 +78,10 @@ export default function OdontogramaPage() {
       setPersona(foundPaciente.persona);
       setPermanenteData(foundPaciente.odontogramaPermanente || {});
       setPrimariaData(foundPaciente.odontogramaPrimaria || {});
+      setDisplayedNotas(foundPaciente.notas || "Sin notas registradas.");
+      setDisplayedEtiquetas(foundPaciente.etiquetas || []);
+      setDisplayedAlergias(deriveAlergiasFromAntecedentes(foundPaciente.antecedentesMedicos));
+      setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(foundPaciente.antecedentesMedicos));
     } else {
       setPaciente(null);
       setPersona(null);
@@ -121,9 +141,34 @@ export default function OdontogramaPage() {
   }, [activeTab, permanenteData, primariaData, patientId]);
 
 
-  // Dummy callbacks for EtiquetasNotasSalud
-  const handleDummySaveNotes = (notes: string) => { console.log("Save notes (dummy):", notes); };
-  const handleDummyAddTag = (tag: EtiquetaPaciente): boolean => { console.log("Add tag (dummy):", tag); return true; };
+  const handleUpdateNotes = (newNotes: string) => {
+    const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
+    if (pacienteIndex > -1 && paciente) {
+        const updatedPatient = { ...paciente, notas: newNotes };
+        mockPacientesData[pacienteIndex] = updatedPatient;
+        setPaciente(updatedPatient); 
+        setDisplayedNotas(newNotes);
+        toast({ title: "Notas Guardadas", description: "Las notas del paciente han sido actualizadas."});
+    }
+  };
+
+  const handleAddTag = (newTag: EtiquetaPaciente): boolean => {
+    const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
+    if (pacienteIndex > -1 && paciente) {
+        if (paciente.etiquetas && paciente.etiquetas.includes(newTag)) {
+            toast({ title: "Etiqueta Duplicada", description: "Esta etiqueta ya existe para el paciente.", variant: "destructive"});
+            return false;
+        }
+        const newTags = [...(paciente.etiquetas || []), newTag];
+        const updatedPatient = { ...paciente, etiquetas: newTags };
+        mockPacientesData[pacienteIndex] = updatedPatient;
+        setPaciente(updatedPatient);
+        setDisplayedEtiquetas(newTags);
+        toast({ title: "Etiqueta Agregada", description: `Etiqueta "${newTag}" agregada al paciente.`});
+        return true;
+    }
+    return false;
+  };
 
   if (loading) return <div className="flex justify-center items-center h-screen"><p>Cargando datos del odontograma...</p></div>;
   if (!paciente || !persona) {
@@ -137,20 +182,17 @@ export default function OdontogramaPage() {
     );
   }
   
-  const displayedAlergias = paciente.antecedentesMedicos?.q3_cuales && paciente.antecedentesMedicos?.q3_alergico === "Sí" ? paciente.antecedentesMedicos.q3_cuales.split(',').map(s => s.trim()).filter(Boolean) : [];
-  const displayedEnfermedades = paciente.antecedentesMedicos?.q5_enfermedades || [];
-
   return (
     <div className="flex flex-col lg:flex-row gap-6 bg-background min-h-screen">
       <ResumenPaciente paciente={paciente} persona={persona} onBack={() => router.push('/gestion-usuario/pacientes')} />
       <div className="flex-1 space-y-6">
         <EtiquetasNotasSalud
-          etiquetas={paciente.etiquetas || []}
-          notas={paciente.notas || "Sin notas registradas."}
+          etiquetas={displayedEtiquetas}
+          notas={displayedNotas}
           alergias={displayedAlergias}
           enfermedades={displayedEnfermedades}
-          onSaveNotes={handleDummySaveNotes}
-          onAddTag={handleDummyAddTag}
+          onSaveNotes={handleUpdateNotes}
+          onAddTag={handleAddTag}
           patientId={patientId}
         />
         <Card>

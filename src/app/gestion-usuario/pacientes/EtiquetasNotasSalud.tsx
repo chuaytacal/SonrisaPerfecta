@@ -90,7 +90,7 @@ export default function EtiquetasNotasSalud({
               </div>
                <Dialog open={isTagModalOpen} onOpenChange={setIsTagModalOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 p-0 h-auto mt-1"><PlusCircle className="mr-1 h-3 w-3"/> Agregar Etiqueta</Button>
+                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10 p-1 h-auto mt-1 rounded-sm"><PlusCircle className="mr-1 h-3 w-3"/> Agregar Etiqueta</Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px]">
                   <DialogHeader><DialogTitle>Agregar Etiqueta</DialogTitle><DialogDescription>Seleccione una etiqueta para agregar al paciente.</DialogDescription></DialogHeader>
