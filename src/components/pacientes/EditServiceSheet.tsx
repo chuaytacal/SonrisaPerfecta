@@ -57,7 +57,7 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
   }, [isOpen, item, presupuesto.id]);
 
   const subtotal = item.procedimiento.precioBase * item.cantidad;
-  const pagado = pagos.reduce((acc, p) => acc + p.montoTotal, 0);
+  const pagado = pagos.reduce((acc, p) => acc + (typeof p.montoTotal === 'number' ? p.montoTotal : parseFloat(p.montoTotal as any)), 0);
   const porPagar = subtotal - pagado;
 
   const handlePagoChange = (pagoId: string, field: keyof Omit<Pago, 'id' | 'idPaciente' | 'itemsPagados'>, value: any) => {
@@ -201,7 +201,14 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
                                               {format(new Date(pago.fechaPago), 'dd/MM/yyyy')}
                                           </Button>
                                       </PopoverTrigger>
-                                      <PopoverContent><Calendar mode="single" selected={new Date(pago.fechaPago)} onSelect={(date) => handlePagoChange(pago.id, 'fechaPago', date!)} /></PopoverContent>
+                                      <PopoverContent>
+                                        <Calendar 
+                                            mode="single" 
+                                            selected={new Date(pago.fechaPago)} 
+                                            onSelect={(date) => handlePagoChange(pago.id, 'fechaPago', date!)} 
+                                            disabled={(date) => date < new Date(presupuesto.fechaCreacion)}
+                                        />
+                                      </PopoverContent>
                                   </Popover>
                               </TableCell>
                               <TableCell className="w-[180px]">
@@ -259,7 +266,7 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
                 <div>
                     <DialogTitle className="text-2xl font-semibold">Monto Excedido</DialogTitle>
                     <DialogDescription className="text-base leading-relaxed mt-2">
-                        El monto ingresado (S/ {(exceededInfo?.typed ?? 0).toFixed(2)}) es mayor que el saldo pendiente para este servicio (S/ {(exceededInfo?.max ?? 0).toFixed(2)}). Se ha ajustado al máximo permitido.
+                        El monto a cobrar (S/ {(exceededInfo?.typed ?? 0).toFixed(2)}) es mayor que el saldo pendiente para este servicio (S/ {(exceededInfo?.max ?? 0).toFixed(2)}). Por favor, ajuste el monto.
                     </DialogDescription>
                 </div>
             </div>
