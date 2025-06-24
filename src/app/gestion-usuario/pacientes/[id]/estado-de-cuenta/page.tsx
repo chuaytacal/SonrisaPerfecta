@@ -195,7 +195,7 @@ export default function EstadoDeCuentaPage() {
                                   <TableCell>{doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'N/A'}</TableCell>
                                   <TableCell>{pago.descripcion}</TableCell>
                                   <TableCell>{pago.metodoPago}</TableCell>
-                                  <TableCell className="text-right">S/ {pago.monto.toFixed(2)}</TableCell>
+                                  <TableCell className="text-right">S/ {pago.montoTotal.toFixed(2)}</TableCell>
                                 </TableRow>
                               )
                             })
