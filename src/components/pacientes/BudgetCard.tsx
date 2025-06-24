@@ -36,12 +36,12 @@ interface BudgetCardProps {
 }
 
 const statusConfig: Record<EstadoPresupuesto, { label: string; icon: React.ElementType, badgeClass: string, textClass: string, color: string, hoverFocusClass: string }> = {
-  Creado: { label: 'Creado', icon: FileText, badgeClass: 'border-blue-500 text-blue-600', textClass: 'text-blue-600', color: '#3b82f6', hoverFocusClass: 'hover:bg-blue-500/10 focus:bg-blue-500/20' },
-  Aceptado: { label: 'Aceptado', icon: ThumbsUp, badgeClass: 'border-green-600 text-green-600', textClass: 'text-green-600', color: '#16a34a', hoverFocusClass: 'hover:bg-green-600/10 focus:bg-green-600/20' },
-  Rechazado: { label: 'Rechazado', icon: ThumbsDown, badgeClass: 'border-red-600 text-red-600', textClass: 'text-red-600', color: '#dc2626', hoverFocusClass: 'hover:bg-red-600/10 focus:bg-red-600/20' },
-  Abandonado: { label: 'Abandonado', icon: HeartOff, badgeClass: 'border-gray-500 text-gray-500', textClass: 'text-gray-500', color: '#6b7280', hoverFocusClass: 'hover:bg-gray-500/10 focus:bg-gray-500/20' },
-  Terminado: { label: 'Terminado', icon: CheckCircle2, badgeClass: 'border-purple-600 text-purple-600', textClass: 'text-purple-600', color: '#9333ea', hoverFocusClass: 'hover:bg-purple-600/10 focus:bg-purple-600/20' },
-  Otro: { label: 'Otro', icon: Circle, badgeClass: 'border-gray-500 text-gray-500', textClass: 'text-gray-500', color: '#6b7280', hoverFocusClass: 'hover:bg-gray-500/10 focus:bg-gray-500/20' },
+  Creado: { label: 'Creado', icon: FileText, badgeClass: 'border-blue-500', textClass: 'text-blue-600', color: '#3b82f6', hoverFocusClass: 'hover:bg-blue-500/10 focus:bg-blue-500/20' },
+  Aceptado: { label: 'Aceptado', icon: ThumbsUp, badgeClass: 'border-green-600', textClass: 'text-green-600', color: '#16a34a', hoverFocusClass: 'hover:bg-green-600/10 focus:bg-green-600/20' },
+  Rechazado: { label: 'Rechazado', icon: ThumbsDown, badgeClass: 'border-red-600', textClass: 'text-red-600', color: '#dc2626', hoverFocusClass: 'hover:bg-red-600/10 focus:bg-red-600/20' },
+  Abandonado: { label: 'Abandonado', icon: HeartOff, badgeClass: 'border-gray-500', textClass: 'text-gray-500', color: '#6b7280', hoverFocusClass: 'hover:bg-gray-500/10 focus:bg-gray-500/20' },
+  Terminado: { label: 'Terminado', icon: CheckCircle2, badgeClass: 'border-purple-600', textClass: 'text-purple-600', color: '#9333ea', hoverFocusClass: 'hover:bg-purple-600/10 focus:bg-purple-600/20' },
+  Otro: { label: 'Otro', icon: Circle, badgeClass: 'border-gray-500', textClass: 'text-gray-500', color: '#6b7280', hoverFocusClass: 'hover:bg-gray-500/10 focus:bg-gray-500/20' },
 };
 
 
@@ -131,9 +131,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
     setIsConfirmOpen(false);
   };
   
-  const displayName = nombre 
-    ? `${nombre} - (${format(new Date(fechaAtencion), 'dd/MM/yyyy')})`
-    : `Presupuesto del ${format(new Date(fechaCreacion), 'dd/MM/yyyy')}`;
+  const displayName = nombre || `Presupuesto del ${format(new Date(fechaCreacion), 'dd/MM/yyyy')}`;
 
   return (
     <>
@@ -143,7 +141,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
             <div className="flex items-center gap-4">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className={cn("text-xs font-semibold h-7 px-2 gap-1 group", statusConfig[estado].badgeClass, statusConfig[estado].hoverFocusClass)} style={{ borderColor: statusConfig[estado].color }}>
+                        <Button variant="outline" className={cn("text-xs font-semibold h-7 px-2 gap-1 group", statusConfig[estado].badgeClass, statusConfig[estado].textClass, statusConfig[estado].hoverFocusClass, `hover:${statusConfig[estado].textClass}`)}>
                             <ChevronDown className="h-3 w-3" />
                             <CurrentStatusIcon className="h-4 w-4" />
                             {statusConfig[estado].label}
@@ -152,7 +150,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                     <DropdownMenuContent align="start">
                       <div className="p-2 font-semibold text-sm">Estado del Presupuesto</div>
                       {Object.entries(statusConfig).map(([key, config]) => (
-                        <DropdownMenuItem key={key} onClick={() => handleStateChange(key as EstadoPresupuesto)} className={cn("group", config.textClass, config.hoverFocusClass)}>
+                        <DropdownMenuItem key={key} onClick={() => handleStateChange(key as EstadoPresupuesto)} className={cn("group", config.textClass, config.hoverBgClass, `hover:${config.textClass}`)}>
                           <config.icon className={cn("mr-2 h-4 w-4", config.textClass)} />
                           <span>{config.label}</span>
                         </DropdownMenuItem>
@@ -161,9 +159,10 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                 </DropdownMenu>
 
               <AccordionTrigger className="p-0 flex-1 hover:no-underline [&>svg]:ml-4 justify-start">
-                <div className="flex items-center gap-4">
-                  <div className="font-semibold text-foreground text-left">{displayName}</div>
-                </div>
+                  <div className="flex items-center gap-3">
+                      <div className="font-semibold text-foreground">{`#${id.slice(-6).toUpperCase()}`}</div>
+                      <div className="text-muted-foreground">{displayName}</div>
+                  </div>
               </AccordionTrigger>
             </div>
               <TooltipProvider delayDuration={100}>

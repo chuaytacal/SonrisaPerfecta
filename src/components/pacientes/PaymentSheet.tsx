@@ -347,17 +347,17 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
             
             {/* Step 2: Payment Confirmation */}
             <div className={cn("absolute inset-0 transition-transform duration-500 ease-in-out flex flex-col bg-card", step === 2 ? "translate-x-0" : "translate-x-full")}>
-                 <div className="p-4 border-b flex items-center justify-between">
-                    <button onClick={() => setStep(1)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                 <SheetHeader className="p-4 border-b flex flex-row items-center justify-between">
+                    <Button variant="ghost" onClick={() => setStep(1)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
                         <ArrowLeft className="h-4 w-4" />
                         <span>Atrás</span>
-                    </button>
+                    </Button>
+                    <SheetTitle className="text-center">CONFIRMAR VENTA</SheetTitle>
                     <SheetClose asChild><Button variant="ghost" size="icon" className="h-6 w-6"><X className="h-4 w-4"/></Button></SheetClose>
-                </div>
+                </SheetHeader>
                  <ScrollArea className="flex-grow">
                     <div className="p-6 space-y-6">
                         <div className="space-y-4 max-w-2xl mx-auto">
-                            <h2 className="text-xl font-semibold text-center mb-4">CONFIRMAR VENTA</h2>
                             <div className="w-full max-w-sm mx-auto p-4 rounded-lg bg-muted/50 text-center mb-6">
                                 <p className="text-sm text-muted-foreground">Monto total a cobrar</p>
                                 <p className="text-3xl font-bold text-primary">S/ {totalACobrar.toFixed(2)}</p>
@@ -416,7 +416,7 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
       </SheetContent>
     </Sheet>
      <Dialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-        <DialogContent className="w-[95vw] sm:w-[90vw] max-w-md p-6">
+        <DialogContent className="w-[90vw] md:w-[40vw] max-w-xl p-6">
             <div className="text-center space-y-4">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                     <Megaphone className="h-10 w-10 text-primary" />
