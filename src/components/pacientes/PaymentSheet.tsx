@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { type Presupuesto, type MetodoPago, type ItemPresupuesto, Paciente as PacienteType, TipoComprobante, Pago } from '@/types';
 import { mockPersonalData, mockPagosData, mockPresupuestosData } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, CheckCircle, Gift, Megaphone, Wallet, ChevronRight, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Gift, Megaphone, Wallet, ChevronRight } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -348,16 +348,15 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
             
             {/* Step 2: Payment Confirmation */}
             <div className={cn("absolute inset-0 transition-transform duration-500 ease-in-out flex flex-col bg-card", step === 2 ? "translate-x-0" : "translate-x-full")}>
-                 <div className="p-6 border-b flex items-center justify-between">
+                 <div className="p-6 border-b flex items-center">
                     <button onClick={() => setStep(1)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
                         <ArrowLeft className="h-4 w-4" />
-                        <span>Caja {'>'} Confirmar Venta</span>
+                        <span>Atrás</span>
                     </button>
-                    <SheetClose asChild><Button variant="ghost" size="icon" className="h-6 w-6"><X className="h-4 w-4"/></Button></SheetClose>
                 </div>
                  <ScrollArea className="flex-grow">
                     <div className="p-6 space-y-6">
-                        <div className="max-w-2xl mx-auto">
+                        <div className="space-y-4 max-w-2xl mx-auto">
                             <h2 className="text-xl font-semibold text-center mb-4">CONFIRMAR VENTA</h2>
                             <div className="w-full max-w-sm mx-auto p-4 rounded-lg bg-muted/50 text-center mb-6">
                                 <p className="text-sm text-muted-foreground">Monto total a cobrar</p>

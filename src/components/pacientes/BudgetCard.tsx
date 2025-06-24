@@ -22,9 +22,10 @@ import {
 } from "@/components/ui/tooltip"
 import { DollarSign, Edit, Download, Trash2, ChevronDown, FileText, ThumbsUp, ThumbsDown, HeartOff, CheckCircle2, Circle, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { mockPresupuestosData } from '@/lib/data';
+import { mockPresupuestosData, mockPagosData } from '@/lib/data';
 import { PaymentSheet } from './PaymentSheet';
 import { useToast } from '@/hooks/use-toast';
+import { ConfirmationDialog } from '../ui/confirmation-dialog';
 
 interface BudgetCardProps {
   presupuesto: Presupuesto;
@@ -32,13 +33,13 @@ interface BudgetCardProps {
   onUpdate: () => void;
 }
 
-const statusConfig: Record<EstadoPresupuesto, { label: string; icon: React.ElementType, badgeClass: string, textClass: string, color: string }> = {
-  Creado: { label: 'Creado', icon: FileText, badgeClass: 'border-blue-500 text-blue-600', textClass: 'text-blue-600 focus:text-blue-600 focus:bg-blue-50', color: '#3b82f6' },
-  Aceptado: { label: 'Aceptado', icon: ThumbsUp, badgeClass: 'border-green-600 text-green-600', textClass: 'text-green-600 focus:text-green-600 focus:bg-green-50', color: '#16a34a' },
-  Rechazado: { label: 'Rechazado', icon: ThumbsDown, badgeClass: 'border-red-600 text-red-600', textClass: 'text-red-600 focus:text-red-600 focus:bg-red-50', color: '#dc2626' },
-  Abandonado: { label: 'Abandonado', icon: HeartOff, badgeClass: 'border-gray-500 text-gray-500', textClass: 'text-gray-500 focus:text-gray-500 focus:bg-gray-100', color: '#6b7280' },
-  Terminado: { label: 'Terminado', icon: CheckCircle2, badgeClass: 'border-purple-600 text-purple-600', textClass: 'text-purple-600 focus:text-purple-600 focus:bg-purple-50', color: '#9333ea' },
-  Otro: { label: 'Otro', icon: Circle, badgeClass: 'border-gray-500 text-gray-500', textClass: 'text-gray-500 focus:text-gray-500 focus:bg-gray-100', color: '#6b7280' },
+const statusConfig: Record<EstadoPresupuesto, { label: string; icon: React.ElementType, badgeClass: string, textClass: string, color: string, hoverBgClass: string }> = {
+  Creado: { label: 'Creado', icon: FileText, badgeClass: 'border-blue-500 text-blue-600 hover:text-blue-600', textClass: 'text-blue-600', color: '#3b82f6', hoverBgClass: 'hover:bg-blue-100' },
+  Aceptado: { label: 'Aceptado', icon: ThumbsUp, badgeClass: 'border-green-600 text-green-600 hover:text-green-600', textClass: 'text-green-600', color: '#16a34a', hoverBgClass: 'hover:bg-green-100' },
+  Rechazado: { label: 'Rechazado', icon: ThumbsDown, badgeClass: 'border-red-600 text-red-600 hover:text-red-600', textClass: 'text-red-600', color: '#dc2626', hoverBgClass: 'hover:bg-red-100' },
+  Abandonado: { label: 'Abandonado', icon: HeartOff, badgeClass: 'border-gray-500 text-gray-500 hover:text-gray-500', textClass: 'text-gray-500', color: '#6b7280', hoverBgClass: 'hover:bg-gray-100' },
+  Terminado: { label: 'Terminado', icon: CheckCircle2, badgeClass: 'border-purple-600 text-purple-600 hover:text-purple-600', textClass: 'text-purple-600', color: '#9333ea', hoverBgClass: 'hover:bg-purple-100' },
+  Otro: { label: 'Otro', icon: Circle, badgeClass: 'border-gray-500 text-gray-500 hover:text-gray-500', textClass: 'text-gray-500', color: '#6b7280', hoverBgClass: 'hover:bg-gray-100' },
 };
 
 
@@ -50,6 +51,8 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
     title: string;
     items: ItemPresupuesto[];
   } | null>(null);
+
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   
   useEffect(() => {
     setPresupuesto(initialPresupuesto);
@@ -100,6 +103,33 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
     });
   };
 
+  const handleDelete = () => {
+    const budgetIdToDelete = presupuesto.id;
+
+    const budgetIndex = mockPresupuestosData.findIndex(p => p.id === budgetIdToDelete);
+    if (budgetIndex > -1) {
+        mockPresupuestosData.splice(budgetIndex, 1);
+    }
+    
+    // Filter payments, removing any that are associated with the deleted budget.
+    const paymentsToKeep = mockPagosData.filter(pago => 
+        !pago.itemsPagados.some(item => item.idPresupuesto === budgetIdToDelete)
+    );
+    // This assumes we replace the whole array. In a real DB, you'd perform DELETE operations.
+    mockPagosData.length = 0;
+    Array.prototype.push.apply(mockPagosData, paymentsToKeep);
+
+    toast({
+        title: "Presupuesto Eliminado",
+        description: `El presupuesto #${budgetIdToDelete.slice(-6)} y sus pagos asociados han sido eliminados.`,
+        variant: "destructive"
+    });
+    
+    onUpdate();
+    setIsConfirmOpen(false);
+  };
+
+
   return (
     <>
       <Accordion type="single" collapsible defaultValue="item-1" className="w-full bg-card border rounded-lg shadow-sm">
@@ -108,7 +138,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
             <div className="flex items-center gap-4">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className={cn("text-xs font-semibold h-7 px-2 gap-1", statusConfig[estado].badgeClass)} style={{ borderColor: statusConfig[estado].color }}>
+                        <Button variant="outline" className={cn("text-xs font-semibold h-7 px-2 gap-1", statusConfig[estado].badgeClass, statusConfig[estado].hoverBgClass)} style={{ borderColor: statusConfig[estado].color }}>
                             <ChevronDown className="h-3 w-3" />
                             <CurrentStatusIcon className="h-4 w-4" />
                             {statusConfig[estado].label}
@@ -117,7 +147,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                     <DropdownMenuContent align="start">
                       <div className="p-2 font-semibold text-sm">Estado del Presupuesto</div>
                       {Object.entries(statusConfig).map(([key, config]) => (
-                        <DropdownMenuItem key={key} onClick={() => handleStateChange(key as EstadoPresupuesto)} className={cn("focus:text-white", config.textClass, `focus:bg-[${config.color}]`)}>
+                        <DropdownMenuItem key={key} onClick={() => handleStateChange(key as EstadoPresupuesto)} className={cn(config.textClass, `focus:bg-[${config.color}]/20 focus:text-[${config.color}]`)}>
                           <config.icon className="mr-2 h-4 w-4" />
                           <span>{config.label}</span>
                         </DropdownMenuItem>
@@ -147,7 +177,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                   </TooltipTrigger><TooltipContent><p>Imprimir</p></TooltipContent></Tooltip>
 
                   <Tooltip><TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setIsConfirmOpen(true)}><Trash2 className="h-4 w-4" /></Button>
                   </TooltipTrigger><TooltipContent><p>Eliminar</p></TooltipContent></Tooltip>
               </div>
               </TooltipProvider>
@@ -228,6 +258,15 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
             onPaymentSuccess={handlePaymentSuccess}
         />
       )}
+      <ConfirmationDialog
+        isOpen={isConfirmOpen}
+        onOpenChange={setIsConfirmOpen}
+        onConfirm={handleDelete}
+        title="Confirmar Eliminación"
+        description="¿Estás seguro de que deseas eliminar este presupuesto y todos sus pagos asociados? Esta acción no se puede deshacer."
+        confirmButtonText="Sí, eliminar"
+        confirmButtonVariant="destructive"
+      />
     </>
   );
 }
