@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, Calendar, Users, DollarSign, Award, CheckCircle2, AlertTriangle } from "lucide-react";
 import { DateRange } from "react-day-picker";
@@ -28,6 +28,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type { AppointmentState } from '@/types/calendar';
 
 export default function ReportesPage() {
+  const [isClient, setIsClient] = useState(false);
+  
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: addDays(new Date(), -29),
     to: new Date(),
@@ -245,6 +251,7 @@ export default function ReportesPage() {
             <CardDescription>Resumen de ingresos diarios en el período seleccionado.</CardDescription>
           </CardHeader>
           <CardContent>
+            {isClient ? (
              <ChartContainer config={{}} className="h-[300px] w-full">
               <RechartsBarChart data={ingresosPorDia}>
                 <CartesianGrid vertical={false} />
@@ -254,6 +261,7 @@ export default function ReportesPage() {
                 <Bar dataKey="Ingresos" fill="hsl(var(--primary))" radius={4} />
               </RechartsBarChart>
             </ChartContainer>
+            ) : (<div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">Cargando gráfico...</div>) }
           </CardContent>
         </Card>
         <Card>
@@ -262,6 +270,7 @@ export default function ReportesPage() {
             <CardDescription>Servicios más realizados en el período.</CardDescription>
           </CardHeader>
           <CardContent>
+            {isClient ? (
             <ChartContainer config={{}} className="h-[300px] w-full">
               <PieChart>
                 <Tooltip content={<ChartTooltipContent />} />
@@ -272,6 +281,7 @@ export default function ReportesPage() {
                 </Pie>
               </PieChart>
             </ChartContainer>
+            ) : (<div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">Cargando gráfico...</div>) }
           </CardContent>
         </Card>
       </div>

@@ -9,8 +9,15 @@ import { es } from "date-fns/locale";
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import type { AppointmentState } from "@/types/calendar";
+import React, { useState, useEffect } from 'react';
+
 
 export default function DashboardPage() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // KPI Calculations
   const today = new Date();
@@ -170,7 +177,7 @@ export default function DashboardPage() {
             <CardDescription>Distribución de los estados de las citas programadas para este mes.</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center items-center h-[250px]">
-             {appointmentStatusChartData.length > 0 ? (
+             {isClient && appointmentStatusChartData.length > 0 ? (
                 <ChartContainer config={{}} className="w-full h-full">
                   <PieChart>
                     <Tooltip content={<ChartTooltipContent />} />
@@ -182,7 +189,7 @@ export default function DashboardPage() {
                   </PieChart>
                 </ChartContainer>
              ) : (
-                <p className="text-muted-foreground">No hay datos de citas para este mes.</p>
+                <p className="text-muted-foreground">{ isClient ? 'No hay datos de citas para este mes.' : 'Cargando gráfico...' }</p>
              )}
           </CardContent>
         </Card>
