@@ -123,6 +123,12 @@ export default function EstadoDeCuentaPage() {
             items: data.items,
             montoPagado: data.items.reduce((acc, item) => acc + (item.montoPagado || 0), 0)
         };
+        
+        mockPagosData.forEach(pago => {
+            if (pago.itemsPagados.some(itemPagado => itemPagado.idPresupuesto === updatedBudget.id)) {
+                pago.doctorResponsableId = updatedBudget.doctorResponsableId!;
+            }
+        });
 
         mockPresupuestosData[budgetIndex] = updatedBudget;
         toast({ title: "Presupuesto Actualizado", description: "Los cambios han sido guardados." });
@@ -221,6 +227,7 @@ export default function EstadoDeCuentaPage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
+                            <TableHead>ID Pago</TableHead>
                             <TableHead>Fecha</TableHead>
                             <TableHead>Doctor</TableHead>
                             <TableHead>Concepto</TableHead>
@@ -234,6 +241,7 @@ export default function EstadoDeCuentaPage() {
                               const doctor = mockPersonalData.find(d => d.id === pago.doctorResponsableId);
                               return (
                                 <TableRow key={pago.id}>
+                                  <TableCell className="font-mono text-xs">#{pago.id.slice(-6).toUpperCase()}</TableCell>
                                   <TableCell>{format(new Date(pago.fechaPago), 'dd/MM/yyyy')}</TableCell>
                                   <TableCell>{doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'N/A'}</TableCell>
                                   <TableCell>{pago.descripcion}</TableCell>
@@ -244,7 +252,7 @@ export default function EstadoDeCuentaPage() {
                             })
                           ) : (
                             <TableRow>
-                              <TableCell colSpan={5} className="text-center h-24">No hay pagos registrados.</TableCell>
+                              <TableCell colSpan={6} className="text-center h-24">No hay pagos registrados.</TableCell>
                             </TableRow>
                           )}
                         </TableBody>
