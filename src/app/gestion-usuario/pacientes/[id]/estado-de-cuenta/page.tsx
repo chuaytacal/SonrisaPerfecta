@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, PlusCircle } from 'lucide-react';
 import { mockPacientesData, mockPresupuestosData, mockPagosData, mockPersonalData } from '@/lib/data';
-import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto, Pago } from '@/types';
+import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto, Pago, Procedimiento } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -48,28 +48,46 @@ export default function EstadoDeCuentaPage() {
   const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<Presupuesto | null>(null);
+
 
   useEffect(() => {
+    refreshBudgetsAndPayments();
     const foundPaciente = mockPacientesData.find(p => p.id === patientId);
     if (foundPaciente) {
       setPaciente(foundPaciente);
       setPersona(foundPaciente.persona);
-      const sortedBudgets = mockPresupuestosData
-        .filter(p => p.idPaciente === patientId)
-        .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
-      setPresupuestos(sortedBudgets);
-      setPagos(mockPagosData.filter(p => p.idPaciente === patientId));
     } else {
       setPaciente(null);
       setPersona(null);
-      setPresupuestos([]);
-      setPagos([]);
     }
     setLoading(false);
   }, [patientId]);
 
-  const handleSaveService = (data: {
-    items: { procedimiento: Procedimiento; cantidad: number }[],
+  const refreshBudgetsAndPayments = () => {
+    const foundPaciente = mockPacientesData.find(p => p.id === patientId);
+    if (foundPaciente) {
+        const sortedBudgets = mockPresupuestosData
+            .filter(p => p.idPaciente === patientId)
+            .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
+        setPresupuestos(sortedBudgets);
+        setPagos([...mockPagosData.filter(p => p.idPaciente === patientId)].sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime()))
+    }
+  };
+
+  const handleOpenAddSheet = () => {
+    setEditingBudget(null);
+    setIsSheetOpen(true);
+  };
+  
+  const handleEditBudget = (budget: Presupuesto) => {
+    setEditingBudget(budget);
+    setIsSheetOpen(true);
+  };
+
+  const handleSaveBudget = (data: {
+    id?: string;
+    items: { id: string, procedimiento: Procedimiento; cantidad: number; montoPagado?: number; }[],
     nombre: string,
     doctorResponsableId: string,
     estado: Presupuesto['estado'],
@@ -77,44 +95,63 @@ export default function EstadoDeCuentaPage() {
   }) => {
     if (!paciente) return;
 
-    const newBudget: Presupuesto = {
-      id: `presupuesto-${crypto.randomUUID()}`,
-      idPaciente: paciente.id,
-      nombre: data.nombre || 'Presupuesto sin nombre',
-      fechaCreacion: new Date(),
-      estado: data.estado,
-      montoPagado: 0,
-      items: data.items.map(item => ({
-        id: `item-${crypto.randomUUID()}`,
-        procedimiento: item.procedimiento,
-        cantidad: item.cantidad,
-        montoPagado: 0,
-      })),
-      doctorResponsableId: data.doctorResponsableId,
-      nota: data.nota,
-    };
+    if (data.id) { // UPDATE LOGIC
+        const budgetIndex = mockPresupuestosData.findIndex(b => b.id === data.id);
+        if (budgetIndex === -1) return;
 
-    mockPresupuestosData.unshift(newBudget);
-    refreshBudgets();
+        const originalBudget = mockPresupuestosData[budgetIndex];
+        const originalItemIds = new Set(originalBudget.items.map(item => item.id));
+        const finalItemIds = new Set(data.items.map(item => item.id));
+        const deletedItemIds = [...originalItemIds].filter(id => !finalItemIds.has(id));
+
+        if (deletedItemIds.length > 0) {
+            const paymentsToKeep = mockPagosData.filter(pago => 
+                !pago.itemsPagados.some(itemPagado => 
+                    itemPagado.idPresupuesto === data.id && deletedItemIds.includes(itemPagado.idItem)
+                )
+            );
+            mockPagosData.length = 0;
+            Array.prototype.push.apply(mockPagosData, paymentsToKeep);
+        }
+
+        const updatedBudget: Presupuesto = {
+            ...originalBudget,
+            nombre: data.nombre,
+            doctorResponsableId: data.doctorResponsableId,
+            estado: data.estado,
+            nota: data.nota,
+            items: data.items,
+            montoPagado: data.items.reduce((acc, item) => acc + (item.montoPagado || 0), 0)
+        };
+
+        mockPresupuestosData[budgetIndex] = updatedBudget;
+        toast({ title: "Presupuesto Actualizado", description: "Los cambios han sido guardados." });
+
+    } else { // CREATE LOGIC
+        const newBudget: Presupuesto = {
+          id: `presupuesto-${crypto.randomUUID()}`,
+          idPaciente: paciente.id,
+          nombre: data.nombre || 'Presupuesto sin nombre',
+          fechaCreacion: new Date(),
+          estado: data.estado,
+          montoPagado: 0,
+          items: data.items.map(item => ({
+            id: `item-${crypto.randomUUID()}`,
+            procedimiento: item.procedimiento,
+            cantidad: item.cantidad,
+            montoPagado: 0,
+          })),
+          doctorResponsableId: data.doctorResponsableId,
+          nota: data.nota,
+        };
+        mockPresupuestosData.unshift(newBudget);
+        toast({ title: "Presupuesto Creado", description: "El nuevo presupuesto ha sido añadido." });
+    }
     
     setIsSheetOpen(false);
-    toast({
-        title: "Presupuesto Creado",
-        description: "El nuevo presupuesto ha sido añadido al estado de cuenta.",
-    });
+    setEditingBudget(null);
+    refreshBudgetsAndPayments();
   };
-  
-  const refreshBudgets = () => {
-    const foundPaciente = mockPacientesData.find(p => p.id === patientId);
-    if (foundPaciente) {
-        const sortedBudgets = mockPresupuestosData
-            .filter(p => p.idPaciente === patientId)
-            .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
-        setPresupuestos(sortedBudgets);
-        setPagos([...mockPagosData.filter(p => p.idPaciente === patientId)])
-    }
-  };
-
 
   const handleDummySaveNotes = (notes: string) => console.log("Save notes (dummy):", notes);
   const handleDummyAddTag = (tag: EtiquetaPaciente): boolean => { console.log("Add tag (dummy):", tag); return true; };
@@ -154,7 +191,7 @@ export default function EstadoDeCuentaPage() {
                     <TabsTrigger value="presupuestos">Presupuestos</TabsTrigger>
                     <TabsTrigger value="historial">Historial de pagos</TabsTrigger>
                 </TabsList>
-                <Button onClick={() => setIsSheetOpen(true)}>
+                <Button onClick={handleOpenAddSheet}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Añadir Servicio
                 </Button>
@@ -163,7 +200,7 @@ export default function EstadoDeCuentaPage() {
                 <div className="space-y-4">
                     {presupuestos.length > 0 ? (
                         presupuestos.map(presupuesto => (
-                            <BudgetCard key={presupuesto.id} presupuesto={presupuesto} paciente={paciente} onUpdate={refreshBudgets}/>
+                            <BudgetCard key={presupuesto.id} presupuesto={presupuesto} paciente={paciente} onUpdate={refreshBudgetsAndPayments} onEdit={handleEditBudget}/>
                         ))
                     ) : (
                         <Card>
@@ -220,8 +257,12 @@ export default function EstadoDeCuentaPage() {
 
       <AddServiceSheet 
         isOpen={isSheetOpen}
-        onOpenChange={setIsSheetOpen}
-        onSave={handleSaveService}
+        onOpenChange={(open) => {
+            if (!open) setEditingBudget(null);
+            setIsSheetOpen(open);
+        }}
+        onSave={handleSaveBudget}
+        editingBudget={editingBudget}
       />
     </div>
   );
