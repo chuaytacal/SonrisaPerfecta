@@ -74,57 +74,83 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
     }, [isOpen]);
     
     const totalACobrar = useMemo(() => {
-        if (abonoManual !== '') return abonoManual;
-        
-        return selectedItems.reduce((acc, itemId) => {
-                const abono = abonos[itemId];
-                return acc + (typeof abono === 'number' ? abono : 0);
-            }, 0);
+      // If manual input has a value, it is the source of truth
+      if (abonoManual !== '' && typeof abonoManual === 'number') {
+        return abonoManual;
+      }
+      
+      // Otherwise, sum up the individual abonos from selected items
+      return selectedItems.reduce((acc, itemId) => {
+              const abono = abonos[itemId];
+              return acc + (typeof abono === 'number' ? abono : 0);
+          }, 0);
     }, [abonoManual, selectedItems, abonos]);
 
-    const handleManualAbonoChange = (value: string) => {
-        setSelectedItems([]); // Using manual input deselects all items
-        setAbonos({});
-
-        const numValue = value === '' ? '' : parseFloat(value);
+    const handleItemAbonoChange = (itemId: string, value: string) => {
+        const newAbono = value === '' ? '' : parseFloat(value);
+      
+        const currentItem = itemsToPay.find(i => i.id === itemId);
+        if (!currentItem) return;
+  
+        const otherItemsTotal = selectedItems
+          .filter(id => id !== itemId)
+          .reduce((acc, id) => acc + (Number(abonos[id]) || 0), 0);
         
-        if (typeof numValue === 'number' && numValue > totalPorPagar) {
-            setExceededInfo({ typed: numValue, max: totalPorPagar });
+        const newTotalACobrar = otherItemsTotal + (Number(newAbono) || 0);
+  
+        if (newTotalACobrar > totalPorPagar) {
+            const maxForThisItem = totalPorPagar - otherItemsTotal;
+            setExceededInfo({ typed: newTotalACobrar, max: totalPorPagar });
             setIsAlertOpen(true);
-            setAbonoManual(totalPorPagar); // Clamp to max value
+            setAbonos(prev => ({...prev, [itemId]: maxForThisItem < 0 ? 0 : maxForThisItem }));
         } else {
-            setAbonoManual(numValue);
+            setAbonos(prev => ({...prev, [itemId]: newAbono }));
+        }
+  
+        setAbonoManual(''); // Clear manual input when table is edited
+        if (typeof newAbono === 'number' && newAbono > 0 && !selectedItems.includes(itemId)) {
+            setSelectedItems(prev => [...prev, itemId]);
         }
     };
-    
-    const handleItemAbonoChange = (itemId: string, value: string) => {
-      const newAbono = value === '' ? '' : parseFloat(value);
-      const currentItem = itemsToPay.find(i => i.id === itemId);
-      if (!currentItem) return;
 
-      const itemPorPagar = currentItem.procedimiento.precioBase * currentItem.cantidad;
-      
-      const otherItemsTotal = selectedItems
-        .filter(id => id !== itemId)
-        .reduce((acc, id) => acc + (Number(abonos[id]) || 0), 0);
-      
-      const newTotalACobrar = otherItemsTotal + (Number(newAbono) || 0);
-
-      if (newTotalACobrar > totalPorPagar) {
-          const maxForThisItem = totalPorPagar - otherItemsTotal;
-          setExceededInfo({ typed: newTotalACobrar, max: totalPorPagar });
+    const handleCobrarClick = () => {
+      let amountToDistribute = typeof abonoManual === 'number' ? abonoManual : 0;
+  
+      if (amountToDistribute <= 0) {
+          toast({ title: "Monto inválido", description: "Ingrese un monto mayor a cero para cobrar.", variant: "destructive" });
+          return;
+      }
+  
+      if (amountToDistribute > totalPorPagar) {
+          setExceededInfo({ typed: amountToDistribute, max: totalPorPagar });
           setIsAlertOpen(true);
-          setAbonos(prev => ({...prev, [itemId]: maxForThisItem < 0 ? 0 : maxForThisItem }));
-      } else {
-          setAbonos(prev => ({...prev, [itemId]: newAbono }));
+          amountToDistribute = totalPorPagar; // Clamp to max
+          setAbonoManual(totalPorPagar); // Update the input field as well
       }
-
-      setAbonoManual('');
-      if (!selectedItems.includes(itemId)) {
-          setSelectedItems(prev => [...prev, itemId]);
+      
+      const newAbonos: Record<string, number | ''> = {};
+      const newSelectedItems: string[] = [];
+      let remainingAmount = amountToDistribute;
+  
+      for (const item of itemsToPay) {
+          if (remainingAmount <= 0) {
+              newAbonos[item.id] = '';
+              continue;
+          };
+  
+          const itemPorPagar = item.procedimiento.precioBase * item.cantidad;
+          const amountToApply = Math.min(remainingAmount, itemPorPagar);
+          
+          newAbonos[item.id] = amountToApply;
+          if (amountToApply > 0) {
+            newSelectedItems.push(item.id);
+          }
+          remainingAmount -= amountToApply;
       }
+  
+      setAbonos(newAbonos);
+      setSelectedItems(newSelectedItems);
     };
-
 
     const handleSelectAll = (checked: boolean) => {
         const allItemIds = itemsToPay.map(item => item.id);
@@ -195,12 +221,14 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
     ];
     
     const conceptoTexto = useMemo(() => {
-       if (abonoManual !== '') return `Abono al presupuesto #${presupuesto.id.slice(-6)}`;
+      if (abonoManual !== '' && typeof abonoManual === 'number' && abonoManual > 0) {
+        return `Abono al presupuesto #${presupuesto.id.slice(-6)}`;
+      }
        return itemsToPay
-        .filter(item => selectedItems.includes(item.id))
+        .filter(item => selectedItems.includes(item.id) && abonos[item.id]! > 0)
         .map(item => `(${item.cantidad}) ${item.procedimiento.denominacion}`)
         .join(', ');
-    }, [abonoManual, selectedItems, itemsToPay, presupuesto.id]);
+    }, [abonoManual, selectedItems, abonos, itemsToPay, presupuesto.id]);
 
   return (
     <>
@@ -218,8 +246,9 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
                         <div className="flex items-center gap-2">
                              <div className="relative w-40">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">S/</span>
-                                <Input type="number" placeholder="0.00" value={abonoManual} onChange={e => handleManualAbonoChange(e.target.value)} className="pl-8"/>
+                                <Input type="number" placeholder="0.00" value={abonoManual} onChange={e => setAbonoManual(e.target.value === '' ? '' : parseFloat(e.target.value))} className="pl-8"/>
                             </div>
+                            <Button variant="outline" onClick={handleCobrarClick}>Cobrar</Button>
                         </div>
                          <p className="text-sm text-muted-foreground">Opción 2: Si no tienes un monto definido, puedes seleccionar los items que deseas cobrar y si deseas también puedes editar el monto.</p>
                         <div className="border rounded-lg">
