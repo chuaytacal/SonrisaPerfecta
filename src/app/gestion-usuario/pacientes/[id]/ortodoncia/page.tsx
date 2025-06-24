@@ -2,14 +2,19 @@
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
-import { mockPacientesData } from '@/lib/data';
-import type { Paciente as PacienteType, Persona, EtiquetaPaciente } from '@/types';
+import { ArrowLeft, Search, ArrowUpDown } from 'lucide-react';
+import { mockPacientesData, mockPersonalData, mockPresupuestosData } from '@/lib/data';
+import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Personal } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
     <svg
@@ -29,6 +34,14 @@ const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
   );
 
+interface OrthoHistoryItem {
+  fecha: Date;
+  doctor?: Personal;
+  tratamiento: string;
+  notas: string;
+  honorarios: number;
+}
+
 export default function OrtodonciaPage() {
   const params = useParams();
   const router = useRouter();
@@ -37,6 +50,10 @@ export default function OrtodonciaPage() {
   const [paciente, setPaciente] = useState<PacienteType | null>(null);
   const [persona, setPersona] = useState<Persona | null>(null);
   const [loading, setLoading] = useState(true);
+  const [orthoHistory, setOrthoHistory] = useState<OrthoHistoryItem[]>([]);
+
+  const [doctorFilter, setDoctorFilter] = useState('all');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof OrthoHistoryItem; direction: 'asc' | 'desc' }>({ key: 'fecha', direction: 'desc' });
 
   useEffect(() => {
     const foundPaciente = mockPacientesData.find(p => p.id === patientId);
@@ -49,6 +66,72 @@ export default function OrtodonciaPage() {
     }
     setLoading(false);
   }, [patientId]);
+  
+  useEffect(() => {
+    if (paciente) {
+        const historiaClinicaId = paciente.idHistoriaClinica;
+        const budgetsForPatient = mockPresupuestosData.filter(p => p.idHistoriaClinica === historiaClinicaId);
+        
+        const historyItems: OrthoHistoryItem[] = [];
+        const orthoTreatments = ["Ortodoncia cuota inicial", "Ortodoncia cuota mensual"];
+
+        budgetsForPatient.forEach(budget => {
+            const doctor = mockPersonalData.find(d => d.id === budget.doctorResponsableId);
+            budget.items.forEach(item => {
+                if (orthoTreatments.includes(item.procedimiento.denominacion)) {
+                  historyItems.push({
+                      fecha: new Date(budget.fechaAtencion),
+                      doctor: doctor,
+                      tratamiento: item.procedimiento.denominacion,
+                      notas: budget.nota || 'Sin notas para este presupuesto.',
+                      honorarios: item.procedimiento.precioBase * item.cantidad,
+                  });
+                }
+            });
+        });
+        
+        historyItems.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+        setOrthoHistory(historyItems);
+    }
+  }, [paciente]);
+
+  const doctorOptions = useMemo(() => {
+    const uniqueDoctors = new Map<string, Personal>();
+    orthoHistory.forEach(item => {
+        if (item.doctor) {
+            uniqueDoctors.set(item.doctor.id, item.doctor);
+        }
+    });
+    return [{ value: 'all', label: 'Todos los Doctores' }, ...Array.from(uniqueDoctors.values()).map(d => ({ value: d.id, label: `${d.persona.nombre} ${d.persona.apellidoPaterno}` }))];
+  }, [orthoHistory]);
+
+  const requestSort = (key: keyof OrthoHistoryItem) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  const filteredAndSortedHistory = useMemo(() => {
+    let filtered = [...orthoHistory];
+
+    if (doctorFilter !== 'all') {
+        filtered = filtered.filter(item => item.doctor?.id === doctorFilter);
+    }
+
+    filtered.sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+
+    return filtered;
+  }, [orthoHistory, doctorFilter, sortConfig]);
 
   const handleDummySaveNotes = (notes: string) => { console.log("Save notes (dummy):", notes); };
   const handleDummyAddTag = (tag: EtiquetaPaciente): boolean => { console.log("Add tag (dummy):", tag); return true; };
@@ -83,11 +166,59 @@ export default function OrtodonciaPage() {
         />
         <Card>
           <CardHeader>
-            <CardTitle>Ortodoncia</CardTitle>
+            <CardTitle>Historial de Ortodoncia</CardTitle>
+            <CardDescription>Resumen de los tratamientos y cuotas de ortodoncia del paciente.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">Construyendo la sección de Ortodoncia...</p>
-            {/* Future content for Ortodoncia will go here */}
+              <div className="flex flex-col sm:flex-row items-center gap-2 mb-4">
+                  <Select value={doctorFilter} onValueChange={setDoctorFilter}>
+                      <SelectTrigger className="w-full sm:w-[200px]">
+                          <SelectValue placeholder="Filtrar por doctor..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {doctorOptions.map(option => (
+                              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+                </div>
+              <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                            <TableHead className="w-[150px]">
+                                <Button variant="ghost" onClick={() => requestSort('fecha')} className="px-1">
+                                  FECHA
+                                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </TableHead>
+                            <TableHead className="w-[200px]">DOCTOR</TableHead>
+                            <TableHead>TRATAMIENTO</TableHead>
+                            <TableHead>NOTAS</TableHead>
+                            <TableHead className="text-right w-[120px]">HONORARIOS</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredAndSortedHistory.length > 0 ? (
+                            filteredAndSortedHistory.map((item, index) => (
+                                <TableRow key={index}>
+                                <TableCell>{format(item.fecha, 'dd/MM/yyyy', { locale: es })}</TableCell>
+                                <TableCell>{item.doctor ? `${item.doctor.persona.nombre} ${item.doctor.persona.apellidoPaterno}` : 'N/A'}</TableCell>
+                                <TableCell className="font-medium">{item.tratamiento}</TableCell>
+                                <TableCell className="text-muted-foreground">{item.notas}</TableCell>
+                                <TableCell className="text-right font-mono">S/ {item.honorarios.toFixed(2)}</TableCell>
+                                </TableRow>
+                            ))
+                            ) : (
+                            <TableRow>
+                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                No se encontraron tratamientos de ortodoncia registrados.
+                                </TableCell>
+                            </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
           </CardContent>
         </Card>
       </div>
