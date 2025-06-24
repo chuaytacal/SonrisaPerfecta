@@ -18,9 +18,10 @@ import { RescheduleModal } from '@/components/calendario/RescheduleModal';
 import { RescheduleConfirmationModal } from '@/components/calendario/RescheduleConfirmationModal';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import type { Appointment, AppointmentFormData, AppointmentState, RescheduleData } from '@/types/calendar';
+import type { Presupuesto } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { mockPacientesData, mockPersonalData, mockMotivosCita, mockAppointmentsData } from '@/lib/data';
+import { mockPacientesData, mockPersonalData, mockMotivosCita, mockAppointmentsData, mockPresupuestosData } from '@/lib/data';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { Personal } from '@/types';
@@ -245,6 +246,33 @@ export default function CalendarioPage() {
     } else {
         mockAppointmentsData.push(appointmentToSave);
     }
+    
+    // Auto-create a budget if there are procedures
+    if (formData.procedimientos && formData.procedimientos.length > 0 && !editingAppointment) {
+      const newBudget: Presupuesto = {
+        id: `presupuesto-${crypto.randomUUID()}`,
+        idPaciente: paciente.id,
+        nombre: `Tratamiento Cita - ${format(startDateTime, 'dd/MM/yyyy')}`,
+        fechaCreacion: new Date(),
+        estado: 'Creado',
+        montoPagado: 0,
+        items: formData.procedimientos.map(p => ({
+          id: `item-${crypto.randomUUID()}`,
+          procedimiento: p,
+          cantidad: 1,
+        })),
+      };
+      mockPresupuestosData.push(newBudget);
+      const patientIndex = mockPacientesData.findIndex(p => p.id === paciente.id);
+      if (patientIndex > -1) {
+        mockPacientesData[patientIndex].presupuestos = [
+          ...(mockPacientesData[patientIndex].presupuestos || []),
+          newBudget,
+        ];
+      }
+    }
+
+
     setAppointments([...mockAppointmentsData]); 
 
     toast({
@@ -571,5 +599,3 @@ export default function CalendarioPage() {
     </div>
   );
 }
-
-    

@@ -4,15 +4,17 @@
 import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
-import { mockPacientesData } from '@/lib/data';
-import type { Paciente as PacienteType, Persona, EtiquetaPaciente } from '@/types';
+import { ArrowLeft, PlusCircle } from 'lucide-react';
+import { mockPacientesData, mockPresupuestosData } from '@/lib/data';
+import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto, Procedimiento } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BudgetCard } from '@/components/pacientes/BudgetCard';
+import { AddServiceSheet } from '@/components/pacientes/AddServiceSheet';
+import { useToast } from '@/hooks/use-toast';
 
-// Define ToothIconCustom locally for error display
 const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -31,41 +33,65 @@ const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
   );
 
-// Dummy data for account statement
-const statementData = [
-    { fecha: '15/05/2024', concepto: 'Consulta Inicial y Limpieza', cargo: 200.00, abono: 0, saldo: 200.00 },
-    { fecha: '15/05/2024', concepto: 'Abono inicial', cargo: 0, abono: 100.00, saldo: 100.00 },
-    { fecha: '22/05/2024', concepto: 'Resina Compuesta (2 caras) - Diente 16', cargo: 250.00, abono: 0, saldo: 350.00 },
-    { fecha: '22/05/2024', concepto: 'Pago tratamiento', cargo: 0, abono: 250.00, saldo: 100.00 },
-    { fecha: '05/06/2024', concepto: 'Control Ortodoncia', cargo: 120.00, abono: 120.00, saldo: 100.00 },
-];
-const totalCargo = statementData.reduce((acc, item) => acc + item.cargo, 0);
-const totalAbono = statementData.reduce((acc, item) => acc + item.abono, 0);
-const saldoFinal = totalCargo - totalAbono;
-
 export default function EstadoDeCuentaPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const patientId = params.id as string;
 
   const [paciente, setPaciente] = useState<PacienteType | null>(null);
   const [persona, setPersona] = useState<Persona | null>(null);
   const [loading, setLoading] = useState(true);
+  const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   useEffect(() => {
     const foundPaciente = mockPacientesData.find(p => p.id === patientId);
     if (foundPaciente) {
       setPaciente(foundPaciente);
       setPersona(foundPaciente.persona);
+      setPresupuestos(foundPaciente.presupuestos || []);
     } else {
       setPaciente(null);
       setPersona(null);
+      setPresupuestos([]);
     }
     setLoading(false);
   }, [patientId]);
 
-  // Dummy callbacks for EtiquetasNotasSalud as this page is read-only
-  const handleDummySaveNotes = (notes: string) => { console.log("Save notes (dummy):", notes); };
+  const handleSaveService = (items: { procedimiento: Procedimiento; cantidad: number }[], nombre: string) => {
+    if (!paciente) return;
+
+    const newBudget: Presupuesto = {
+      id: `presupuesto-${crypto.randomUUID()}`,
+      idPaciente: paciente.id,
+      nombre: nombre || 'Presupuesto sin nombre',
+      fechaCreacion: new Date(),
+      estado: 'Creado',
+      montoPagado: 0,
+      items: items.map(item => ({
+        id: `item-${crypto.randomUUID()}`,
+        procedimiento: item.procedimiento,
+        cantidad: item.cantidad,
+      })),
+    };
+
+    mockPresupuestosData.push(newBudget);
+
+    const patientIndex = mockPacientesData.findIndex(p => p.id === paciente.id);
+    if (patientIndex > -1) {
+      mockPacientesData[patientIndex].presupuestos = [...(mockPacientesData[patientIndex].presupuestos || []), newBudget];
+    }
+
+    setPresupuestos(prev => [newBudget, ...prev]);
+    setIsSheetOpen(false);
+    toast({
+        title: "Presupuesto Creado",
+        description: "El nuevo presupuesto ha sido añadido al estado de cuenta.",
+    });
+  };
+
+  const handleDummySaveNotes = (notes: string) => console.log("Save notes (dummy):", notes);
   const handleDummyAddTag = (tag: EtiquetaPaciente): boolean => { console.log("Add tag (dummy):", tag); return true; };
 
   if (loading) return <div className="flex justify-center items-center h-screen"><p>Cargando estado de cuenta...</p></div>;
@@ -96,50 +122,58 @@ export default function EstadoDeCuentaPage() {
           onAddTag={handleDummyAddTag}
           patientId={patientId}
         />
-        <Card>
-            <CardHeader>
-                <CardTitle>Estado de Cuenta</CardTitle>
-                <CardDescription>Detalle de cargos, abonos y saldos del paciente.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="border rounded-lg overflow-hidden">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[120px]">Fecha</TableHead>
-                                <TableHead>Concepto</TableHead>
-                                <TableHead className="text-right">Cargo (S/)</TableHead>
-                                <TableHead className="text-right">Abono (S/)</TableHead>
-                                <TableHead className="text-right">Saldo (S/)</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {statementData.map((item, index) => (
-                                <TableRow key={index}>
-                                    <TableCell>{item.fecha}</TableCell>
-                                    <TableCell className="font-medium">{item.concepto}</TableCell>
-                                    <TableCell className="text-right">{item.cargo > 0 ? item.cargo.toFixed(2) : '-'}</TableCell>
-                                    <TableCell className="text-right text-green-600">{item.abono > 0 ? item.abono.toFixed(2) : '-'}</TableCell>
-                                    <TableCell className="text-right font-medium">{item.saldo.toFixed(2)}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                        <TableFooter>
-                            <TableRow className="bg-muted/50">
-                                <TableCell colSpan={2} className="font-bold text-right">Totales</TableCell>
-                                <TableCell className="text-right font-bold text-destructive">{totalCargo.toFixed(2)}</TableCell>
-                                <TableCell className="text-right font-bold text-green-700">{totalAbono.toFixed(2)}</TableCell>
-                                <TableCell className="text-right font-bold text-lg text-primary">{saldoFinal.toFixed(2)}</TableCell>
-                            </TableRow>
-                        </TableFooter>
-                    </Table>
+        
+        <Tabs defaultValue="presupuestos" className="w-full">
+            <div className="flex justify-between items-center mb-4">
+                <TabsList>
+                    <TabsTrigger value="presupuestos">Presupuestos</TabsTrigger>
+                    <TabsTrigger value="historial">Historial de pagos</TabsTrigger>
+                    <TabsTrigger value="ordenes">Órdenes de Lab.</TabsTrigger>
+                </TabsList>
+                <Button onClick={() => setIsSheetOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Añadir Servicio
+                </Button>
+            </div>
+            <TabsContent value="presupuestos">
+                <div className="space-y-4">
+                    {presupuestos.length > 0 ? (
+                        presupuestos.map(presupuesto => (
+                            <BudgetCard key={presupuesto.id} presupuesto={presupuesto} />
+                        ))
+                    ) : (
+                        <Card>
+                            <CardContent className="pt-6 text-center text-muted-foreground">
+                                No hay presupuestos registrados para este paciente.
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
-                 <div className="flex justify-end mt-4">
-                    <Button>Exportar PDF</Button>
-                </div>
-            </CardContent>
-        </Card>
+            </TabsContent>
+            <TabsContent value="historial">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Historial de Pagos</CardTitle>
+                        <CardDescription>Próximamente...</CardDescription>
+                    </CardHeader>
+                </Card>
+            </TabsContent>
+            <TabsContent value="ordenes">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Órdenes de Laboratorio</CardTitle>
+                        <CardDescription>Próximamente...</CardDescription>
+                    </CardHeader>
+                </Card>
+            </TabsContent>
+        </Tabs>
       </div>
+
+      <AddServiceSheet 
+        isOpen={isSheetOpen}
+        onOpenChange={setIsSheetOpen}
+        onSave={handleSaveService}
+      />
     </div>
   );
 }

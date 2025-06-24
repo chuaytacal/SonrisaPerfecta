@@ -40,6 +40,27 @@ export interface AntecedentesMedicosData {
   q9_hipertenso?: "Sí" | "No" | string;
   q10_ultimaConsultaDental?: string;
 }
+
+export type EstadoPresupuesto = 'Creado' | 'Aprobado' | 'Rechazado' | 'Terminado';
+
+export interface ItemPresupuesto {
+  id: string;
+  procedimiento: Procedimiento;
+  cantidad: number;
+  comentario?: string;
+}
+
+export interface Presupuesto {
+  id: string;
+  idPaciente: string;
+  nombre: string;
+  fechaCreacion: Date;
+  estado: EstadoPresupuesto;
+  items: ItemPresupuesto[];
+  montoPagado: number;
+}
+
+
 export interface Paciente {
   id: string;
   idPersona: string;
@@ -52,6 +73,7 @@ export interface Paciente {
   idApoderado?: string;
   odontogramaPermanente?: DientesMap;
   odontogramaPrimaria?: DientesMap;
+  presupuestos?: Presupuesto[];
 }
 
 export interface Procedimiento {
