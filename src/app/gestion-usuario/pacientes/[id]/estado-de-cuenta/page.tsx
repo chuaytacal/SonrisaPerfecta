@@ -2,11 +2,11 @@
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, PlusCircle } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Search, ArrowUpDown, Settings2 } from 'lucide-react';
 import { mockPacientesData, mockPresupuestosData, mockPagosData, mockPersonalData, mockHistoriasClinicasData } from '@/lib/data';
-import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto, Pago, Procedimiento, HistoriaClinica } from '@/types';
+import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto, Pago, Procedimiento, HistoriaClinica, Personal, MetodoPago } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,6 +17,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
 
 const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
     <svg
@@ -50,6 +54,20 @@ export default function EstadoDeCuentaPage() {
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Presupuesto | null>(null);
+
+  // State for payment history filtering and sorting
+  const [doctorFilter, setDoctorFilter] = useState('all');
+  const [conceptoFilter, setConceptoFilter] = useState('');
+  const [medioPagoFilter, setMedioPagoFilter] = useState('all');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Pago; direction: 'asc' | 'desc' }>({ key: 'fechaPago', direction: 'desc' });
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
+      id: true,
+      fechaPago: true,
+      doctorResponsableId: true,
+      descripcion: true,
+      metodoPago: true,
+      montoTotal: true,
+  });
 
 
   useEffect(() => {
@@ -85,6 +103,56 @@ export default function EstadoDeCuentaPage() {
     }
     setLoading(false);
   };
+  
+  const doctorOptions = useMemo(() => {
+    const uniqueDoctors = new Map<string, Personal>();
+    pagos.forEach(pago => {
+        const doctor = mockPersonalData.find(d => d.id === pago.doctorResponsableId);
+        if (doctor) {
+            uniqueDoctors.set(doctor.id, doctor);
+        }
+    });
+    return [{ value: 'all', label: 'Todos los Doctores' }, ...Array.from(uniqueDoctors.values()).map(d => ({ value: d.id, label: `${d.persona.nombre} ${d.persona.apellidoPaterno}` }))];
+  }, [pagos]);
+
+  const medioPagoOptions = useMemo(() => {
+    const uniqueMethods = new Set(pagos.map(p => p.metodoPago));
+    return [{ value: 'all', label: 'Todos los Medios' }, ...Array.from(uniqueMethods).map(m => ({ value: m, label: m }))];
+  }, [pagos]);
+
+  const requestSort = (key: keyof Pago) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+        direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  const filteredAndSortedPagos = useMemo(() => {
+      let filtered = [...pagos];
+
+      if (doctorFilter !== 'all') {
+          filtered = filtered.filter(p => p.doctorResponsableId === doctorFilter);
+      }
+      if (medioPagoFilter !== 'all') {
+          filtered = filtered.filter(p => p.metodoPago === medioPagoFilter);
+      }
+      if (conceptoFilter) {
+          filtered = filtered.filter(p =>
+              p.descripcion.toLowerCase().includes(conceptoFilter.toLowerCase())
+          );
+      }
+
+      filtered.sort((a, b) => {
+          const aValue = new Date(a[sortConfig.key as 'fechaPago']).getTime();
+          const bValue = new Date(b[sortConfig.key as 'fechaPago']).getTime();
+          if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+          if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+          return 0;
+      });
+
+      return filtered;
+  }, [pagos, doctorFilter, conceptoFilter, medioPagoFilter, sortConfig]);
 
   const handleOpenAddSheet = () => {
     setEditingBudget(null);
@@ -188,6 +256,17 @@ export default function EstadoDeCuentaPage() {
 
   const displayedAlergias = paciente.antecedentesMedicos?.q3_cuales && paciente.antecedentesMedicos?.q3_alergico === "Sí" ? paciente.antecedentesMedicos.q3_cuales.split(',').map(s => s.trim()).filter(Boolean) : [];
   const displayedEnfermedades = paciente.antecedentesMedicos?.q5_enfermedades || [];
+  
+  const columnNames: Record<string, string> = {
+    id: 'ID Pago',
+    fechaPago: 'Fecha',
+    doctorResponsableId: 'Doctor',
+    descripcion: 'Concepto',
+    metodoPago: 'Medio de Pago',
+    montoTotal: 'Monto',
+  };
+  
+  const visibleColumnCount = Object.values(columnVisibility).filter(Boolean).length;
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 bg-background min-h-screen">
@@ -236,39 +315,78 @@ export default function EstadoDeCuentaPage() {
                         <CardDescription>Lista de todos los pagos registrados para este paciente.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>ID Pago</TableHead>
-                            <TableHead>Fecha</TableHead>
-                            <TableHead>Doctor</TableHead>
-                            <TableHead>Concepto</TableHead>
-                            <TableHead>Medio de Pago</TableHead>
-                            <TableHead className="text-right">Monto</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {pagos.length > 0 ? (
-                            pagos.map(pago => {
-                              const doctor = mockPersonalData.find(d => d.id === pago.doctorResponsableId);
-                              return (
-                                <TableRow key={pago.id}>
-                                  <TableCell className="font-mono text-xs">#{pago.id.slice(-6).toUpperCase()}</TableCell>
-                                  <TableCell>{format(new Date(pago.fechaPago), 'dd/MM/yyyy')}</TableCell>
-                                  <TableCell>{doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'N/A'}</TableCell>
-                                  <TableCell>{pago.descripcion}</TableCell>
-                                  <TableCell>{pago.metodoPago}</TableCell>
-                                  <TableCell className="text-right">S/ {pago.montoTotal.toFixed(2)}</TableCell>
+                       <div className="flex flex-col sm:flex-row items-center gap-2 mb-4">
+                          <div className="relative w-full sm:w-auto flex-grow">
+                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                  placeholder="Buscar por concepto..."
+                                  value={conceptoFilter}
+                                  onChange={(e) => setConceptoFilter(e.target.value)}
+                                  className="pl-8 w-full"
+                              />
+                          </div>
+                          <Select value={doctorFilter} onValueChange={setDoctorFilter}>
+                              <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Filtrar por doctor..." /></SelectTrigger>
+                              <SelectContent>{doctorOptions.map(option => (<SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>))}</SelectContent>
+                          </Select>
+                          <Select value={medioPagoFilter} onValueChange={(val) => setMedioPagoFilter(val as MetodoPago | 'all')}>
+                              <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Filtrar por medio..." /></SelectTrigger>
+                              <SelectContent>{medioPagoOptions.map(option => (<SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>))}</SelectContent>
+                          </Select>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="w-full sm:w-auto"><Settings2 className="mr-2 h-4 w-4" /> Columnas</Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                            {Object.keys(columnVisibility).map((key) => (
+                                <DropdownMenuCheckboxItem key={key} className="capitalize" checked={columnVisibility[key]} onCheckedChange={(value) => setColumnVisibility((prev) => ({ ...prev, [key]: !!value }))}>
+                                    {columnNames[key]}
+                                </DropdownMenuCheckboxItem>
+                            ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                       </div>
+                       <div className="border rounded-lg overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                {columnVisibility.id && <TableHead>ID Pago</TableHead>}
+                                {columnVisibility.fechaPago && (
+                                  <TableHead className="w-[150px]">
+                                      <Button variant="ghost" onClick={() => requestSort('fechaPago')} className="px-1">
+                                          FECHA <ArrowUpDown className="ml-2 h-4 w-4" />
+                                      </Button>
+                                  </TableHead>
+                                )}
+                                {columnVisibility.doctorResponsableId && <TableHead>Doctor</TableHead>}
+                                {columnVisibility.descripcion && <TableHead>Concepto</TableHead>}
+                                {columnVisibility.metodoPago && <TableHead>Medio de Pago</TableHead>}
+                                {columnVisibility.montoTotal && <TableHead className="text-right">Monto</TableHead>}
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredAndSortedPagos.length > 0 ? (
+                                filteredAndSortedPagos.map(pago => {
+                                  const doctor = mockPersonalData.find(d => d.id === pago.doctorResponsableId);
+                                  return (
+                                    <TableRow key={pago.id}>
+                                      {columnVisibility.id && <TableCell className="font-mono text-xs">#{pago.id.slice(-6).toUpperCase()}</TableCell>}
+                                      {columnVisibility.fechaPago && <TableCell>{format(new Date(pago.fechaPago), 'dd/MM/yyyy')}</TableCell>}
+                                      {columnVisibility.doctorResponsableId && <TableCell>{doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'N/A'}</TableCell>}
+                                      {columnVisibility.descripcion && <TableCell>{pago.descripcion}</TableCell>}
+                                      {columnVisibility.metodoPago && <TableCell>{pago.metodoPago}</TableCell>}
+                                      {columnVisibility.montoTotal && <TableCell className="text-right">S/ {pago.montoTotal.toFixed(2)}</TableCell>}
+                                    </TableRow>
+                                  )
+                                })
+                              ) : (
+                                <TableRow>
+                                  <TableCell colSpan={visibleColumnCount} className="text-center h-24">No hay pagos registrados que coincidan con los filtros.</TableCell>
                                 </TableRow>
-                              )
-                            })
-                          ) : (
-                            <TableRow>
-                              <TableCell colSpan={6} className="text-center h-24">No hay pagos registrados.</TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
+                              )}
+                            </TableBody>
+                          </Table>
+                       </div>
                     </CardContent>
                 </Card>
             </TabsContent>
@@ -287,3 +405,4 @@ export default function EstadoDeCuentaPage() {
     </div>
   );
 }
+
