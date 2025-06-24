@@ -1,9 +1,14 @@
 
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart, Calendar, Users, DollarSign, CheckCircle, FileClock } from "lucide-react";
+import { Calendar, Users, DollarSign, CheckCircle, FileClock, FileText } from "lucide-react";
 import { mockAppointmentsData, mockPacientesData, mockPagosData, mockPresupuestosData } from "@/lib/data";
 import { isToday, isYesterday, isThisMonth, isSameMonth, subMonths, subDays, format } from "date-fns";
 import { es } from "date-fns/locale";
+import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import { PieChart, Pie, Cell, Tooltip } from 'recharts';
+import type { AppointmentState } from "@/types/calendar";
 
 export default function DashboardPage() {
 
@@ -36,7 +41,10 @@ export default function DashboardPage() {
     return Math.round(((ingresosEsteMes - ingresosMesPasado) / ingresosMesPasado) * 100);
   })();
   
-  // 4. Actividad Reciente
+  // 4. Presupuestos Pendientes
+  const presupuestosPendientes = mockPresupuestosData.filter(p => p.estado === 'Creado' || p.estado === 'Aceptado').length;
+  
+  // 5. Actividad Reciente
   const sortedAppointments = [...mockAppointmentsData].sort((a,b) => b.start.getTime() - a.start.getTime());
   const sortedPagos = [...mockPagosData].sort((a,b) => b.fechaPago.getTime() - a.fechaPago.getTime());
   
@@ -47,6 +55,22 @@ export default function DashboardPage() {
   .sort((a,b) => b.date.getTime() - a.date.getTime())
   .slice(0, 5);
 
+  // 6. Citas por Estado (Este Mes)
+  const appointmentsThisMonth = mockAppointmentsData.filter(a => isThisMonth(a.start));
+  const appointmentStatusData = appointmentsThisMonth.reduce((acc, curr) => {
+    acc[curr.estado] = (acc[curr.estado] || 0) + 1;
+    return acc;
+  }, {} as Record<AppointmentState, number>);
+  
+  const appointmentStatusChartData = Object.entries(appointmentStatusData).map(([name, value]) => ({ name, value }));
+
+  const STATUS_COLORS: Record<AppointmentState, string> = {
+    Pendiente: '#f59e0b',    // amber-500
+    Confirmada: '#5625b3',   // purple
+    Atendido: '#16a34a',     // green-600
+    Cancelada: '#dc2626',    // red-600
+    Reprogramada: '#6b7280', // gray-500
+  };
 
   return (
     <div className="space-y-6">
@@ -57,7 +81,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Citas Hoy</CardTitle>
-            <Calendar className="h-5 w-5 text-muted-foreground" />
+            <Calendar className="h-5 w-5 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{citasHoy}</div>
@@ -69,7 +93,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pacientes Activos</CardTitle>
-            <Users className="h-5 w-5 text-muted-foreground" />
+            <Users className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pacientesActivos}</div>
@@ -79,7 +103,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ingresos del Mes</CardTitle>
-            <DollarSign className="h-5 w-5 text-muted-foreground" />
+            <DollarSign className="h-5 w-5 text-amber-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">S/ {ingresosEsteMes.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
@@ -90,12 +114,12 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Productos en Stock Bajo</CardTitle>
-            <BarChart className="h-5 w-5 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Presupuestos Pendientes</CardTitle>
+            <FileText className="h-5 w-5 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div>
-            <p className="text-xs text-muted-foreground">Dato estático (sin data)</p>
+            <div className="text-2xl font-bold">{presupuestosPendientes}</div>
+            <p className="text-xs text-muted-foreground">En estado "Creado" o "Aceptado"</p>
           </CardContent>
         </Card>
       </div>
@@ -139,15 +163,24 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Próximas Tareas</CardTitle>
-            <CardDescription>Recordatorios y tareas pendientes.</CardDescription>
+            <CardTitle>Citas del Mes por Estado</CardTitle>
+            <CardDescription>Distribución de los estados de las citas programadas para este mes.</CardDescription>
           </CardHeader>
-          <CardContent>
-             <ul className="space-y-2 text-sm">
-              <li>Contactar a <span className="font-semibold">Maria Luna</span> para confirmar cita.</li>
-              <li>Realizar pedido de <span className="font-semibold">guantes de nitrilo</span>.</li>
-              <li>Preparar reporte mensual de ingresos.</li>
-            </ul>
+          <CardContent className="flex justify-center items-center h-[250px]">
+             {appointmentStatusChartData.length > 0 ? (
+                <ChartContainer config={{}} className="w-full h-full">
+                  <PieChart>
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Pie data={appointmentStatusChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}>
+                      {appointmentStatusChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as AppointmentState]} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ChartContainer>
+             ) : (
+                <p className="text-muted-foreground">No hay datos de citas para este mes.</p>
+             )}
           </CardContent>
         </Card>
       </div>

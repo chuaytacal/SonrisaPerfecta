@@ -179,7 +179,7 @@ export default function ReportesPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ingresos en Periodo</CardTitle>
-            <DollarSign className="h-5 w-5 text-muted-foreground" />
+            <DollarSign className="h-5 w-5 text-amber-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">S/ {kpis.totalIngresos.toFixed(2)}</div>
@@ -189,7 +189,7 @@ export default function ReportesPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Citas en Periodo</CardTitle>
-            <Calendar className="h-5 w-5 text-muted-foreground" />
+            <Calendar className="h-5 w-5 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{kpis.citasRegistradas}</div>
@@ -199,7 +199,7 @@ export default function ReportesPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Nuevos Pacientes</CardTitle>
-            <Users className="h-5 w-5 text-muted-foreground" />
+            <Users className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{kpis.nuevosPacientes}</div>
@@ -209,7 +209,7 @@ export default function ReportesPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Servicio Más Popular</CardTitle>
-            <Award className="h-5 w-5 text-muted-foreground" />
+            <Award className="h-5 w-5 text-purple-500" />
           </CardHeader>
           <CardContent>
             <div className="text-xl font-bold truncate" title={kpis.servicioPopular}>{kpis.servicioPopular}</div>
