@@ -28,8 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Persona, Paciente } from "@/types"; 
-import { mockPacientesData, mockPersonasData } from "@/lib/data";
+import type { Persona, Paciente, HistoriaClinica } from "@/types"; 
+import { mockPacientesData, mockPersonasData, mockHistoriasClinicasData } from "@/lib/data";
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
 
@@ -87,8 +87,23 @@ export default function PacientesPage() {
     } else {
       mockPersonasData.push(savedPaciente.persona);
     }
+
+    // 3. Create or Update HistoriaClinica
+    const historiaClinicaId = savedPaciente.idHistoriaClinica;
+    const nuevaHistoriaClinica: HistoriaClinica = {
+      id: historiaClinicaId,
+      idPaciente: savedPaciente.id,
+      idApoderado: apoderado?.id,
+    };
+
+    const hcIndex = mockHistoriasClinicasData.findIndex(hc => hc.id === historiaClinicaId);
+    if (hcIndex > -1) {
+      mockHistoriasClinicasData[hcIndex] = nuevaHistoriaClinica;
+    } else {
+      mockHistoriasClinicasData.push(nuevaHistoriaClinica);
+    }
   
-    // 3. Update/Add Paciente in the "DB"
+    // 4. Update/Add Paciente in the "DB"
     const pacienteIndex = mockPacientesData.findIndex(p => p.id === savedPaciente.id);
     if (pacienteIndex > -1) {
       mockPacientesData[pacienteIndex] = savedPaciente;
@@ -96,7 +111,7 @@ export default function PacientesPage() {
       mockPacientesData.unshift(savedPaciente);
     }
   
-    // 4. Update local state from the source of truth to force re-render
+    // 5. Update local state from the source of truth to force re-render
     setPacienteList([...mockPacientesData]);
   
     toast({

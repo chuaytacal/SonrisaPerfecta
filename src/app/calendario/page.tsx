@@ -251,7 +251,7 @@ export default function CalendarioPage() {
     if (formData.procedimientos && formData.procedimientos.length > 0 && !editingAppointment) {
       const newBudget: Presupuesto = {
         id: `presupuesto-${crypto.randomUUID()}`,
-        idPaciente: paciente.id,
+        idHistoriaClinica: paciente.idHistoriaClinica,
         nombre: `Tratamiento Cita - ${format(startDateTime, 'dd/MM/yyyy')}`,
         fechaCreacion: new Date(),
         estado: 'Creado',
@@ -260,16 +260,10 @@ export default function CalendarioPage() {
           id: `item-${crypto.randomUUID()}`,
           procedimiento: p,
           cantidad: 1,
+          montoPagado: 0,
         })),
       };
       mockPresupuestosData.push(newBudget);
-      const patientIndex = mockPacientesData.findIndex(p => p.id === paciente.id);
-      if (patientIndex > -1) {
-        mockPacientesData[patientIndex].presupuestos = [
-          ...(mockPacientesData[patientIndex].presupuestos || []),
-          newBudget,
-        ];
-      }
     }
 
 

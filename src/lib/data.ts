@@ -1,5 +1,5 @@
 
-import type { MotivoCita, Procedimiento, Persona, Paciente, Personal, AntecedentesMedicosData, Presupuesto, ItemPresupuesto, Pago } from '@/types';
+import type { MotivoCita, Procedimiento, Persona, Paciente, Personal, AntecedentesMedicosData, Presupuesto, Pago, HistoriaClinica } from '@/types';
 import type { Appointment } from '@/types/calendar';
 import { addDays, setHours, setMinutes } from 'date-fns';
 import type { DientesMap } from '@/components/odontograma/setting';
@@ -103,7 +103,6 @@ export const mockEtiquetas: string[] = [
 export let mockPagosData: Pago[] = [
   {
     id: 'pago-inicial-1',
-    idPaciente: 'paciente-1',
     fechaPago: new Date('2024-05-15T10:00:00Z'),
     montoTotal: 20,
     metodoPago: 'Efectivo',
@@ -119,7 +118,6 @@ export let mockPagosData: Pago[] = [
   },
   {
     id: 'pago-2',
-    idPaciente: 'paciente-1',
     fechaPago: new Date('2024-06-20T11:00:00Z'),
     montoTotal: 120,
     metodoPago: 'Tarjeta',
@@ -135,10 +133,16 @@ export let mockPagosData: Pago[] = [
   }
 ];
 
+export let mockHistoriasClinicasData: HistoriaClinica[] = [
+  { id: "hc-1", idPaciente: "paciente-1" },
+  { id: "hc-2", idPaciente: "paciente-2", idApoderado: "persona-g1" },
+  { id: "hc-3", idPaciente: "paciente-3" },
+];
+
 export let mockPresupuestosData: Presupuesto[] = [
     {
       id: 'presupuesto-1',
-      idPaciente: 'paciente-1',
+      idHistoriaClinica: 'hc-1',
       nombre: 'Tratamiento Inicial',
       fechaCreacion: new Date('2024-05-15'),
       estado: 'Creado',
@@ -152,7 +156,7 @@ export let mockPresupuestosData: Presupuesto[] = [
     },
     {
       id: 'presupuesto-2',
-      idPaciente: 'paciente-1',
+      idHistoriaClinica: 'hc-1',
       nombre: 'Control General',
       fechaCreacion: new Date('2024-06-20'),
       estado: 'Terminado',
@@ -169,6 +173,7 @@ export let mockPacientesData: Paciente[] = [
     id: "paciente-1",
     idPersona: "persona-p1",
     persona: mockPersonasData.find(p => p.id === "persona-p1")!,
+    idHistoriaClinica: "hc-1",
     fechaIngreso: "10/01/2024",
     estado: "Activo",
     etiquetas: ["Diabético", "Hipertenso"],
@@ -176,12 +181,12 @@ export let mockPacientesData: Paciente[] = [
     antecedentesMedicos: initialAntecedentesExample,
     odontogramaPermanente: sampleOdontogramaPermanente,
     odontogramaPrimaria: {},
-    presupuestos: mockPresupuestosData.filter(p => p.idPaciente === "paciente-1"),
   },
   {
     id: "paciente-2",
     idPersona: "persona-p2",
     persona: mockPersonasData.find(p => p.id === "persona-p2")!,
+    idHistoriaClinica: "hc-2",
     fechaIngreso: "15/03/2024",
     estado: "Activo",
     etiquetas: ["Menor de Edad"],
@@ -190,12 +195,12 @@ export let mockPacientesData: Paciente[] = [
     idApoderado: "persona-g1",
     odontogramaPermanente: {},
     odontogramaPrimaria: {},
-    presupuestos: [],
   },
   {
     id: "paciente-3",
     idPersona: "persona-3", 
     persona: mockPersonasData.find(p => p.id === "persona-3")!,
+    idHistoriaClinica: "hc-3",
     fechaIngreso: "20/05/2023",
     estado: "Inactivo",
     etiquetas: ["Fumador", "Postquirúrgico"],
@@ -203,7 +208,6 @@ export let mockPacientesData: Paciente[] = [
     antecedentesMedicos: { ...initialAntecedentesExample, q8_embarazada: "Sí", q8_semanas: "12" },
     odontogramaPermanente: {},
     odontogramaPrimaria: {},
-    presupuestos: [],
   }
 ];
 

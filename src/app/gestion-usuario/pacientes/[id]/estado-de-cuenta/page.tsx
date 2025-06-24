@@ -5,8 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, PlusCircle } from 'lucide-react';
-import { mockPacientesData, mockPresupuestosData, mockPagosData, mockPersonalData } from '@/lib/data';
-import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto, Pago, Procedimiento } from '@/types';
+import { mockPacientesData, mockPresupuestosData, mockPagosData, mockPersonalData, mockHistoriasClinicasData } from '@/lib/data';
+import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto, Pago, Procedimiento, HistoriaClinica } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -44,6 +44,7 @@ export default function EstadoDeCuentaPage() {
 
   const [paciente, setPaciente] = useState<PacienteType | null>(null);
   const [persona, setPersona] = useState<Persona | null>(null);
+  const [historiaClinica, setHistoriaClinica] = useState<HistoriaClinica | null>(null);
   const [loading, setLoading] = useState(true);
   const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
   const [pagos, setPagos] = useState<Pago[]>([]);
@@ -52,27 +53,37 @@ export default function EstadoDeCuentaPage() {
 
 
   useEffect(() => {
-    refreshBudgetsAndPayments();
+    refreshData();
+  }, [patientId]);
+  
+  const refreshData = () => {
     const foundPaciente = mockPacientesData.find(p => p.id === patientId);
     if (foundPaciente) {
       setPaciente(foundPaciente);
       setPersona(foundPaciente.persona);
+      const foundHistoriaClinica = mockHistoriasClinicasData.find(hc => hc.id === foundPaciente.idHistoriaClinica);
+      setHistoriaClinica(foundHistoriaClinica || null);
+      
+      if (foundHistoriaClinica) {
+        const sortedBudgets = mockPresupuestosData
+          .filter(p => p.idHistoriaClinica === foundHistoriaClinica.id)
+          .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
+        setPresupuestos(sortedBudgets);
+        
+        const presupuestoIds = sortedBudgets.map(p => p.id);
+        const filteredPagos = mockPagosData
+            .filter(p => p.itemsPagados.some(ip => presupuestoIds.includes(ip.idPresupuesto)))
+            .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());
+        setPagos(filteredPagos);
+      }
     } else {
       setPaciente(null);
       setPersona(null);
+      setHistoriaClinica(null);
+      setPresupuestos([]);
+      setPagos([]);
     }
     setLoading(false);
-  }, [patientId]);
-
-  const refreshBudgetsAndPayments = () => {
-    const foundPaciente = mockPacientesData.find(p => p.id === patientId);
-    if (foundPaciente) {
-        const sortedBudgets = mockPresupuestosData
-            .filter(p => p.idPaciente === patientId)
-            .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
-        setPresupuestos(sortedBudgets);
-        setPagos([...mockPagosData.filter(p => p.idPaciente === patientId)].sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime()))
-    }
   };
 
   const handleOpenAddSheet = () => {
@@ -93,7 +104,7 @@ export default function EstadoDeCuentaPage() {
     estado: Presupuesto['estado'],
     nota?: string
   }) => {
-    if (!paciente) return;
+    if (!paciente || !historiaClinica) return;
 
     if (data.id) { // UPDATE LOGIC
         const budgetIndex = mockPresupuestosData.findIndex(b => b.id === data.id);
@@ -118,7 +129,7 @@ export default function EstadoDeCuentaPage() {
             ...originalBudget,
             nombre: data.nombre,
             doctorResponsableId: data.doctorResponsableId,
-            estado: 'Creado', // Reset state on any edit
+            estado: 'Creado',
             nota: data.nota,
             items: data.items,
             montoPagado: data.items.reduce((acc, item) => acc + (item.montoPagado || 0), 0)
@@ -136,7 +147,7 @@ export default function EstadoDeCuentaPage() {
     } else { // CREATE LOGIC
         const newBudget: Presupuesto = {
           id: `presupuesto-${crypto.randomUUID()}`,
-          idPaciente: paciente.id,
+          idHistoriaClinica: historiaClinica.id,
           nombre: data.nombre || 'Presupuesto sin nombre',
           fechaCreacion: new Date(),
           estado: data.estado,
@@ -156,7 +167,7 @@ export default function EstadoDeCuentaPage() {
     
     setIsSheetOpen(false);
     setEditingBudget(null);
-    refreshBudgetsAndPayments();
+    refreshData();
   };
 
   const handleDummySaveNotes = (notes: string) => console.log("Save notes (dummy):", notes);
@@ -206,7 +217,7 @@ export default function EstadoDeCuentaPage() {
                 <div className="space-y-4">
                     {presupuestos.length > 0 ? (
                         presupuestos.map(presupuesto => (
-                            <BudgetCard key={presupuesto.id} presupuesto={presupuesto} paciente={paciente} onUpdate={refreshBudgetsAndPayments} onEdit={handleEditBudget}/>
+                            <BudgetCard key={presupuesto.id} presupuesto={presupuesto} paciente={paciente} onUpdate={refreshData} onEdit={handleEditBudget}/>
                         ))
                     ) : (
                         <Card>

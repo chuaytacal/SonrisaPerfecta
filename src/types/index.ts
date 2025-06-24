@@ -52,9 +52,15 @@ export interface ItemPresupuesto {
   montoPagado: number;
 }
 
-export interface Presupuesto {
+export interface HistoriaClinica {
   id: string;
   idPaciente: string;
+  idApoderado?: string;
+}
+
+export interface Presupuesto {
+  id: string;
+  idHistoriaClinica: string;
   nombre: string;
   fechaCreacion: Date;
   estado: EstadoPresupuesto;
@@ -69,6 +75,7 @@ export interface Paciente {
   id: string;
   idPersona: string;
   persona: Persona;
+  idHistoriaClinica: string;
   fechaIngreso: string; // "DD/MM/YYYY"
   estado: "Activo" | "Inactivo";
   etiquetas: EtiquetaPaciente[];
@@ -77,7 +84,6 @@ export interface Paciente {
   idApoderado?: string;
   odontogramaPermanente?: DientesMap;
   odontogramaPrimaria?: DientesMap;
-  presupuestos?: Presupuesto[];
 }
 
 export interface Procedimiento {
@@ -133,7 +139,6 @@ export type TipoComprobante = 'Boleta' | 'Factura' | 'Otro' | 'Recibo';
 
 export interface Pago {
   id: string;
-  idPaciente: string;
   fechaPago: Date;
   montoTotal: number;
   metodoPago: MetodoPago;

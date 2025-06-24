@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { type Presupuesto, type MetodoPago, type ItemPresupuesto, Paciente as PacienteType, TipoComprobante, Pago } from '@/types';
 import { mockPersonalData, mockPagosData, mockPresupuestosData } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, CheckCircle, Gift, Megaphone, Wallet, ChevronRight } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Gift, Megaphone, Wallet, ChevronRight, X } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -235,7 +235,6 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
 
         const newPago: Pago = {
           id: `pago-${crypto.randomUUID()}`,
-          idPaciente: paciente.id,
           fechaPago: new Date(),
           montoTotal: totalACobrar,
           metodoPago,
@@ -274,7 +273,7 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
   return (
     <>
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-[65vw] p-0 flex flex-col">
+      <SheetContent className="w-full sm:max-w-3xl p-0 flex flex-col">
         <div className="relative overflow-hidden flex-1 flex flex-col">
             {/* Step 1: Payment Selection */}
             <div className={cn("absolute inset-0 transition-transform duration-500 ease-in-out flex flex-col", step === 1 ? "translate-x-0" : "-translate-x-full")}>
@@ -348,11 +347,12 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
             
             {/* Step 2: Payment Confirmation */}
             <div className={cn("absolute inset-0 transition-transform duration-500 ease-in-out flex flex-col bg-card", step === 2 ? "translate-x-0" : "translate-x-full")}>
-                 <div className="p-6 border-b flex items-center">
+                 <div className="p-4 border-b flex items-center justify-between">
                     <button onClick={() => setStep(1)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
                         <ArrowLeft className="h-4 w-4" />
                         <span>Atrás</span>
                     </button>
+                    <SheetClose asChild><Button variant="ghost" size="icon" className="h-6 w-6"><X className="h-4 w-4"/></Button></SheetClose>
                 </div>
                  <ScrollArea className="flex-grow">
                     <div className="p-6 space-y-6">
