@@ -70,7 +70,7 @@ export default function PeriodontogramaPage() {
   const displayedEnfermedades = paciente.antecedentesMedicos?.q5_enfermedades || [];
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 p-4 md:p-6 bg-background min-h-screen">
+    <div className="flex flex-col lg:flex-row gap-6 bg-background min-h-screen">
       <ResumenPaciente paciente={paciente} persona={persona} onBack={() => router.push('/gestion-usuario/pacientes')} />
       <div className="flex-1">
         <EtiquetasNotasSalud
