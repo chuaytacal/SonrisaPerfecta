@@ -5,8 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, PlusCircle } from 'lucide-react';
-import { mockPacientesData, mockPresupuestosData, mockPersonalData } from '@/lib/data';
-import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto, Procedimiento, Personal } from '@/types';
+import { mockPacientesData, mockPresupuestosData } from '@/lib/data';
+import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -98,6 +98,14 @@ export default function EstadoDeCuentaPage() {
         description: "El nuevo presupuesto ha sido añadido al estado de cuenta.",
     });
   };
+  
+  const refreshBudgets = () => {
+    const foundPaciente = mockPacientesData.find(p => p.id === patientId);
+    if (foundPaciente) {
+        setPresupuestos([...(foundPaciente.presupuestos || [])]);
+    }
+  };
+
 
   const handleDummySaveNotes = (notes: string) => console.log("Save notes (dummy):", notes);
   const handleDummyAddTag = (tag: EtiquetaPaciente): boolean => { console.log("Add tag (dummy):", tag); return true; };
@@ -146,7 +154,7 @@ export default function EstadoDeCuentaPage() {
                 <div className="space-y-4">
                     {presupuestos.length > 0 ? (
                         presupuestos.map(presupuesto => (
-                            <BudgetCard key={presupuesto.id} presupuesto={presupuesto} />
+                            <BudgetCard key={presupuesto.id} presupuesto={presupuesto} onUpdate={refreshBudgets}/>
                         ))
                     ) : (
                         <Card>

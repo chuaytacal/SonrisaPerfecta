@@ -125,3 +125,17 @@ export type Personal = {
   estado: "Activo" | "Inactivo";
   avatarUrl?: string; // Específico del rol de personal
 };
+
+export type MetodoPago = 'Efectivo' | 'Tarjeta' | 'Transferencia' | 'Otro';
+export type EstadoPago = 'Creado' | 'Pagado' | 'Anulado';
+
+export interface Pago {
+  id: string;
+  idPresupuesto: string;
+  monto: number;
+  fechaPago: Date;
+  metodoPago: MetodoPago | '';
+  descripcion?: string;
+  estado: EstadoPago;
+  itemsPagados: { idItem: string, monto: number }[];
+}

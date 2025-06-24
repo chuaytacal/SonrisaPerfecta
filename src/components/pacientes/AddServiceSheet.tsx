@@ -16,11 +16,11 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { mockProcedimientos, mockPersonalData } from '@/lib/data';
-import type { Procedimiento, Presupuesto, Personal } from '@/types';
+import type { Procedimiento, Presupuesto } from '@/types';
 import { Combobox } from '@/components/ui/combobox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trash2, PlusCircle, MinusCircle, Plus, FileText, ThumbsUp, ThumbsDown, HeartOff, CheckCircle2, Circle } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AddProcedimientoModal } from '@/components/catalogo/AddProcedimientoModal';
 import { useToast } from '@/hooks/use-toast';
@@ -147,9 +147,9 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave }: AddServiceShee
           </SheetDescription>
         </SheetHeader>
         <ScrollArea className="flex-grow">
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-              <div className="space-y-4">
-                  <div>
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div>
                     <Label htmlFor="nombre-presupuesto">Nombre del Presupuesto (Opcional)</Label>
                     <Input id="nombre-presupuesto" value={nombrePresupuesto} onChange={(e) => setNombrePresupuesto(e.target.value)} placeholder="Ej: Plan de Ortodoncia"/>
                   </div>
@@ -157,33 +157,33 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave }: AddServiceShee
                     <Label>Doctor responsable</Label>
                     <Combobox options={doctorOptions} value={doctorResponsableId} onChange={setDoctorResponsableId} placeholder="Seleccionar doctor..."/>
                   </div>
-              </div>
-              <div className="space-y-4">
-                  <div>
-                    <Label>Estado</Label>
-                    <Select value={estado} onValueChange={(val) => setEstado(val as Presupuesto['estado'])}>
-                        <SelectTrigger><SelectValue/></SelectTrigger>
-                        <SelectContent>
-                            {estadoOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+            </div>
+
+            <div>
+              <Label>Estado</Label>
+              <Select value={estado} onValueChange={(val) => setEstado(val as Presupuesto['estado'])}>
+                  <SelectTrigger><SelectValue/></SelectTrigger>
+                  <SelectContent>
+                      {estadoOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                  </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Agregar servicios/productos</Label>
+              <div className="flex items-center gap-2">
+                  <div className="w-40">
+                        <Select defaultValue="servicio" disabled>
+                          <SelectTrigger><SelectValue/></SelectTrigger>
+                          <SelectContent><SelectItem value="servicio">Servicio</SelectItem></SelectContent>
+                        </Select>
                   </div>
+                  <div className="flex-grow">
+                      <Combobox options={filteredProcedimientoOptions} onChange={handleAddServicio} placeholder="Selecciona un servicio/producto..." />
+                  </div>
+                  <Button variant="outline" onClick={() => setIsAddProcModalOpen(true)}><Plus className="mr-2 h-4 w-4"/> Nuevo</Button>
               </div>
-              <div className="col-span-1 md:col-span-2 space-y-2">
-                <Label>Agregar servicios/productos</Label>
-                <div className="flex items-center gap-2">
-                    <div className="w-40">
-                         <Select defaultValue="servicio" disabled>
-                            <SelectTrigger><SelectValue/></SelectTrigger>
-                            <SelectContent><SelectItem value="servicio">Servicio</SelectItem></SelectContent>
-                         </Select>
-                    </div>
-                    <div className="flex-grow">
-                        <Combobox options={filteredProcedimientoOptions} onChange={handleAddServicio} placeholder="Selecciona un servicio/producto..." />
-                    </div>
-                    <Button variant="outline" onClick={() => setIsAddProcModalOpen(true)}><Plus className="mr-2 h-4 w-4"/> Nuevo</Button>
-                </div>
-              </div>
+            </div>
 
             <div className="border rounded-lg mt-4 col-span-1 md:col-span-2">
               <Table>
@@ -227,26 +227,29 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave }: AddServiceShee
                 </TableBody>
               </Table>
             </div>
-             <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                <div>
-                  <Label htmlFor="nota-pago">Nota de Pago</Label>
-                  <Textarea id="nota-pago" value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Añadir comentario..."/>
-                </div>
-                <div className="space-y-1 text-right mt-4 md:mt-0">
+            
+            <div className="flex flex-col items-end gap-4">
+              <div className="w-full md:w-1/2 space-y-2">
+                <div className="space-y-1 text-right">
                     <div className="flex justify-between items-center text-sm">
                         <span className="text-muted-foreground">Total:</span>
                         <span className="font-semibold">S/ {total.toFixed(2)}</span>
                     </div>
-                     <div className="flex justify-between items-center text-sm">
+                      <div className="flex justify-between items-center text-sm">
                         <span className="text-muted-foreground">Pagado:</span>
                         <span className="font-semibold">S/ 0.00</span>
                     </div>
-                     <div className="flex justify-between items-center text-lg font-bold border-t pt-1 mt-1">
+                      <div className="flex justify-between items-center text-lg font-bold border-t pt-1 mt-1">
                         <span>Por pagar:</span>
                         <span>S/ {total.toFixed(2)}</span>
                     </div>
                 </div>
-             </div>
+                <div>
+                  <Label htmlFor="nota-pago">Nota de Pago</Label>
+                  <Textarea id="nota-pago" value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Añadir comentario..."/>
+                </div>
+              </div>
+            </div>
           </div>
         </ScrollArea>
         <SheetFooter className="p-6 border-t mt-auto">
