@@ -94,7 +94,7 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
 
     // Update mockPagosData
     // 1. Remove deleted payments
-    let tempPayments = mockPagosData.filter(p => !deletedPagoIds.has(p.id));
+    let tempPayments = mockPagosData.filter(p => !deletedPagoIds.includes(p.id));
     // 2. Update existing payments
     const finalPayments = tempPayments.map(p => {
         const updatedPago = pagos.find(up => up.id === p.id);
