@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/popover"
 import { format } from "date-fns"
 import { es } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, User, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -228,7 +228,9 @@ export function AddPersonalForm({
         <ScrollArea className="max-h-[75vh] md:max-h-[calc(85vh-150px)]">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-6 pb-6 pt-2">
-              <h3 className="text-md font-semibold text-muted-foreground border-b pb-1">Datos Personales</h3>
+              <h3 className="text-md font-semibold text-muted-foreground border-b pb-1 flex items-center">
+                <User className="mr-2 h-5 w-5" /> Datos Personales
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                     control={form.control}
@@ -370,7 +372,9 @@ export function AddPersonalForm({
                 )}
               />
               
-              <h3 className="text-md font-semibold text-muted-foreground border-b pb-1 pt-4">Datos del Personal</h3>
+              <h3 className="text-md font-semibold text-muted-foreground border-b pb-1 pt-4 flex items-center">
+                <ClipboardList className="mr-2 h-5 w-5" /> Datos del Personal
+              </h3>
               <FormField
                 control={form.control}
                 name="fechaIngreso" 
