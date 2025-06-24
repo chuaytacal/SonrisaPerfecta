@@ -388,15 +388,15 @@ export default function CalendarioPage() {
   return (
     <div className="flex flex-col relative h-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Calendario de Citas</h1>
+        <h1 className="text-3xl font-bold text-foreground">Calendario de Citas</h1>
         <p className="text-muted-foreground">Gestiona y visualiza todas las citas programadas en la clínica.</p>
       </div>
 
        <div className="flex flex-col sm:flex-row gap-4 mb-4 p-4 border rounded-lg bg-card shadow-sm">
-        <div className="flex-1 space-y-2">
+        <div className="space-y-2">
             <Label htmlFor="doctor-filter">Filtrar por Doctor</Label>
             <Select value={doctorFilter} onValueChange={setDoctorFilter}>
-                <SelectTrigger id="doctor-filter">
+                <SelectTrigger id="doctor-filter" className="w-full sm:w-[250px]">
                     <SelectValue placeholder="Seleccionar doctor..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -406,10 +406,10 @@ export default function CalendarioPage() {
                 </SelectContent>
             </Select>
         </div>
-        <div className="flex-1 space-y-2">
+        <div className="space-y-2">
             <Label htmlFor="status-filter">Filtrar por Estado</Label>
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as AppointmentState | 'all')}>
-                <SelectTrigger id="status-filter">
+                <SelectTrigger id="status-filter" className="w-full sm:w-[250px]">
                     <SelectValue placeholder="Seleccionar estado..." />
                 </SelectTrigger>
                 <SelectContent>

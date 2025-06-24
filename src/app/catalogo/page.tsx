@@ -258,9 +258,9 @@ export default function CatalogoPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Catálogo del Sistema</h1>
+    <div>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-foreground">Catálogo del Sistema</h1>
         <p className="text-muted-foreground">Administre los elementos reutilizables del sistema como procedimientos, motivos de cita y etiquetas de paciente.</p>
       </div>
       
