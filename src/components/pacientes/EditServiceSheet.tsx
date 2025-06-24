@@ -74,11 +74,13 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
             setExceededInfo({ typed: newMonto, max: maxPermitido });
             setIsExceededAlertOpen(true);
             finalValue = maxPermitido;
+        } else {
+             finalValue = newMonto;
         }
     }
     
     setPagos(prev =>
-      prev.map(p => (p.id === pagoId ? { ...p, [field]: field === 'montoTotal' ? finalValue : value } : p))
+      prev.map(p => (p.id === pagoId ? { ...p, [field]: finalValue } : p))
     );
   };
   
@@ -257,7 +259,7 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
                 <div>
                     <DialogTitle className="text-2xl font-semibold">Monto Excedido</DialogTitle>
                     <DialogDescription className="text-base leading-relaxed mt-2">
-                        El monto ingresado (S/ {exceededInfo?.typed.toFixed(2)}) es mayor que el saldo pendiente para este servicio (S/ {exceededInfo?.max.toFixed(2)}). Se ha ajustado al máximo permitido.
+                        El monto ingresado (S/ {(exceededInfo?.typed ?? 0).toFixed(2)}) es mayor que el saldo pendiente para este servicio (S/ {(exceededInfo?.max ?? 0).toFixed(2)}). Se ha ajustado al máximo permitido.
                     </DialogDescription>
                 </div>
             </div>
