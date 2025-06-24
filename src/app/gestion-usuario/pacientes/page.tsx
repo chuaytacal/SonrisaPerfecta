@@ -209,12 +209,22 @@ const columns: ColumnDef<Paciente>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "#",
-    header: "#",
+    id: "#",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        #
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row, table }) => {
-      const rowIndex = row.index;
-      return <span>{rowIndex + 1 + (table.getState().pagination.pageIndex * table.getState().pagination.pageSize)}</span>;
+      const pageIndex = table.getState().pagination.pageIndex
+      const pageSize = table.getState().pagination.pageSize
+      return <span>{row.index + 1 + pageIndex * pageSize}</span>
     },
+    sortingFn: (rowA, rowB) => Number(rowA.id) - Number(rowB.id),
   },
   {
     id: "persona.nombre", 

@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowUpDown, MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight, Eye } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { AddPersonalForm } from "@/components/personal/AddPersonalForm";
 import { SelectPersonaModal } from "@/components/personal/SelectPersonaModal";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -175,12 +175,22 @@ const columns: ColumnDef<Personal>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "#",
-    header: "#",
+    id: "#",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        #
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row, table }) => {
-      const rowIndex = row.index;
-      return <span>{rowIndex + 1 + (table.getState().pagination.pageIndex * table.getState().pagination.pageSize)}</span>;
+      const pageIndex = table.getState().pagination.pageIndex
+      const pageSize = table.getState().pagination.pageSize
+      return <span>{row.index + 1 + pageIndex * pageSize}</span>
     },
+    sortingFn: (rowA, rowB) => Number(rowA.id) - Number(rowB.id),
   },
   {
     id: "persona.nombre",

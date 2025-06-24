@@ -1,6 +1,7 @@
 
 import type { Metadata } from 'next';
 import './globals.css';
+import 'react-phone-number-input/style.css';
 import './phone-input.css';
 import { Toaster } from '@/components/ui/toaster';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
