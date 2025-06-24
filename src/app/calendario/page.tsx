@@ -609,12 +609,13 @@ export default function CalendarioPage() {
         onConfirm={confirmDelete}
         title="Confirmar Eliminación"
         description={
-            <div>
-                <p>¿Estás seguro de que deseas eliminar la cita para <strong>{appointmentToAction?.paciente?.persona.nombre}</strong>?</p>
-                <p className="mt-2 text-sm text-destructive">
+            <span>
+                ¿Estás seguro de que deseas eliminar la cita para <strong>{appointmentToAction?.paciente?.persona.nombre}</strong>?
+                <br />
+                <span className="mt-2 inline-block text-sm text-destructive">
                     Si esta cita generó un presupuesto, este también será eliminado junto con sus pagos asociados.
-                </p>
-            </div>
+                </span>
+            </span>
         }
         confirmButtonText="Eliminar"
         confirmButtonVariant="destructive"
