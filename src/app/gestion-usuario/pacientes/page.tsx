@@ -215,7 +215,6 @@ const columns: ColumnDef<Paciente>[] = [
       const rowIndex = row.index;
       return <span>{rowIndex + 1 + (table.getState().pagination.pageIndex * table.getState().pagination.pageSize)}</span>;
     },
-     enableSorting: false,
   },
   {
     id: "persona.nombre", 

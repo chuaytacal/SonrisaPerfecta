@@ -44,6 +44,7 @@ import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { mockPersonasData, mockPersonalData } from "@/lib/data";
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
 
 
 const personalFormSchema = z.object({
@@ -55,10 +56,7 @@ const personalFormSchema = z.object({
   fechaNacimiento: z.date({ required_error: "La fecha de nacimiento es requerida."}),
   sexo: z.enum(["M", "F"], { required_error: "Seleccione un sexo." }),
   direccion: z.string().min(1, {message: "La dirección es requerida."}),
-  telefono: z.string()
-    .min(7, { message: "El teléfono debe tener al menos 7 dígitos." })
-    .max(15, { message: "El teléfono no puede exceder los 15 dígitos."})
-    .regex(/^\d+$/, { message: "El teléfono solo debe contener números." }),
+  telefono: z.string().refine(isValidPhoneNumber, { message: "Número de teléfono inválido." }),
   especialidad: z.string().min(1, "La especialidad es requerida."),
   fechaIngreso: z.date({ required_error: "La fecha de ingreso es requerida."}), 
   estado: z.enum(["Activo", "Inactivo"], { required_error: "Seleccione un estado." }),
@@ -358,15 +356,23 @@ export function AddPersonalForm({
                   </FormItem>
                 )}
               />
-              <FormField 
+              <FormField
                 control={form.control}
                 name="telefono"
                 render={({ field }) => (
-                <FormItem>
+                  <FormItem>
                     <FormLabel>Teléfono</FormLabel>
-                    <FormControl><Input placeholder="987654321" {...field} disabled={isOtherPersonaFieldsDisabled && !isEditMode} /></FormControl>
+                    <FormControl>
+                       <PhoneInput
+                        international
+                        defaultCountry="PE"
+                        placeholder="987 654 321"
+                        {...field}
+                        disabled={isOtherPersonaFieldsDisabled && !isEditMode}
+                      />
+                    </FormControl>
                     <FormMessage />
-                </FormItem>
+                  </FormItem>
                 )}
               />
               

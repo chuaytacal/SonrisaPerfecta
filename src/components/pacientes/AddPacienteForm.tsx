@@ -46,6 +46,7 @@ import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { mockPacientesData, mockPersonasData, mockEtiquetas } from "@/lib/data";
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
 
 
 const pacienteFormSchema = z.object({
@@ -58,10 +59,7 @@ const pacienteFormSchema = z.object({
   fechaNacimiento: z.date({ required_error: "La fecha de nacimiento es requerida."}),
   sexo: z.enum(["M", "F"], { required_error: "Seleccione un sexo." }),
   direccion: z.string().min(1, {message: "La dirección es requerida."}),
-  telefono: z.string()
-    .min(7, { message: "El teléfono debe tener al menos 7 dígitos." })
-    .max(15, { message: "El teléfono no puede exceder los 15 dígitos."})
-    .regex(/^\d+$/, { message: "El teléfono solo debe contener números." }),
+  telefono: z.string().refine(isValidPhoneNumber, { message: "Número de teléfono inválido." }),
   
   // Paciente specific fields
   fechaIngreso: z.date({ required_error: "La fecha de ingreso es requerida."}), 
@@ -77,7 +75,9 @@ const pacienteFormSchema = z.object({
   apoderado_fechaNacimiento: z.date().optional(),
   apoderado_sexo: z.enum(["M", "F"]).optional(),
   apoderado_direccion: z.string().optional(),
-  apoderado_telefono: z.string().optional(),
+  apoderado_telefono: z.string().optional().refine(value => !value || isValidPhoneNumber(value), {
+    message: "Número de teléfono inválido para el apoderado.",
+  }),
 }).superRefine((data, ctx) => {
     if (data.tipoDocumento === 'DNI' && data.numeroDocumento.length !== 8) {
         ctx.addIssue({
@@ -92,12 +92,6 @@ const pacienteFormSchema = z.object({
             message: "Debe tener entre 8 y 12 caracteres.",
             path: ["numeroDocumento"],
         });
-    }
-
-    if (data.apoderado_telefono) {
-        if (!/^\d{7,15}$/.test(data.apoderado_telefono)) {
-            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Teléfono inválido (7-15 dígitos).", path: ["apoderado_telefono"] });
-        }
     }
     
     if (data.apoderado_tipoDocumento && data.apoderado_numeroDocumento) {
@@ -478,15 +472,23 @@ export function AddPacienteForm({
                   </FormItem>
                 )}
               />
-              <FormField 
+              <FormField
                 control={form.control}
                 name="telefono"
                 render={({ field }) => (
-                <FormItem>
+                  <FormItem>
                     <FormLabel>Teléfono</FormLabel>
-                    <FormControl><Input placeholder="987654321" {...field} disabled={isOtherPersonaFieldsDisabled && !isEditMode} /></FormControl>
+                    <FormControl>
+                      <PhoneInput
+                        international
+                        defaultCountry="PE"
+                        placeholder="987 654 321"
+                        {...field}
+                        disabled={isOtherPersonaFieldsDisabled && !isEditMode}
+                      />
+                    </FormControl>
                     <FormMessage />
-                </FormItem>
+                  </FormItem>
                 )}
               />
               
@@ -689,10 +691,22 @@ export function AddPacienteForm({
                         </FormItem>
                     )}
                   />
-                  <FormField control={form.control} name="apoderado_telefono"
+                  <FormField
+                    control={form.control}
+                    name="apoderado_telefono"
                     render={({ field }) => (
-                        <FormItem><FormLabel>Teléfono</FormLabel>
-                        <FormControl><Input placeholder="987654321" {...field} value={field.value ?? ""} /></FormControl><FormMessage />
+                        <FormItem>
+                        <FormLabel>Teléfono</FormLabel>
+                        <FormControl>
+                            <PhoneInput
+                                international
+                                defaultCountry="PE"
+                                placeholder="987 654 321"
+                                {...field}
+                                value={field.value ?? ""}
+                            />
+                        </FormControl>
+                        <FormMessage />
                         </FormItem>
                     )}
                   />

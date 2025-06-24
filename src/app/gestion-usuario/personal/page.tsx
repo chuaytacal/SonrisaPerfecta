@@ -182,7 +182,6 @@ const columns: ColumnDef<Personal>[] = [
       const rowIndex = row.index;
       return <span>{rowIndex + 1 + (table.getState().pagination.pageIndex * table.getState().pagination.pageSize)}</span>;
     },
-     enableSorting: false,
   },
   {
     id: "persona.nombre",
@@ -290,9 +289,6 @@ const columns: ColumnDef<Personal>[] = [
             <DropdownMenuItem onClick={() => handleToggleStatus(personal)}>
               {personal.estado === "Activo" ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
               {personal.estado === "Activo" ? "Desactivar" : "Activar"}
-            </DropdownMenuItem>
-             <DropdownMenuItem onClick={() => alert(`Ver detalles de ${personal.persona.nombre}`)}>
-                <Eye className="mr-2 h-4 w-4" /> Ver Detalles
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
