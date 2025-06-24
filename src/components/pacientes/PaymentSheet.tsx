@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { type Presupuesto, type MetodoPago, type ItemPresupuesto, Paciente as PacienteType, TipoComprobante, Pago } from '@/types';
 import { mockPersonalData, mockPagosData, mockPresupuestosData } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, Check, CheckCircle, Gift, Megaphone, Wallet, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Gift, Megaphone, Wallet } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -334,57 +334,59 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
             </div>
             
             <div className={cn("absolute inset-0 transition-transform duration-500 ease-in-out flex flex-col bg-card", step === 2 ? "translate-x-0" : "translate-x-full")}>
-                 <div className="p-6 border-b flex items-center justify-between">
+                 <div className="p-6 border-b flex items-center">
                     <button onClick={() => setStep(1)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
                         <ArrowLeft className="h-4 w-4" />
-                        <span>Caja {'>'} Confirmar Venta</span>
+                        <span>Volver</span>
                     </button>
-                    <SheetClose asChild><Button variant="ghost" size="icon" className="h-6 w-6"><X className="h-4 w-4"/></Button></SheetClose>
                 </div>
                  <ScrollArea className="flex-grow">
                     <div className="p-6">
-                        <div className="space-y-4 max-w-2xl mx-auto">
+                        <h2 className="text-xl font-semibold text-center mb-4">CONFIRMAR VENTA</h2>
+                        <div className="max-w-3xl mx-auto space-y-6">
                             <div className="w-full max-w-sm mx-auto p-4 rounded-lg bg-muted/50 text-center">
                                 <p className="text-sm text-muted-foreground">Monto total a cobrar</p>
                                 <p className="text-3xl font-bold text-primary">S/ {totalACobrar.toFixed(2)}</p>
                             </div>
-                            <div className="space-y-3">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                                     <div><Label>Concepto</Label><p className="text-sm font-medium" title={conceptoTexto}>{conceptoTexto}</p></div>
                                     <div><Label>Paciente</Label><p className="text-sm font-medium">{paciente.persona.nombre} {paciente.persona.apellidoPaterno}</p></div>
-                                    <div>
-                                        <Label>Doctor relacionado a la venta</Label>
-                                        <Select value={doctor?.id} disabled>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder={doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'No asignado'}/>
-                                            </SelectTrigger>
-                                        </Select>
-                                    </div>
-                                    <div>
-                                        <Label>Comprobante</Label>
-                                         <RadioGroup value={comprobante} onValueChange={(val) => setComprobante(val as any)} className="flex space-x-4 mt-2">
-                                            <div className="flex items-center space-x-2"><RadioGroupItem value="Boleta" id="r-boleta" /><Label htmlFor="r-boleta" className="font-normal">Boleta</Label></div>
-                                            <div className="flex items-center space-x-2"><RadioGroupItem value="Factura" id="r-factura" /><Label htmlFor="r-factura" className="font-normal">Factura</Label></div>
-                                            <div className="flex items-center space-x-2"><RadioGroupItem value="Otro" id="r-otro" /><Label htmlFor="r-otro" className="font-normal">Otro</Label></div>
-                                            <div className="flex items-center space-x-2"><RadioGroupItem value="Recibo" id="r-recibo" /><Label htmlFor="r-recibo" className="font-normal">Recibo</Label></div>
-                                        </RadioGroup>
-                                    </div>
                                 </div>
                                 <div>
-                                    <Label>Medio de pago</Label>
-                                    <Select value={metodoPago} onValueChange={(val) => setMetodoPago(val as MetodoPago)}>
-                                        <SelectTrigger><SelectValue placeholder="Seleccione..."/></SelectTrigger>
-                                        <SelectContent>
-                                            {metodoPagoOptions.map(opt => (
-                                                <SelectItem key={opt.value} value={opt.value}>
-                                                    <div className="flex items-center gap-2">
-                                                        <opt.icon className="h-4 w-4" style={{color: 'currentColor'}}/>
-                                                        <span>{opt.label}</span>
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
+                                    <Label>Doctor relacionado a la venta</Label>
+                                    <Select value={doctor?.id} disabled>
+                                        <SelectTrigger className="w-full md:w-1/2">
+                                            <SelectValue placeholder={doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'No asignado'}/>
+                                        </SelectTrigger>
                                     </Select>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  <div>
+                                      <Label>Comprobante</Label>
+                                       <RadioGroup value={comprobante} onValueChange={(val) => setComprobante(val as any)} className="flex space-x-4 mt-2">
+                                          <div className="flex items-center space-x-2"><RadioGroupItem value="Boleta" id="r-boleta" /><Label htmlFor="r-boleta" className="font-normal">Boleta</Label></div>
+                                          <div className="flex items-center space-x-2"><RadioGroupItem value="Factura" id="r-factura" /><Label htmlFor="r-factura" className="font-normal">Factura</Label></div>
+                                          <div className="flex items-center space-x-2"><RadioGroupItem value="Otro" id="r-otro" /><Label htmlFor="r-otro" className="font-normal">Otro</Label></div>
+                                          <div className="flex items-center space-x-2"><RadioGroupItem value="Recibo" id="r-recibo" /><Label htmlFor="r-recibo" className="font-normal">Recibo</Label></div>
+                                      </RadioGroup>
+                                  </div>
+                                  <div>
+                                      <Label>Medio de pago</Label>
+                                      <Select value={metodoPago} onValueChange={(val) => setMetodoPago(val as MetodoPago)}>
+                                          <SelectTrigger><SelectValue placeholder="Seleccione..."/></SelectTrigger>
+                                          <SelectContent>
+                                              {metodoPagoOptions.map(opt => (
+                                                  <SelectItem key={opt.value} value={opt.value}>
+                                                      <div className="flex items-center gap-2">
+                                                          <opt.icon className="h-4 w-4" />
+                                                          <span>{opt.label}</span>
+                                                      </div>
+                                                  </SelectItem>
+                                              ))}
+                                          </SelectContent>
+                                      </Select>
+                                  </div>
                                 </div>
                             </div>
                         </div>
@@ -399,7 +401,7 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
       </SheetContent>
     </Sheet>
      <Dialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-        <DialogContent className="w-[95vw] sm:w-[90vw] max-w-xl p-6">
+        <DialogContent className="w-[95vw] sm:w-[90vw] max-w-md p-6">
             <div className="w-full flex justify-center">
                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                     <Megaphone className="h-10 w-10 text-primary" />

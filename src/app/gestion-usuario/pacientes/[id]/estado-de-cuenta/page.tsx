@@ -54,7 +54,10 @@ export default function EstadoDeCuentaPage() {
     if (foundPaciente) {
       setPaciente(foundPaciente);
       setPersona(foundPaciente.persona);
-      setPresupuestos(mockPresupuestosData.filter(p => p.idPaciente === patientId));
+      const sortedBudgets = mockPresupuestosData
+        .filter(p => p.idPaciente === patientId)
+        .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
+      setPresupuestos(sortedBudgets);
       setPagos(mockPagosData.filter(p => p.idPaciente === patientId));
     } else {
       setPaciente(null);
@@ -91,7 +94,7 @@ export default function EstadoDeCuentaPage() {
       nota: data.nota,
     };
 
-    mockPresupuestosData.push(newBudget);
+    mockPresupuestosData.unshift(newBudget);
     refreshBudgets();
     
     setIsSheetOpen(false);
@@ -104,7 +107,10 @@ export default function EstadoDeCuentaPage() {
   const refreshBudgets = () => {
     const foundPaciente = mockPacientesData.find(p => p.id === patientId);
     if (foundPaciente) {
-        setPresupuestos([...mockPresupuestosData.filter(p => p.idPaciente === patientId)]);
+        const sortedBudgets = mockPresupuestosData
+            .filter(p => p.idPaciente === patientId)
+            .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
+        setPresupuestos(sortedBudgets);
         setPagos([...mockPagosData.filter(p => p.idPaciente === patientId)])
     }
   };

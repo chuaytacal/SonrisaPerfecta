@@ -97,7 +97,24 @@ export const mockEtiquetas: string[] = [
     "Alergia a Penicilina", "Diabético", "Menor de Edad", "Fumador", "Hipertenso", "Covid+", "Postquirúrgico", "Anciano", "Nuevo Tag Ejemplo"
 ];
 
-export let mockPagosData: Pago[] = [];
+export let mockPagosData: Pago[] = [
+  {
+    id: 'pago-inicial-1',
+    idPaciente: 'paciente-1',
+    fechaPago: new Date('2024-05-15T10:00:00Z'),
+    montoTotal: 20,
+    metodoPago: 'Efectivo',
+    tipoComprobante: 'Boleta',
+    doctorResponsableId: 'personal-2',
+    descripcion: '(1) Limpieza Dental Completa',
+    itemsPagados: [{
+      idPresupuesto: 'presupuesto-1',
+      idItem: 'item-1',
+      monto: 20,
+      concepto: 'Limpieza Dental Completa'
+    }]
+  }
+];
 
 export let mockPresupuestosData: Presupuesto[] = [
     {

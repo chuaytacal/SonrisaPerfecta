@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Presupuesto, EstadoPresupuesto, ItemPresupuesto, Paciente as PacienteType } from '@/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -50,6 +50,11 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
     title: string;
     items: ItemPresupuesto[];
   } | null>(null);
+  
+  useEffect(() => {
+    setPresupuesto(initialPresupuesto);
+  }, [initialPresupuesto]);
+
 
   const { estado, id, nombre, fechaCreacion, items, montoPagado, nota } = presupuesto;
 
@@ -67,10 +72,8 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
   };
   
   const handlePaymentSuccess = () => {
-    // onUpdate will be called from the parent, which will cause this component to receive a new 'presupuesto' prop
-    // so we just need to close the sheet.
-    setPaymentContext(null); // Close the sheet
-    onUpdate(); // Trigger parent re-render
+    setPaymentContext(null);
+    onUpdate();
   };
 
   const handlePayItem = (item: ItemPresupuesto) => {
@@ -83,7 +86,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
   const handlePayMultiple = () => {
     const itemsPorPagar = items.filter(item => {
       const subtotal = item.procedimiento.precioBase * item.cantidad;
-      return item.montoPagado < subtotal;
+      return (item.montoPagado || 0) < subtotal;
     });
 
     if (itemsPorPagar.length === 0) {
@@ -115,7 +118,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                       <div className="p-2 font-semibold text-sm">Estado del Presupuesto</div>
                       {Object.entries(statusConfig).map(([key, config]) => (
                         <DropdownMenuItem key={key} onClick={() => handleStateChange(key as EstadoPresupuesto)} className={cn("focus:text-white", config.textClass, `focus:bg-[${config.color}]`)}>
-                          <config.icon className="mr-2 h-4 w-4" style={{ color: 'currentColor' }}/>
+                          <config.icon className="mr-2 h-4 w-4" />
                           <span>{config.label}</span>
                         </DropdownMenuItem>
                       ))}
@@ -129,7 +132,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                 </div>
               </AccordionTrigger>
             </div>
-              <TooltipProvider>
+              <TooltipProvider delayDuration={0}>
               <div className="flex items-center gap-1.5 ml-4">
                   <Tooltip><TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePayMultiple}><DollarSign className="h-4 w-4" /></Button>
@@ -165,7 +168,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                 <TableBody>
                   {items.map((item) => {
                     const subtotal = item.procedimiento.precioBase * item.cantidad;
-                    const porPagar = subtotal - item.montoPagado;
+                    const porPagar = subtotal - (item.montoPagado || 0);
                     const isPaid = porPagar <= 0;
 
                     return (
@@ -173,7 +176,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                         <TableCell className="font-medium">{item.procedimiento.denominacion}</TableCell>
                         <TableCell>{item.cantidad}</TableCell>
                         <TableCell className="text-right">S/ {subtotal.toFixed(2)}</TableCell>
-                        <TableCell className="text-right text-green-600">S/ {item.montoPagado.toFixed(2)}</TableCell>
+                        <TableCell className="text-right text-green-600">S/ {(item.montoPagado || 0).toFixed(2)}</TableCell>
                         <TableCell className="text-right text-red-600">S/ {porPagar.toFixed(2)}</TableCell>
                         <TableCell className="text-right">
                             {isPaid ? (
