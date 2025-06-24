@@ -58,6 +58,8 @@ interface DataTableProps<TData, TValue> {
   onAdd?: () => void;
   addButtonLabel?: string;
   children?: React.ReactNode; // For custom filters or actions area
+  sorting?: SortingState;
+  onSortingChange?: React.Dispatch<React.SetStateAction<SortingState>>;
 }
 
 export function DataTable<TData, TValue>({
@@ -70,8 +72,9 @@ export function DataTable<TData, TValue>({
   onAdd,
   addButtonLabel = "Añadir",
   children,
+  sorting,
+  onSortingChange,
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = React.useState('');
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -82,7 +85,7 @@ export function DataTable<TData, TValue>({
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    onSortingChange: setSorting,
+    onSortingChange: onSortingChange,
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
@@ -323,4 +326,3 @@ export function DataTable<TData, TValue>({
     </div>
   );
 }
-

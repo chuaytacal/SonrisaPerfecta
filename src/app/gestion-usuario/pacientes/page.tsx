@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useRouter } from 'next/navigation'; 
 import { DataTable } from "@/components/ui/data-table";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowUpDown, MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight, Eye } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight, Eye } from "lucide-react";
 import { AddPacienteForm } from "@/components/pacientes/AddPacienteForm"; 
 import { SelectPersonaModal } from "@/components/personal/SelectPersonaModal"; 
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -51,6 +51,16 @@ export default function PacientesPage() {
     description: ""
   });
   const [sortBy, setSortBy] = React.useState<string>("persona.nombre_asc");
+  const [sorting, setSorting] = React.useState<SortingState>([])
+
+  React.useEffect(() => {
+    if (sortBy) {
+        const [id, order] = sortBy.split('_');
+        setSorting([{ id, desc: order === 'desc' }]);
+    } else {
+        setSorting([]);
+    }
+  }, [sortBy]);
 
   const personasNoPacientes = React.useMemo(() => {
     const pacientePersonaIds = new Set(mockPacientesData.map(p => p.idPersona));
@@ -210,21 +220,13 @@ const columns: ColumnDef<Paciente>[] = [
   },
   {
     id: "#",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        #
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
+    header: "#",
     cell: ({ row, table }) => {
       const pageIndex = table.getState().pagination.pageIndex
       const pageSize = table.getState().pagination.pageSize
       return <span>{row.index + 1 + pageIndex * pageSize}</span>
     },
-    sortingFn: (rowA, rowB) => Number(rowA.id) - Number(rowB.id),
+    enableSorting: false,
   },
   {
     id: "persona.nombre", 
@@ -236,7 +238,7 @@ const columns: ColumnDef<Paciente>[] = [
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Nombre
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <MoreHorizontal className="ml-2 h-4 w-4" />
         </Button>
       );
     },
@@ -264,12 +266,13 @@ const columns: ColumnDef<Paciente>[] = [
     accessorKey: "persona.telefono",
     header: "Teléfono",
     cell: ({ row }) => {
-        const paciente = row.original;
-        return (
-            <div>
-                <div>{paciente.persona.telefono}</div>
-            </div>
-        )
+        const phone = row.original.persona.telefono;
+        if (!phone) return <span>N/A</span>;
+        const match = phone.match(/^(\+\d{1,3})(\d+)$/);
+        if (match) {
+            return <span><span className="text-muted-foreground">{match[1]}</span> {match[2]}</span>
+        }
+        return <span>{phone}</span>;
     }
   },
   {
@@ -300,7 +303,7 @@ const columns: ColumnDef<Paciente>[] = [
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Fecha de Ingreso
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <MoreHorizontal className="ml-2 h-4 w-4" />
         </Button>
       );
     },
@@ -387,7 +390,9 @@ const columns: ColumnDef<Paciente>[] = [
         statusColumnId="estado"
         statusOptions={statusOptions}
         onAdd={handleOpenAddPacienteFlow} 
-        addButtonLabel="Añadir Paciente" 
+        addButtonLabel="Añadir Paciente"
+        sorting={sorting}
+        onSortingChange={setSorting}
       >
         <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-full sm:w-auto min-w-[180px]">

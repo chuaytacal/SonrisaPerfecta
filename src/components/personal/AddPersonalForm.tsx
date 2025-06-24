@@ -57,7 +57,6 @@ const personalFormSchema = z.object({
   sexo: z.enum(["M", "F"], { required_error: "Seleccione un sexo." }),
   direccion: z.string().min(1, {message: "La dirección es requerida."}),
   telefono: z.string().refine(isValidPhoneNumber, { message: "Número de teléfono inválido." }),
-  especialidad: z.string().min(1, "La especialidad es requerida."),
   fechaIngreso: z.date({ required_error: "La fecha de ingreso es requerida."}), 
   estado: z.enum(["Activo", "Inactivo"], { required_error: "Seleccione un estado." }),
 }).superRefine((data, ctx) => {
@@ -110,7 +109,6 @@ export function AddPersonalForm({
       sexo: "M",
       direccion: "",
       telefono: "",
-      especialidad: "",
       fechaIngreso: new Date(),
       estado: "Activo",
     },
@@ -121,7 +119,7 @@ export function AddPersonalForm({
       let defaultVals: Partial<PersonalFormValues> = {
         tipoDocumento: "DNI", numeroDocumento: "", nombre: "", apellidoPaterno: "", apellidoMaterno: "",
         fechaNacimiento: new Date(), sexo: "M", direccion: "", telefono: "",
-        especialidad: "", fechaIngreso: new Date(), estado: "Activo",
+        fechaIngreso: new Date(), estado: "Activo",
       };
 
       if (isEditMode && initialPersonalData) { 
@@ -129,7 +127,6 @@ export function AddPersonalForm({
         defaultVals = {
             ...persona, 
             fechaNacimiento: new Date(persona.fechaNacimiento), 
-            especialidad: initialPersonalData.especialidad,
             fechaIngreso: initialPersonalData.fechaIngreso ? new Date(initialPersonalData.fechaIngreso.split('/').reverse().join('-')) : new Date(),
             estado: initialPersonalData.estado,
         };
@@ -137,7 +134,6 @@ export function AddPersonalForm({
         defaultVals = {
             ...selectedPersonaToPreload,
             fechaNacimiento: new Date(selectedPersonaToPreload.fechaNacimiento),
-            especialidad: "",
             fechaIngreso: new Date(),
             estado: "Activo",
         };
@@ -203,7 +199,6 @@ export function AddPersonalForm({
         id: initialPersonalData?.id || `personal-${crypto.randomUUID()}`,
         idPersona: personaData.id,
         persona: personaData,
-        especialidad: values.especialidad,
         fechaIngreso: format(values.fechaIngreso, "dd/MM/yyyy"),
         estado: values.estado,
         avatarUrl: initialPersonalData?.avatarUrl || "",
@@ -215,7 +210,6 @@ export function AddPersonalForm({
 
   const tipoDocumentoOptions: TipoDocumento[] = ["DNI", "EXTRANJERIA", "PASAPORTE"];
   const sexoOptions: {label: string, value: Sexo}[] = [{label: "Masculino", value: "M"}, {label: "Femenino", value: "F"}];
-  const especialidadOptions = ["Ortodoncia", "Endodoncia", "Periodoncia", "Odontopediatría", "Cirugía Oral", "General"];
 
   const title = isEditMode ? "Editar Personal" : (isCreatingNewPersonaFlow ? "Registrar Nueva Persona y Personal" : "Asignar Rol de Personal");
   const description = isEditMode ? "Modifique los datos del miembro del personal." : (isCreatingNewPersonaFlow ? "Complete los campos para la nueva persona y su rol." : "Complete los detalles del rol para la persona seleccionada.");
@@ -377,26 +371,6 @@ export function AddPersonalForm({
               />
               
               <h3 className="text-md font-semibold text-muted-foreground border-b pb-1 pt-4">Datos del Personal</h3>
-              <FormField
-                control={form.control}
-                name="especialidad"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Especialidad</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccione una especialidad" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {especialidadOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <FormField
                 control={form.control}
                 name="fechaIngreso" 

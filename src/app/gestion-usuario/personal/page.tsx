@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { DataTable } from "@/components/ui/data-table";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowUpDown, MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight, Eye } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { AddPersonalForm } from "@/components/personal/AddPersonalForm";
 import { SelectPersonaModal } from "@/components/personal/SelectPersonaModal";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -49,7 +49,17 @@ export default function PersonalPage() {
     title: "",
     description: ""
   });
-  const [sortBy, setSortBy] = React.useState<string>("nombre_asc");
+  const [sortBy, setSortBy] = React.useState<string>("persona.nombre_asc");
+  const [sorting, setSorting] = React.useState<SortingState>([])
+
+  React.useEffect(() => {
+    if (sortBy) {
+        const [id, order] = sortBy.split('_');
+        setSorting([{ id, desc: order === 'desc' }]);
+    } else {
+        setSorting([]);
+    }
+  }, [sortBy]);
 
   const personasNoPersonal = React.useMemo(() => {
     const personalPersonaIds = new Set(mockPersonalData.map(p => p.idPersona));
@@ -176,12 +186,13 @@ const columns: ColumnDef<Personal>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "#",
+    id: '#',
     header: "#",
     cell: ({ row, table }) => {
       const rowIndex = row.index;
       return <span>{rowIndex + 1 + (table.getState().pagination.pageIndex * table.getState().pagination.pageSize)}</span>;
     },
+    enableSorting: false,
   },
   {
     id: "persona.nombre",
@@ -193,7 +204,7 @@ const columns: ColumnDef<Personal>[] = [
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Nombre
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <MoreHorizontal className="ml-2 h-4 w-4" />
         </Button>
       );
     },
@@ -225,12 +236,13 @@ const columns: ColumnDef<Personal>[] = [
     accessorKey: "persona.telefono",
     header: "Teléfono",
     cell: ({ row }) => {
-        const personal = row.original;
-        return (
-            <div>
-                <div>{personal.persona.telefono}</div>
-            </div>
-        )
+        const phone = row.original.persona.telefono;
+        if (!phone) return <span>N/A</span>;
+        const match = phone.match(/^(\+\d{1,3})(\d+)$/);
+        if (match) {
+            return <span><span className="text-muted-foreground">{match[1]}</span> {match[2]}</span>
+        }
+        return <span>{phone}</span>;
     }
   },
   {
@@ -242,7 +254,7 @@ const columns: ColumnDef<Personal>[] = [
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Fecha de Ingreso
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <MoreHorizontal className="ml-2 h-4 w-4" />
         </Button>
       );
     },
@@ -303,7 +315,7 @@ const columns: ColumnDef<Personal>[] = [
   ];
 
   const sortOptions = [
-    { label: "Nombre (A-Z)", value: "persona.nombre_asc" }, // Updated for nested property
+    { label: "Nombre (A-Z)", value: "persona.nombre_asc" }, 
     { label: "Nombre (Z-A)", value: "persona.nombre_desc" },
     { label: "Fecha de Ingreso (Más Reciente)", value: "fechaIngreso_desc" },
     { label: "Fecha de Ingreso (Más Antiguo)", value: "fechaIngreso_asc" },
@@ -327,6 +339,8 @@ const columns: ColumnDef<Personal>[] = [
         statusOptions={statusOptions}
         onAdd={handleOpenAddPersonalFlow}
         addButtonLabel="Añadir Personal"
+        sorting={sorting}
+        onSortingChange={setSorting}
       >
         <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-full sm:w-auto min-w-[180px]">

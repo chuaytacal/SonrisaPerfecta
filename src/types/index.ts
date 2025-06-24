@@ -96,7 +96,6 @@ export type Personal = {
   id: string; // ID del registro de Personal/Especialista
   idPersona: string; // FK a la tabla Persona
   persona: Persona; // Datos de la persona anidados
-  especialidad: string; // "Ortodoncia", "Endodoncia", etc.
   fechaIngreso: string; // "DD/MM/YYYY" - Fecha de ingreso como personal
   estado: "Activo" | "Inactivo";
   avatarUrl?: string; // Específico del rol de personal

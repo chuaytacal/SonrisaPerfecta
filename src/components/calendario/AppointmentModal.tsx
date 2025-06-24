@@ -108,7 +108,7 @@ export function AppointmentModal({ isOpen, onClose, onSave, onDelete, existingAp
       .filter(p => p.estado === 'Activo')
       .map(p => ({
         value: p.id,
-        label: `${p.persona.nombre} ${p.persona.apellidoPaterno} (${p.especialidad})`
+        label: `${p.persona.nombre} ${p.persona.apellidoPaterno}`
       })), []);
 
   const procedimientoOptions = useMemo(() =>
