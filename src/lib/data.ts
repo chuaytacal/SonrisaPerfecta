@@ -1,5 +1,5 @@
 
-import type { MotivoCita, Procedimiento, Persona, Paciente, Personal, AntecedentesMedicosData, Presupuesto, Pago, HistoriaClinica } from '@/types';
+import type { MotivoCita, Procedimiento, Persona, Paciente, Personal, AntecedentesMedicosData, Presupuesto, Pago, HistoriaClinica, Usuario, Rol } from '@/types';
 import type { Appointment } from '@/types/calendar';
 import { addDays, setHours, setMinutes } from 'date-fns';
 import type { DientesMap } from '@/components/odontograma/setting';
@@ -19,6 +19,12 @@ export const mockPersonasData: Persona[] = [
   { id: "persona-g1", tipoDocumento: "DNI", numeroDocumento: "29876543", nombre: "Peach", apellidoPaterno: "Toadstool", apellidoMaterno: "Mushroom", fechaNacimiento: new Date("1985-11-18"), sexo: "F", direccion: "Mushroom Castle", telefono: "+51999888777", email: "peach@example.com" },
 ];
 
+export let mockUsuariosData: Usuario[] = [
+  { id: "usuario-1", usuario: "jschilderm", contrasena: "Password123", rol: "Doctor", idPersonal: "personal-1" },
+  { id: "usuario-2", usuario: "pventurir", contrasena: "Password123", rol: "Doctor", idPersonal: "personal-2" },
+  { id: "usuario-3", usuario: "cpandolfig", contrasena: "Password123", rol: "Administrador", idPersonal: "personal-3" },
+];
+
 export let mockPersonalData: Personal[] = [
   {
     id: "personal-1",
@@ -28,6 +34,7 @@ export let mockPersonalData: Personal[] = [
     estado: "Inactivo",
     avatarUrl: "https://placehold.co/40x40.png?text=JS",
     especialidad: "Odontología General",
+    idUsuario: "usuario-1",
   },
   {
     id: "personal-2",
@@ -37,6 +44,7 @@ export let mockPersonalData: Personal[] = [
     estado: "Activo",
     avatarUrl: "https://placehold.co/40x40.png?text=PV",
     especialidad: "Ortodoncia",
+    idUsuario: "usuario-2",
   },
   {
     id: "personal-3",
@@ -46,6 +54,7 @@ export let mockPersonalData: Personal[] = [
     estado: "Activo",
     avatarUrl: "https://placehold.co/40x40.png?text=CP",
     especialidad: "Endodoncia",
+    idUsuario: "usuario-3",
   },
 ];
 

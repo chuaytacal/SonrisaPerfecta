@@ -28,8 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Persona, Personal } from "@/types";
-import { mockPersonasData, mockPersonalData } from "@/lib/data";
+import type { Persona, Personal, Usuario } from "@/types";
+import { mockPersonasData, mockPersonalData, mockUsuariosData } from "@/lib/data";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 
@@ -37,6 +37,7 @@ export default function PersonalPage() {
   const [personalList, setPersonalList] = React.useState<Personal[]>(mockPersonalData);
   const [isAddPersonalFormOpen, setIsAddPersonalFormOpen] = React.useState(false);
   const [editingPersonal, setEditingPersonal] = React.useState<Personal | null>(null);
+  const [editingUsuario, setEditingUsuario] = React.useState<Usuario | null>(null);
   const [selectedPersonaToPreload, setSelectedPersonaToPreload] = React.useState<Persona | null>(null);
   const [isCreatingNewPersonaFlow, setIsCreatingNewPersonaFlow] = React.useState(false);
   const [isSelectPersonaModalOpen, setIsSelectPersonaModalOpen] = React.useState(false);
@@ -67,14 +68,27 @@ export default function PersonalPage() {
     return mockPersonasData.filter(persona => !personalPersonaIds.has(persona.id));
   }, [personalList]);
 
-  const handleSavePersonal = (savedPersonal: Personal) => {
+  const handleSavePersonal = (savedPersonal: Personal, savedUser: Usuario) => {
+    // 1. Update/Add Persona
     const personaIndex = mockPersonasData.findIndex(p => p.id === savedPersonal.idPersona);
     if (personaIndex > -1) {
       mockPersonasData[personaIndex] = savedPersonal.persona;
     } else {
       mockPersonasData.push(savedPersonal.persona);
     }
+
+    // 2. Update/Add Usuario
+    const userIndex = mockUsuariosData.findIndex(u => u.id === savedUser.id);
+    if (userIndex > -1) {
+        mockUsuariosData[userIndex] = savedUser;
+    } else {
+        mockUsuariosData.push(savedUser);
+    }
+
+    // 3. Link user to personal record
+    savedPersonal.idUsuario = savedUser.id;
   
+    // 4. Update/Add Personal
     const personalIndex = mockPersonalData.findIndex(p => p.id === savedPersonal.id);
     if (personalIndex > -1) {
       mockPersonalData[personalIndex] = savedPersonal;
@@ -90,12 +104,14 @@ export default function PersonalPage() {
     });
     setIsAddPersonalFormOpen(false);
     setEditingPersonal(null);
+    setEditingUsuario(null);
     setSelectedPersonaToPreload(null);
     setIsCreatingNewPersonaFlow(false);
   };
   
   const handleOpenAddPersonalFlow = () => {
     setEditingPersonal(null); 
+    setEditingUsuario(null);
     setSelectedPersonaToPreload(null);
     setIsCreatingNewPersonaFlow(false);
     setIsSelectPersonaModalOpen(true);
@@ -118,7 +134,13 @@ export default function PersonalPage() {
   const openEditModal = (personal: Personal) => {
     setEditingPersonal(personal);
     setSelectedPersonaToPreload(personal.persona);
-    setIsCreatingNewPersonaFlow(false); 
+    if (personal.idUsuario) {
+        const foundUser = mockUsuariosData.find(u => u.id === personal.idUsuario);
+        setEditingUsuario(foundUser || null);
+    } else {
+        setEditingUsuario(null);
+    }
+    setIsCreatingNewPersonaFlow(false);
     setIsAddPersonalFormOpen(true);
   };
 
@@ -237,6 +259,20 @@ const columns: ColumnDef<Personal>[] = [
     }
   },
   {
+    id: 'rol',
+    header: 'Rol',
+    cell: ({ row }) => {
+      const personal = row.original;
+      const usuario = mockUsuariosData.find(u => u.id === personal.idUsuario);
+      return usuario ? <Badge variant="outline">{usuario.rol}</Badge> : <span className="text-xs text-muted-foreground">Sin rol</span>;
+    },
+    filterFn: (row, id, value) => {
+      const personal = row.original;
+      const usuario = mockUsuariosData.find(u => u.id === personal.idUsuario);
+      return usuario?.rol.toLowerCase().includes(String(value).toLowerCase());
+    }
+  },
+  {
     accessorKey: "persona.telefono",
     header: "Teléfono",
     cell: ({ row }) => {
@@ -251,7 +287,6 @@ const columns: ColumnDef<Personal>[] = [
                 return <span><span className="text-muted-foreground">{countryCode}</span> {nationalNumber}</span>
             }
         } catch (error) {
-             // Fallback for any parsing error
         }
         return <span>{phone}</span>;
     }
@@ -382,10 +417,12 @@ const columns: ColumnDef<Personal>[] = [
             if (!isOpen) {
                 setEditingPersonal(null);
                 setSelectedPersonaToPreload(null);
+                setEditingUsuario(null);
                 setIsCreatingNewPersonaFlow(false);
             }
         }}
         initialPersonalData={editingPersonal}
+        initialUsuarioData={editingUsuario}
         selectedPersonaToPreload={selectedPersonaToPreload}
         isCreatingNewPersonaFlow={isCreatingNewPersonaFlow}
         onStaffSaved={handleSavePersonal}

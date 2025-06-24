@@ -18,6 +18,16 @@ export interface Persona {
   email: string;
 }
 
+export type Rol = 'Administrador' | 'Doctor' | 'Secretaria';
+
+export interface Usuario {
+  id: string;
+  usuario: string;
+  contrasena: string;
+  rol: Rol;
+  idPersonal: string;
+}
+
 export type EtiquetaPaciente = string;
 
 export interface AntecedentesMedicosData {
@@ -135,6 +145,8 @@ export type Personal = {
   estado: "Activo" | "Inactivo";
   avatarUrl?: string; // Específico del rol de personal
   especialidad?: string;
+  idUsuario?: string;
+  usuario?: Usuario;
 };
 
 export type MetodoPago = 'Efectivo' | 'Tarjeta' | 'Transferencia' | 'Otro';
