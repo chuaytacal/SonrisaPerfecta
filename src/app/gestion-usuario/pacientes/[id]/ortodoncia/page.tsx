@@ -280,14 +280,14 @@ export default function OrtodonciaPage() {
                             <TableRow>
                             <TableHead className="w-[150px]">
                                 <Button variant="ghost" onClick={() => requestSort('fecha')} className="px-1">
-                                  FECHA
+                                  Fecha
                                   <ArrowUpDown className="ml-2 h-4 w-4" />
                                 </Button>
                             </TableHead>
-                            {columnVisibility.doctor && <TableHead className="w-[200px]">DOCTOR</TableHead>}
-                            {columnVisibility.tratamiento && <TableHead>TRATAMIENTO</TableHead>}
-                            {columnVisibility.notas && <TableHead>NOTAS</TableHead>}
-                            {columnVisibility.honorarios && <TableHead className="text-right w-[120px]">HONORARIOS</TableHead>}
+                            {columnVisibility.doctor && <TableHead className="w-[200px]">Doctor</TableHead>}
+                            {columnVisibility.tratamiento && <TableHead>Tratamiento</TableHead>}
+                            {columnVisibility.notas && <TableHead>Notas</TableHead>}
+                            {columnVisibility.honorarios && <TableHead className="text-right w-[120px]">Honorarios</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>

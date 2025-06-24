@@ -413,7 +413,7 @@ export default function EstadoDeCuentaPage() {
                                 {columnVisibility.fechaPago && (
                                   <TableHead className="w-[150px]">
                                       <Button variant="ghost" onClick={() => requestSort('fechaPago')} className="px-1">
-                                          FECHA <ArrowUpDown className="ml-2 h-4 w-4" />
+                                          Fecha <ArrowUpDown className="ml-2 h-4 w-4" />
                                       </Button>
                                   </TableHead>
                                 )}

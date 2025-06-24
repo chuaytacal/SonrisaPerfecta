@@ -23,7 +23,6 @@ import {
   PlusSquare,
   BookMarked,
   History,
-  CircleDollarSign,
   ClipboardType,
   FilePlus,
   BarChart3,
@@ -56,15 +55,7 @@ const sidebarNavItems = [
       { href: '/inventario/productos/registrar', label: 'Registrar Productos', icon: PlusSquare },
     ],
   },
-  {
-    label: 'Historial de Pago',
-    icon: History,
-    basePathForActive: '/historial-pago',
-    subItems: [
-      { href: '/historial-pago/registrar', label: 'Registrar Pago', icon: CircleDollarSign },
-      { href: '/historial-pago/lista', label: 'Lista de Pagos', icon: List },
-    ],
-  },
+  { href: '/historial-pago', label: 'Historial de Pagos', icon: History },
   {
     label: 'Recetas',
     icon: ClipboardType,
