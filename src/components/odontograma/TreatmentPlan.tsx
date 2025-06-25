@@ -106,6 +106,8 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType, onDie
             nota: mapaNotas.get(item.id) || '',
         }));
     });
+    console.log(planTratamiento)
+    console.log(dientesMap)
   }, [dientesMap, odontogramType]);
 
   const abrirModalNotas = (id: string) => {
