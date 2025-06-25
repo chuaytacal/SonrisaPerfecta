@@ -1,19 +1,19 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import Image from 'next/image';
 import { login } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { KeyRound, Loader2, User } from 'lucide-react';
+import { KeyRound, Loader2, User, Eye, EyeOff } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 function LoginButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" className="w-full" disabled={pending}>
+    <Button type="submit" disabled={pending} className="w-auto">
       {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
       Iniciar Sesión
     </Button>
@@ -22,6 +22,7 @@ function LoginButton() {
 
 export default function LoginPage() {
   const [state, formAction] = useActionState(login, undefined);
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-primary/10 p-4">
@@ -30,7 +31,7 @@ export default function LoginPage() {
         {/* Left Panel: Image */}
         <div className="relative hidden h-full lg:block">
           <Image
-            src="https://placehold.co/600x600.png"
+            src="/foto-dental.jpg"
             alt="Clínica Dental Loayza"
             fill
             style={{ objectFit: 'cover' }}
@@ -80,11 +81,21 @@ export default function LoginPage() {
                     <Input
                         id="contrasena"
                         name="contrasena"
-                        type="password"
+                        type={showPassword ? 'text' : 'password'}
                         placeholder="Contraseña"
-                        className="pl-10"
+                        className="pl-10 pr-10"
                         required
                     />
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:bg-transparent"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </Button>
                 </div>
             </div>
 
@@ -97,8 +108,10 @@ export default function LoginPage() {
                 </AlertDescription>
               </Alert>
             )}
-
-            <LoginButton />
+            
+            <div className="flex justify-center pt-2">
+                <LoginButton />
+            </div>
           </form>
         </div>
       </div>
