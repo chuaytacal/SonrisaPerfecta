@@ -262,32 +262,100 @@ export default function CalendarioPage() {
     const existingIndex = mockAppointmentsData.findIndex(app => app.id === appointmentToSave.id);
     if (existingIndex > -1) {
         mockAppointmentsData[existingIndex] = appointmentToSave;
+        
+        // Find and sync the associated budget
+        const budgetToUpdate = mockPresupuestosData.find(b => b.idCita === appointmentToSave.id);
+
+        if (budgetToUpdate) {
+            // Budget exists, sync it
+            budgetToUpdate.fechaAtencion = appointmentToSave.start;
+            budgetToUpdate.doctorResponsableId = appointmentToSave.idDoctor;
+            budgetToUpdate.nombre = appointmentToSave.motivoCita.nombre;
+
+            const newProcedimientoIds = new Set((appointmentToSave.procedimientos || []).map(p => p.id));
+            
+            // Remove items (and their payments) no longer in the appointment
+            const itemsToRemove = budgetToUpdate.items.filter(item => !newProcedimientoIds.has(item.procedimiento.id));
+            if (itemsToRemove.length > 0) {
+                const itemIdsToRemove = new Set(itemsToRemove.map(item => item.id));
+                const paymentsToKeep = mockPagosData.filter(pago => 
+                    !pago.itemsPagados.some(itemPagado => 
+                        itemPagado.idPresupuesto === budgetToUpdate.id && itemIdsToRemove.has(itemPagado.idItem)
+                    )
+                );
+                mockPagosData.length = 0;
+                Array.prototype.push.apply(mockPagosData, paymentsToKeep);
+            }
+            
+            // Filter out old items and add new ones
+            const existingItems = budgetToUpdate.items.filter(item => newProcedimientoIds.has(item.procedimiento.id));
+            const newProcedures = (appointmentToSave.procedimientos || []).filter(p => !existingItems.some(item => item.procedimiento.id === p.id));
+            
+            const newItems = newProcedures.map(proc => ({
+              id: `item-${crypto.randomUUID()}`,
+              procedimiento: proc,
+              cantidad: 1,
+              montoPagado: 0,
+            }));
+
+            budgetToUpdate.items = [...existingItems, ...newItems];
+
+            // Recalculate total paid amount for the budget
+            budgetToUpdate.montoPagado = budgetToUpdate.items.reduce((sum, item) => sum + (item.montoPagado || 0), 0);
+            
+            // If all procedures are removed, delete the budget
+            if (budgetToUpdate.items.length === 0) {
+                 const budgetIndex = mockPresupuestosData.findIndex(p => p.id === budgetToUpdate.id);
+                if (budgetIndex > -1) {
+                    mockPresupuestosData.splice(budgetIndex, 1);
+                }
+            }
+        } else if (formData.procedimientos && formData.procedimientos.length > 0) {
+            // No budget existed, but now there are procedures, so create one
+            const newBudget: Presupuesto = {
+              id: `presupuesto-${crypto.randomUUID()}`,
+              idHistoriaClinica: paciente.idHistoriaClinica,
+              idCita: appointmentToSave.id,
+              nombre: motivoCita.nombre,
+              fechaCreacion: new Date(),
+              fechaAtencion: startDateTime,
+              estado: 'Creado',
+              montoPagado: 0,
+              items: formData.procedimientos.map(p => ({
+                id: `item-${crypto.randomUUID()}`,
+                procedimiento: p,
+                cantidad: 1,
+                montoPagado: 0,
+              })),
+              doctorResponsableId: doctor.id
+            };
+            mockPresupuestosData.unshift(newBudget);
+        }
+
     } else {
         mockAppointmentsData.push(appointmentToSave);
+        // Auto-create a budget if there are procedures on creation
+        if (formData.procedimientos && formData.procedimientos.length > 0) {
+          const newBudget: Presupuesto = {
+            id: `presupuesto-${crypto.randomUUID()}`,
+            idHistoriaClinica: paciente.idHistoriaClinica,
+            idCita: appointmentToSave.id,
+            nombre: motivoCita.nombre,
+            fechaCreacion: new Date(),
+            fechaAtencion: startDateTime,
+            estado: 'Creado',
+            montoPagado: 0,
+            items: formData.procedimientos.map(p => ({
+              id: `item-${crypto.randomUUID()}`,
+              procedimiento: p,
+              cantidad: 1,
+              montoPagado: 0,
+            })),
+            doctorResponsableId: doctor.id
+          };
+          mockPresupuestosData.unshift(newBudget);
+        }
     }
-    
-    // Auto-create a budget if there are procedures
-    if (formData.procedimientos && formData.procedimientos.length > 0 && !editingAppointment) {
-      const newBudget: Presupuesto = {
-        id: `presupuesto-${crypto.randomUUID()}`,
-        idHistoriaClinica: paciente.idHistoriaClinica,
-        idCita: appointmentToSave.id,
-        nombre: motivoCita.nombre,
-        fechaCreacion: new Date(),
-        fechaAtencion: startDateTime,
-        estado: 'Creado',
-        montoPagado: 0,
-        items: formData.procedimientos.map(p => ({
-          id: `item-${crypto.randomUUID()}`,
-          procedimiento: p,
-          cantidad: 1,
-          montoPagado: 0,
-        })),
-        doctorResponsableId: doctor.id
-      };
-      mockPresupuestosData.unshift(newBudget);
-    }
-
 
     setAppointments([...mockAppointmentsData]); 
 
@@ -349,6 +417,15 @@ export default function CalendarioPage() {
   
     // Add the new appointment to the list
     mockAppointmentsData.push(newAppointment);
+
+    // Sync budget to new appointment
+    const originalBudget = mockPresupuestosData.find(b => b.idCita === selectedEventForPopover.id);
+    if (originalBudget) {
+        originalBudget.idCita = newAppointment.id;
+        originalBudget.fechaAtencion = newAppointment.start;
+        originalBudget.doctorResponsableId = newAppointment.idDoctor;
+    }
+
 
     // 3. Update state and close modals
     setAppointments([...mockAppointmentsData]);
@@ -623,3 +700,5 @@ export default function CalendarioPage() {
     </div>
   );
 }
+
+    
