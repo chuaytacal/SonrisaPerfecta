@@ -28,95 +28,98 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen w-full flex items-center justify-center p-4 bg-primary/10">
-        {/* Main Card Container */}
-        <div className="relative w-full max-w-6xl min-h-[75vh] bg-card rounded-2xl shadow-2xl flex overflow-hidden">
-            
-            {/* Left Panel (Image with Curve) */}
-            <div className="w-1/2 hidden md:block relative">
-                 <Image
-                    src={dentalPhoto}
-                    alt="Fondo de la clínica dental"
-                    fill
-                    className="object-cover"
-                    priority
-                />
-                {/* The Tint */}
-                <div className="absolute inset-0 bg-primary/50"></div>
-                {/* The S-Curve SVG Overlay */}
-                <div className="absolute top-0 right-0 h-full w-24 -mr-1 z-10">
-                    <svg viewBox="0 0 100 700" className="h-full w-auto" fill="hsl(var(--card))" preserveAspectRatio="none">
-                       {/* This path creates the S-curve shape that separates the two panels */}
-                       <path d="M 0 0 C 100 250, 0 450, 0 700 L 100 700 L 100 0 Z" />
-                    </svg>
-                </div>
-            </div>
+      {/* Contenedor principal: más grande y con más sombra */}
+      <div className="relative w-full max-w-7xl min-h-[80vh] bg-card rounded-2xl shadow-2xl flex overflow-hidden">
+          
+          {/* Panel Izquierdo: Ocupa la mitad del espacio y contiene la imagen y la curva */}
+          <div className="w-1/2 hidden md:block relative">
+              <Image
+                  src={dentalPhoto}
+                  alt="Fondo de la clínica dental"
+                  fill
+                  className="object-cover"
+                  priority
+              />
+              {/* Tinte azulado */}
+              <div className="absolute inset-0 bg-primary/50"></div>
+              
+              {/* Separador Curvo Mejorado: más ancho y superpuesto */}
+              <div className="absolute top-0 right-0 h-full w-32 -mr-16 z-10">
+                  <svg viewBox="0 0 100 700" className="h-full w-full" fill="hsl(var(--card))" preserveAspectRatio="none">
+                      <path d="M 0 0 C 150 250, -50 450, 0 700 L 100 700 L 100 0 Z" />
+                  </svg>
+              </div>
+          </div>
 
-            {/* Right Panel (Form) */}
-            <div className="w-full md:w-1/2 p-8 sm:p-12 flex flex-col justify-center bg-card">
-                <div className="mb-6 flex justify-center">
-                    <Logo width={200} height={50} />
-                </div>
-                <div className="text-center">
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Bienvenido de Vuelta</h1>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                    Ingrese sus credenciales para acceder al panel.
-                    </p>
-                </div>
-                
-                <form action={formAction} className="mt-8 space-y-4">
-                    <div className="space-y-2">
-                        <div className="relative">
-                            <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                id="usuario"
-                                name="usuario"
-                                type="text"
-                                placeholder="Usuario"
-                                className="pl-10"
-                                required
-                            />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <div className="relative">
-                            <KeyRound className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                id="contrasena"
-                                name="contrasena"
-                                type={showPassword ? 'text' : 'password'}
-                                placeholder="Contraseña"
-                                className="pl-10 pr-10"
-                                required
-                            />
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:bg-transparent"
-                                onClick={() => setShowPassword((prev) => !prev)}
-                                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                            >
-                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                            </Button>
-                        </div>
-                    </div>
+          {/* Panel Derecho: Ocupa la otra mitad y contiene el formulario */}
+          <div className="w-full md:w-1/2 p-8 sm:p-12 flex flex-col justify-center bg-card">
+              <div className="mx-auto w-full max-w-sm">
+                  <div className="mb-8 flex justify-center">
+                      <Logo width={200} height={50} />
+                  </div>
+                  
+                  <div className="text-center mb-8">
+                      <h1 className="text-3xl font-bold tracking-tight text-foreground">Bienvenido de Vuelta</h1>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                          Ingrese sus credenciales para acceder al panel.
+                      </p>
+                  </div>
+                  
+                  <form action={formAction} className="space-y-4">
+                      <div className="space-y-2">
+                          <div className="relative">
+                              <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                              <Input
+                                  id="usuario"
+                                  name="usuario"
+                                  type="text"
+                                  placeholder="Usuario"
+                                  className="pl-10"
+                                  required
+                              />
+                          </div>
+                      </div>
+                      <div className="space-y-2">
+                          <div className="relative">
+                              <KeyRound className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                              <Input
+                                  id="contrasena"
+                                  name="contrasena"
+                                  type={showPassword ? 'text' : 'password'}
+                                  placeholder="Contraseña"
+                                  className="pl-10 pr-10"
+                                  required
+                              />
+                              <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:bg-transparent"
+                                  onClick={() => setShowPassword((prev) => !prev)}
+                                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                              >
+                                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                              </Button>
+                          </div>
+                      </div>
 
-                    {state?.error && (
-                    <Alert variant="destructive">
-                        <KeyRound className="h-4 w-4" />
-                        <AlertTitle>Error de Autenticación</AlertTitle>
-                        <AlertDescription>
-                        {state.error}
-                        </AlertDescription>
-                    </Alert>
-                    )}
-                    
-                    <div className="flex justify-center pt-2">
-                        <LoginButton />
-                    </div>
-                </form>
-            </div>
-        </div>
+                      {state?.error && (
+                      <Alert variant="destructive">
+                          <KeyRound className="h-4 w-4" />
+                          <AlertTitle>Error de Autenticación</AlertTitle>
+                          <AlertDescription>
+                          {state.error}
+                          </AlertDescription>
+                      </Alert>
+                      )}
+                      
+                      <div className="flex justify-center pt-2">
+                          <LoginButton />
+                      </div>
+                  </form>
+              </div>
+          </div>
+      </div>
     </main>
   );
 }
