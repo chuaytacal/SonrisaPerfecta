@@ -42,6 +42,9 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
       x={x}
       y={y}
       fill="white"
+      stroke="black"
+      strokeWidth={0.5}
+      paintOrder="stroke"
       textAnchor="middle"
       dominantBaseline="central"
       className="text-xs font-bold pointer-events-none"
@@ -333,7 +336,7 @@ export default function ReportesPage() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Legend content={<ChartLegendContent />} />
+                <Legend content={<ChartLegendContent className="flex-wrap" />} />
               </PieChart>
             </ChartContainer>
             ) : (<div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">Cargando gráfico...</div>) }

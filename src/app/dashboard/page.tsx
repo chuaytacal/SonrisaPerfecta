@@ -27,6 +27,9 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
       x={x}
       y={y}
       fill="white"
+      stroke="black"
+      strokeWidth={0.5}
+      paintOrder="stroke"
       textAnchor="middle"
       dominantBaseline="central"
       className="text-xs font-bold pointer-events-none"
@@ -251,7 +254,7 @@ export default function DashboardPage() {
                         <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as AppointmentState]} />
                       ))}
                     </Pie>
-                    <Legend content={<ChartLegendContent />} />
+                    <Legend content={<ChartLegendContent className="flex-wrap" />} />
                   </PieChart>
                 </ChartContainer>
              ) : (
