@@ -5,7 +5,6 @@ import React, { useState, useEffect } from 'react';
 import type { ItemPresupuesto, Paciente, Presupuesto, Pago, MetodoPago } from '@/types';
 import { mockPagosData, mockPersonalData, mockPresupuestosData } from '@/lib/data';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 
 import {
   Sheet,
@@ -38,10 +37,17 @@ interface EditServiceSheetProps {
   onUpdate: () => void;
 }
 
+interface EditablePago {
+    id: string; // Original Pago ID
+    fechaPago: Date;
+    metodoPago: MetodoPago;
+    monto: number;
+}
+
 export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUpdate }: EditServiceSheetProps) {
   const { toast } = useToast();
-  const [pagos, setPagos] = useState<Pago[]>([]);
-  const [paymentToDelete, setPaymentToDelete] = useState<Pago | null>(null);
+  const [editablePagos, setEditablePagos] = useState<EditablePago[]>([]);
+  const [paymentToDelete, setPaymentToDelete] = useState<EditablePago | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isExceededAlertOpen, setIsExceededAlertOpen] = useState(false);
   const [exceededInfo, setExceededInfo] = useState<{ typed: number, max: number } | null>(null);
@@ -49,24 +55,36 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
 
   useEffect(() => {
     if (isOpen) {
-      const pagosFiltrados = mockPagosData.filter(pago => 
-        pago.itemsPagados.some(itemPagado => itemPagado.idItem === item.id && itemPagado.idPresupuesto === presupuesto.id)
-      );
-      setPagos(JSON.parse(JSON.stringify(pagosFiltrados)));
+      const pagosDelItem = mockPagosData.reduce<EditablePago[]>((acc, pago) => {
+        const itemPagado = pago.itemsPagados.find(
+          (ip) => ip.idItem === item.id && ip.idPresupuesto === presupuesto.id
+        );
+        if (itemPagado) {
+          acc.push({
+            id: pago.id,
+            fechaPago: pago.fechaPago,
+            metodoPago: pago.metodoPago,
+            monto: itemPagado.monto,
+          });
+        }
+        return acc;
+      }, []);
+      setEditablePagos(JSON.parse(JSON.stringify(pagosDelItem)));
     }
   }, [isOpen, item, presupuesto.id]);
 
   const subtotal = item.procedimiento.precioBase * item.cantidad;
-  const pagado = pagos.reduce((acc, p) => acc + (typeof p.montoTotal === 'number' ? p.montoTotal : parseFloat(p.montoTotal as any)), 0);
+  const pagado = editablePagos.reduce((acc, p) => acc + p.monto, 0);
   const porPagar = subtotal - pagado;
 
-  const handlePagoChange = (pagoId: string, field: keyof Omit<Pago, 'id' | 'idPaciente' | 'itemsPagados'>, value: any) => {
+  const handlePagoChange = (pagoId: string, field: 'fechaPago' | 'metodoPago' | 'monto', value: any) => {
     let finalValue = value;
-    if (field === 'montoTotal') {
+    if (field === 'monto') {
         const newMonto = parseFloat(value) || 0;
-        const otrosPagosMonto = pagos
+        
+        const otrosPagosMonto = editablePagos
             .filter(p => p.id !== pagoId)
-            .reduce((acc, p) => acc + p.montoTotal, 0);
+            .reduce((acc, p) => acc + p.monto, 0);
         
         const maxPermitido = parseFloat((subtotal - otrosPagosMonto).toFixed(2));
 
@@ -79,7 +97,7 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
         }
     }
     
-    setPagos(prev =>
+    setEditablePagos(prev =>
       prev.map(p => (p.id === pagoId ? { ...p, [field]: finalValue } : p))
     );
   };
@@ -87,7 +105,7 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
   const handleMontoBlur = (pagoId: string, currentMontoStr: string) => {
       const currentMonto = parseFloat(currentMontoStr) || 0;
       if(currentMonto <= 0) {
-          const p = pagos.find(p => p.id === pagoId);
+          const p = editablePagos.find(p => p.id === pagoId);
           if(p) {
             setPaymentToDelete(p);
             setIsDeleteConfirmOpen(true);
@@ -97,7 +115,7 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
 
   const confirmDeletePayment = () => {
     if (!paymentToDelete) return;
-    setPagos(prev => prev.filter(p => p.id !== paymentToDelete.id));
+    setEditablePagos(prev => prev.filter(p => p.id !== paymentToDelete.id));
     setIsDeleteConfirmOpen(false);
     setPaymentToDelete(null);
     toast({ title: "Eliminación pendiente", description: "El pago se eliminará permanentemente al guardar los cambios." });
@@ -108,29 +126,26 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
     const presupuestoIndex = mockPresupuestosData.findIndex(p => p.id === presupuesto.id);
     if (presupuestoIndex === -1) return;
 
-    const originalPagoIds = new Set(mockPagosData
-        .filter(p => p.itemsPagados.some(ip => ip.idItem === item.id && ip.idPresupuesto === presupuesto.id))
-        .map(p => p.id)
-    );
+    mockPagosData.forEach(pago => {
+        const pagoEditable = editablePagos.find(ep => ep.id === pago.id);
+        const itemPagadoOriginal = pago.itemsPagados.find(ip => ip.idItem === item.id && ip.idPresupuesto === presupuesto.id);
 
-    const currentPagoIds = new Set(pagos.map(p => p.id));
-    const deletedPagoIds = [...originalPagoIds].filter(id => !currentPagoIds.has(id));
+        if (pagoEditable && itemPagadoOriginal) {
+            itemPagadoOriginal.monto = pagoEditable.monto;
+            pago.fechaPago = pagoEditable.fechaPago;
+            pago.metodoPago = pagoEditable.metodoPago;
+        } else if (!pagoEditable && itemPagadoOriginal) {
+             pago.itemsPagados = pago.itemsPagados.filter(ip => ip.idItem !== item.id);
+        }
 
-    // Update mockPagosData
-    // 1. Remove deleted payments
-    let tempPayments = mockPagosData.filter(p => !deletedPagoIds.includes(p.id));
-    // 2. Update existing payments
-    const finalPayments = tempPayments.map(p => {
-        const updatedPago = pagos.find(up => up.id === p.id);
-        return updatedPago || p;
+        pago.montoTotal = pago.itemsPagados.reduce((sum, ip) => sum + ip.monto, 0);
     });
 
+    const paymentsToKeep = mockPagosData.filter(p => p.itemsPagados.length > 0);
     mockPagosData.length = 0;
-    Array.prototype.push.apply(mockPagosData, finalPayments);
+    Array.prototype.push.apply(mockPagosData, paymentsToKeep);
     
-    // Recalculate item and budget totals
-    const newItemMontoPagado = pagos.reduce((sum, p) => sum + p.montoTotal, 0);
-
+    const newItemMontoPagado = editablePagos.reduce((sum, p) => sum + p.monto, 0);
     const itemIndex = mockPresupuestosData[presupuestoIndex].items.findIndex(i => i.id === item.id);
     if (itemIndex > -1) {
         mockPresupuestosData[presupuestoIndex].items[itemIndex].montoPagado = newItemMontoPagado;
@@ -142,7 +157,6 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
     if (mockPresupuestosData[presupuestoIndex].montoPagado >= totalPresupuestoCalculado) {
       mockPresupuestosData[presupuestoIndex].estado = 'Terminado';
     }
-
 
     onUpdate();
     toast({ title: "Servicio Actualizado", description: `Los pagos de "${item.procedimiento.denominacion}" han sido actualizados.` });
@@ -161,7 +175,6 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
         </SheetHeader>
         <ScrollArea className="flex-grow">
           <div className="p-6 space-y-6">
-            {/* Service Details */}
             <div className="space-y-4">
                 <h3 className="text-lg font-medium">{item.procedimiento.denominacion}</h3>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -175,7 +188,6 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
                     <div><Label>Por Pagar</Label><p className="font-mono text-lg text-red-600">S/ {porPagar.toFixed(2)}</p></div>
                 </div>
             </div>
-            {/* Payments Table */}
             <div className="space-y-2">
               <Label>Pagos Registrados para este Servicio</Label>
               <div className="border rounded-lg">
@@ -183,16 +195,13 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
                   <TableHeader>
                     <TableRow>
                       <TableHead>Fecha</TableHead>
-                      <TableHead>Doctor</TableHead>
                       <TableHead>Medio de Pago</TableHead>
                       <TableHead className="text-right">Monto</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pagos.length > 0 ? (
-                      pagos.map(pago => {
-                        const doctor = mockPersonalData.find(d => d.id === pago.doctorResponsableId);
-                        return (
+                    {editablePagos.length > 0 ? (
+                      editablePagos.map(pago => (
                           <TableRow key={pago.id}>
                               <TableCell className="w-[140px]">
                                   <Popover>
@@ -212,26 +221,20 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
                                   </Popover>
                               </TableCell>
                               <TableCell className="w-[180px]">
-                                  <Input
-                                    value={doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'N/A'}
-                                    disabled
-                                  />
-                              </TableCell>
-                              <TableCell className="w-[150px]">
                                    <Select value={pago.metodoPago} onValueChange={val => handlePagoChange(pago.id, 'metodoPago', val as MetodoPago)}>
                                       <SelectTrigger><SelectValue/></SelectTrigger>
                                       <SelectContent>{metodoPagoOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
                                   </Select>
                               </TableCell>
                               <TableCell className="text-right w-[120px]">
-                                  <Input type="number" value={pago.montoTotal} onChange={e => handlePagoChange(pago.id, 'montoTotal', e.target.value)} onBlur={e => handleMontoBlur(pago.id, e.target.value)} className="w-24 text-right" />
+                                  <Input type="number" value={pago.monto} onChange={e => handlePagoChange(pago.id, 'monto', e.target.value)} onBlur={e => handleMontoBlur(pago.id, e.target.value)} className="w-24 text-right" />
                               </TableCell>
                           </TableRow>
                         )
-                      })
+                      )
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">
+                        <TableCell colSpan={3} className="h-24 text-center">
                           No hay pagos registrados para este servicio.
                         </TableCell>
                       </TableRow>
