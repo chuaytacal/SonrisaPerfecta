@@ -46,7 +46,7 @@ export default function LoginPage() {
               {/* Separador Curvo Mejorado: más ancho y superpuesto */}
               <div className="absolute top-0 right-0 h-full w-32 -mr-16 z-10">
                   <svg viewBox="0 0 100 700" className="h-full w-full" fill="hsl(var(--card))" preserveAspectRatio="none">
-                      <path d="M 0 0 C 150 250, -50 450, 0 700 L 100 700 L 100 0 Z" />
+                      <path d="M 0 0 Q 150 175, 0 350 T 0 700 L 100 700 L 100 0 Z" />
                   </svg>
               </div>
           </div>
