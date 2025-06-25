@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useActionState, useState } from 'react';
@@ -31,7 +32,7 @@ export default function LoginPage() {
         {/* Left Panel: Image */}
         <div className="relative hidden h-full lg:block">
           <Image
-            src="/foto-dental.jpg"
+            src="https://placehold.co/800x600.png"
             alt="Clínica Dental Loayza"
             fill
             style={{ objectFit: 'cover' }}
