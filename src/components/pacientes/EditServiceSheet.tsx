@@ -228,12 +228,12 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
                                   </Popover>
                               </TableCell>
                                <TableCell className="w-[180px]">
-                                  <Select value="doctor" disabled>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder={doctor ? `${doctor.persona.nombre.split(' ')[0]} ${doctor.persona.apellidoPaterno}` : 'N/A'} />
-                                    </SelectTrigger>
-                                  </Select>
-                              </TableCell>
+                                <Input
+                                    value={doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'N/A'}
+                                    disabled
+                                    className="disabled:cursor-default disabled:opacity-100"
+                                />
+                               </TableCell>
                               <TableCell className="w-[180px]">
                                    <Select value={pago.metodoPago} onValueChange={val => handlePagoChange(pago.id, 'metodoPago', val as MetodoPago)}>
                                       <SelectTrigger><SelectValue/></SelectTrigger>

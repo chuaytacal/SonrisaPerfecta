@@ -9,7 +9,7 @@ import { addDays, startOfDay, endOfDay, isWithinInterval, format, startOfMonth, 
 import { es } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Pago, Appointment, Paciente, Personal } from '@/types';
+import type { Pago, Appointment, Paciente, Personal, Presupuesto } from '@/types';
 import { mockPagosData, mockAppointmentsData, mockPacientesData, mockPersonalData, mockPresupuestosData, mockUsuariosData } from '@/lib/data';
 import {
   Bar,
@@ -121,9 +121,9 @@ export default function ReportesPage() {
 
     // Ingresos por Dia
     const ingresosPorDiaData = pagosEnRango.reduce((acc, pago) => {
-        const d = new Date(pago.fechaPago);
+        const d = pago.fechaPago;
         // Use local date parts for grouping to reflect the clinic's day
-        const fechaKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const fechaKey = format(d, 'yyyy-MM-dd');
         acc[fechaKey] = (acc[fechaKey] || 0) + pago.montoTotal;
         return acc;
     }, {} as Record<string, number>);
@@ -133,13 +133,19 @@ export default function ReportesPage() {
         .sort((a, b) => a.fecha.localeCompare(b.fecha))
         .map(item => ({
             ...item,
-            // Parse date string as local time by adding T00:00:00
             fecha: format(new Date(item.fecha + 'T00:00:00'), 'dd MMM', { locale: es }), 
         }));
 
-    // Distribucion de Servicios
-    const serviciosContador = pagosEnRango.flatMap(p => p.itemsPagados).reduce((acc, item) => {
-        acc[item.concepto] = (acc[item.concepto] || 0) + 1;
+    // Filter budgets for service distribution
+    const presupuestosEnRango: Presupuesto[] = mockPresupuestosData.filter(pr => {
+        const fechaPresupuesto = new Date(pr.fechaAtencion); // Use attention date for relevance
+        const doctorMatch = doctorFilter === 'all' || pr.doctorResponsableId === doctorFilter;
+        return isWithinInterval(fechaPresupuesto, { start: from, end: to }) && doctorMatch;
+    });
+
+    // Distribucion de Servicios (now based on quantity)
+    const serviciosContador = presupuestosEnRango.flatMap(p => p.items).reduce((acc, item) => {
+        acc[item.procedimiento.denominacion] = (acc[item.procedimiento.denominacion] || 0) + item.cantidad;
         return acc;
     }, {} as Record<string, number>);
 
