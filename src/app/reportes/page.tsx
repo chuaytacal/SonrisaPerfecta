@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { BarChart, Calendar, Users, DollarSign, Award, CheckCircle2, AlertTriangle } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { addDays, startOfDay, endOfDay, isWithinInterval, format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Pago, Appointment, Paciente, Personal } from '@/types';
@@ -29,17 +30,18 @@ import type { AppointmentState } from '@/types/calendar';
 
 export default function ReportesPage() {
   const [isClient, setIsClient] = useState(false);
-  
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: addDays(new Date(), -29),
-    to: new Date(),
-  });
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [doctorFilter, setDoctorFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<AppointmentState | 'all'>('all');
+
+  useEffect(() => {
+    // Initialize date range on the client to avoid hydration mismatch
+    setDateRange({
+      from: addDays(new Date(), -29),
+      to: new Date(),
+    });
+    setIsClient(true);
+  }, []);
 
   const {
     kpis,
@@ -95,6 +97,7 @@ export default function ReportesPage() {
     // Ingresos por Dia
     const ingresosPorDiaData = pagosEnRango.reduce((acc, pago) => {
         const d = new Date(pago.fechaPago);
+        // Use UTC date parts to avoid timezone shifting issues during grouping
         const fechaKey = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
         acc[fechaKey] = (acc[fechaKey] || 0) + pago.montoTotal;
         return acc;
@@ -105,7 +108,7 @@ export default function ReportesPage() {
         .sort((a, b) => a.fecha.localeCompare(b.fecha))
         .map(item => ({
             ...item,
-            fecha: format(new Date(`${item.fecha}T00:00:00Z`), 'dd MMM', { locale: es }),
+            fecha: format(new Date(`${item.fecha}T00:00:00Z`), 'dd MMM', { locale: es }), // Add UTC timezone indicator 'Z'
         }));
 
     // Distribucion de Servicios
