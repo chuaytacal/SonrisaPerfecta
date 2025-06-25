@@ -10,6 +10,7 @@ import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import type { AppointmentState } from "@/types/calendar";
 import React, { useState, useEffect } from 'react';
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 export default function DashboardPage() {
@@ -142,7 +143,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <ul className="space-y-3 text-sm">
-              {actividadReciente.length > 0 ? (
+              {isClient && actividadReciente.length > 0 ? (
                 actividadReciente.map((act, index) => (
                   <li key={index} className="flex items-start gap-3">
                     {act.type === 'cita' ? 
@@ -165,8 +166,18 @@ export default function DashboardPage() {
                     </div>
                   </li>
                 ))
-              ) : (
+              ) : isClient && actividadReciente.length === 0 ? (
                 <p className="text-muted-foreground">No hay actividad reciente.</p>
+              ) : (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <Skeleton className="h-5 w-5 rounded-full mt-0.5" />
+                    <div className="space-y-1 w-full">
+                        <Skeleton className="h-4 w-4/5" />
+                        <Skeleton className="h-3 w-3/5" />
+                    </div>
+                  </li>
+                ))
               )}
             </ul>
           </CardContent>
