@@ -13,6 +13,30 @@ import React, { useState, useEffect } from 'react';
 import { Skeleton } from "@/components/ui/skeleton";
 
 
+const RADIAN = Math.PI / 180;
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, value }: any) => {
+  if (percent < 0.05) { // Don't render for small slices to prevent clutter
+    return null;
+  }
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="white"
+      textAnchor="middle"
+      dominantBaseline="central"
+      className="text-xs font-bold pointer-events-none"
+    >
+      {`${(percent * 100).toFixed(0)}% (${value})`}
+    </text>
+  );
+};
+
+
 export default function DashboardPage() {
   const [isClient, setIsClient] = useState(false);
 
@@ -222,7 +246,7 @@ export default function DashboardPage() {
                 <ChartContainer config={chartConfig} className="w-full h-full">
                   <PieChart>
                     <Tooltip content={<ChartTooltipContent hideLabel />} />
-                    <Pie data={appointmentStatusChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false}>
+                    <Pie data={appointmentStatusChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={renderCustomizedLabel}>
                       {appointmentStatusChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as AppointmentState]} />
                       ))}

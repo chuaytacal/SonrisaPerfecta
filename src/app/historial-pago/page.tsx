@@ -95,7 +95,12 @@ export default function HistorialPagosPage() {
     },
     {
       accessorKey: 'descripcion',
-      header: 'Concepto'
+      header: 'Concepto',
+      cell: ({ row }) => (
+          <div className="max-w-xs whitespace-normal break-words">
+              {row.original.descripcion}
+          </div>
+      )
     },
     {
       accessorKey: 'metodoPago',

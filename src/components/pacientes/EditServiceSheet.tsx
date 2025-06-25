@@ -227,8 +227,12 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
                                       </PopoverContent>
                                   </Popover>
                               </TableCell>
-                              <TableCell>
-                                {doctor ? `${doctor.persona.nombre.split(' ')[0]} ${doctor.persona.apellidoPaterno}` : 'N/A'}
+                               <TableCell className="w-[180px]">
+                                  <Select value="doctor" disabled>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder={doctor ? `${doctor.persona.nombre.split(' ')[0]} ${doctor.persona.apellidoPaterno}` : 'N/A'} />
+                                    </SelectTrigger>
+                                  </Select>
                               </TableCell>
                               <TableCell className="w-[180px]">
                                    <Select value={pago.metodoPago} onValueChange={val => handlePagoChange(pago.id, 'metodoPago', val as MetodoPago)}>

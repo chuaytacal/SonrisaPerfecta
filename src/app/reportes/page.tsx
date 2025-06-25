@@ -28,6 +28,30 @@ import { ChartContainer, ChartTooltipContent, ChartLegendContent, ChartConfig } 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { AppointmentState } from '@/types/calendar';
 
+const RADIAN = Math.PI / 180;
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, value }: any) => {
+  if (percent < 0.05) { // Don't render for small slices to prevent clutter
+    return null;
+  }
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="white"
+      textAnchor="middle"
+      dominantBaseline="central"
+      className="text-xs font-bold pointer-events-none"
+    >
+      {`${(percent * 100).toFixed(0)}% (${value})`}
+    </text>
+  );
+};
+
+
 export default function ReportesPage() {
   const [isClient, setIsClient] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
@@ -298,7 +322,7 @@ export default function ReportesPage() {
             <ChartContainer config={{}} className="h-[300px] w-full">
               <PieChart>
                 <Tooltip content={<ChartTooltipContent />} />
-                <Pie data={distribucionServicios} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} labelLine={false}>
+                <Pie data={distribucionServicios} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} labelLine={false} label={renderCustomizedLabel}>
                   {distribucionServicios.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
