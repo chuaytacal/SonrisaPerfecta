@@ -98,8 +98,8 @@ export default function ReportesPage() {
     // Ingresos por Dia
     const ingresosPorDiaData = pagosEnRango.reduce((acc, pago) => {
         const d = new Date(pago.fechaPago);
-        // Use UTC date parts to avoid timezone shifting issues during grouping
-        const fechaKey = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+        // Use local date parts for grouping to reflect the clinic's day
+        const fechaKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         acc[fechaKey] = (acc[fechaKey] || 0) + pago.montoTotal;
         return acc;
     }, {} as Record<string, number>);
@@ -109,7 +109,8 @@ export default function ReportesPage() {
         .sort((a, b) => a.fecha.localeCompare(b.fecha))
         .map(item => ({
             ...item,
-            fecha: format(new Date(`${item.fecha}T12:00:00Z`), 'dd MMM', { locale: es }), // Use a neutral time like noon UTC
+            // Parse date string as local time by adding T00:00:00
+            fecha: format(new Date(item.fecha + 'T00:00:00'), 'dd MMM', { locale: es }), 
         }));
 
     // Distribucion de Servicios
