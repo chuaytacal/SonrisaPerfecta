@@ -249,7 +249,11 @@ export default function PacientesPage() {
         confirmButtonText: newStatus === "Activo" ? "Activar" : "Desactivar",
     });
     setConfirmAction(() => () => {
-        setPacienteList(prev => prev.map(p => p.id === paciente.id ? {...p, estado: newStatus} : p));
+        const pacienteIndex = mockPacientesData.findIndex(p => p.id === paciente.id);
+        if (pacienteIndex > -1) {
+            mockPacientesData[pacienteIndex].estado = newStatus;
+        }
+        setPacienteList([...mockPacientesData]);
         toast({
             title: "Estado Actualizado",
             description: `El estado de ${paciente.persona.nombre} ${paciente.persona.apellidoPaterno} ha sido cambiado a ${newStatus}.`

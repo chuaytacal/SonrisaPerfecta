@@ -9,7 +9,7 @@ import { addDays, startOfDay, endOfDay, isWithinInterval, format } from 'date-fn
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Pago, Appointment, Paciente, Personal } from '@/types';
-import { mockPagosData, mockAppointmentsData, mockPacientesData, mockPersonalData, mockPresupuestosData } from '@/lib/data';
+import { mockPagosData, mockAppointmentsData, mockPacientesData, mockPersonalData, mockPresupuestosData, mockUsuariosData } from '@/lib/data';
 import {
   Bar,
   XAxis,
@@ -139,13 +139,20 @@ export default function ReportesPage() {
     };
   }, [dateRange, doctorFilter, statusFilter]);
   
-  const doctorOptions = useMemo(() => [
-    { value: 'all', label: 'Todos los Doctores' },
-    ...mockPersonalData.map(d => ({ value: d.id, label: `${d.persona.nombre} ${d.persona.apellidoPaterno}` }))
-  ], []);
+  const doctorOptions = useMemo(() => {
+    const activeDoctors = mockPersonalData.filter(p => {
+        if (p.estado !== 'Activo') return false;
+        const user = mockUsuariosData.find(u => u.id === p.idUsuario);
+        return user?.rol === 'Doctor';
+    });
+    return [
+        { value: 'all', label: 'Todos los Doctores' },
+        ...activeDoctors.map(d => ({ value: d.id, label: `${d.persona.nombre} ${d.persona.apellidoPaterno}` }))
+    ];
+  }, []);
   
   const statusOptions: { value: AppointmentState | 'all', label: string }[] = [
-      { value: 'all', label: 'Todos los estados' },
+      { value: 'all', label: 'Todas las citas' },
       { value: 'Pendiente', label: 'Pendiente' },
       { value: 'Confirmada', label: 'Confirmada' },
       { value: 'Atendido', label: 'Atendido' },
@@ -170,7 +177,7 @@ export default function ReportesPage() {
           </Select>
           <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as AppointmentState | 'all')}>
               <SelectTrigger className="w-full sm:w-[240px]">
-                  <SelectValue placeholder="Filtrar por estado..." />
+                  <SelectValue placeholder="Todas las citas" />
               </SelectTrigger>
               <SelectContent>
                   {statusOptions.map(option => (

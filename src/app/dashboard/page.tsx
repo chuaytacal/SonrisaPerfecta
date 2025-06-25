@@ -2,9 +2,9 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Calendar, Users, DollarSign, CheckCircle, FileClock, FileText } from "lucide-react";
+import { Calendar, Users, DollarSign, CheckCircle2, FileClock, FileText, FilePlus } from "lucide-react";
 import { mockAppointmentsData, mockPacientesData, mockPagosData, mockPresupuestosData } from "@/lib/data";
-import { isToday, isYesterday, isThisMonth, isSameMonth, subMonths, subDays, format } from "date-fns";
+import { isToday, isYesterday, isThisMonth, isSameMonth, subMonths, subDays, format, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
@@ -35,7 +35,7 @@ export default function DashboardPage() {
 
   // 2. Pacientes Activos
   const pacientesActivos = mockPacientesData.filter(p => p.estado === 'Activo').length;
-  const nuevosPacientesEsteMes = mockPacientesData.filter(p => isThisMonth(new Date(p.fechaIngreso.split('/').reverse().join('-')))).length;
+  const nuevosPacientesEsteMes = mockPacientesData.filter(p => isThisMonth(parse(p.fechaIngreso, 'dd/MM/yyyy', new Date()))).length;
 
   // 3. Ingresos del Mes
   const ingresosEsteMes = mockPagosData
@@ -55,13 +55,17 @@ export default function DashboardPage() {
   // 5. Actividad Reciente
   const sortedAppointments = [...mockAppointmentsData].sort((a,b) => b.start.getTime() - a.start.getTime());
   const sortedPagos = [...mockPagosData].sort((a,b) => b.fechaPago.getTime() - a.fechaPago.getTime());
+  const sortedPacientes = [...mockPacientesData].sort((a,b) => parse(b.fechaIngreso, 'dd/MM/yyyy', new Date()).getTime() - parse(a.fechaIngreso, 'dd/MM/yyyy', new Date()).getTime());
+  const sortedPresupuestos = [...mockPresupuestosData].sort((a,b) => b.fechaCreacion.getTime() - a.fechaCreacion.getTime());
   
   const actividadReciente = [
-      ...sortedAppointments.slice(0, 3).map(a => ({ type: 'cita', data: a, date: a.start })),
-      ...sortedPagos.slice(0, 3).map(p => ({ type: 'pago', data: p, date: p.fechaPago }))
+      ...sortedAppointments.slice(0, 5).map(a => ({ type: 'cita', data: a, date: a.start })),
+      ...sortedPagos.slice(0, 5).map(p => ({ type: 'pago', data: p, date: p.fechaPago })),
+      ...sortedPacientes.slice(0, 5).map(p => ({ type: 'paciente', data: p, date: parse(p.fechaIngreso, 'dd/MM/yyyy', new Date()) })),
+      ...sortedPresupuestos.slice(0, 5).map(p => ({ type: 'presupuesto', data: p, date: p.fechaCreacion }))
   ]
   .sort((a,b) => b.date.getTime() - a.date.getTime())
-  .slice(0, 5);
+  .slice(0, 10);
 
   // 6. Citas por Estado (Este Mes)
   const appointmentsThisMonth = mockAppointmentsData.filter(a => isThisMonth(a.start));
@@ -136,30 +140,47 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+        <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle>Actividad Reciente</CardTitle>
             <CardDescription>Últimas acciones registradas en el sistema.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-3 text-sm">
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
               {isClient && actividadReciente.length > 0 ? (
                 actividadReciente.map((act, index) => (
                   <li key={index} className="flex items-start gap-3">
-                    {act.type === 'cita' ? 
-                        <FileClock className="h-5 w-5 text-muted-foreground mt-0.5" /> : 
-                        <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />}
+                    {
+                      act.type === 'cita' ? <FileClock className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" /> :
+                      act.type === 'pago' ? <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /> :
+                      act.type === 'paciente' ? <Users className="h-5 w-5 text-blue-500 mt-0.5 shrink-0" /> :
+                      <FilePlus className="h-5 w-5 text-purple-500 mt-0.5 shrink-0" />
+                    }
                     <div>
                       {act.type === 'cita' ? (
                         <>
-                          <span className="font-semibold">{act.data.estado}</span> para <span className="font-semibold">{act.data.paciente?.persona.nombre}</span>
+                          Cita <span className="font-semibold">{act.data.estado}</span> para <span className="font-semibold">{act.data.paciente?.persona.nombre}</span>
                           <p className="text-xs text-muted-foreground">{format(act.date, "dd MMM yyyy, HH:mm", { locale: es })}</p>
                         </>
-                      ) : (
+                      ) : act.type === 'pago' ? (
                         <>
                           Pago de <span className="font-semibold">S/ {act.data.montoTotal.toFixed(2)}</span> recibido.
                           <p className="text-xs text-muted-foreground">
                             {mockPacientesData.find(p => p.idHistoriaClinica === mockPresupuestosData.find(pr => pr.id === act.data.itemsPagados[0]?.idPresupuesto)?.idHistoriaClinica)?.persona.nombre || 'Paciente no encontrado'} - {format(act.date, "dd MMM yyyy", { locale: es })}
+                          </p>
+                        </>
+                      ) : act.type === 'paciente' ? (
+                         <>
+                          Nuevo paciente: <span className="font-semibold">{act.data.persona.nombre} {act.data.persona.apellidoPaterno}</span>
+                          <p className="text-xs text-muted-foreground">
+                            Registrado el {format(act.date, "dd MMM yyyy", { locale: es })}
+                          </p>
+                        </>
+                      ) : ( // presupuesto
+                         <>
+                          Presupuesto creado para <span className="font-semibold">{mockPacientesData.find(p => p.idHistoriaClinica === act.data.idHistoriaClinica)?.persona.nombre}</span>
+                          <p className="text-xs text-muted-foreground">
+                            {format(act.date, "dd MMM yyyy", { locale: es })}
                           </p>
                         </>
                       )}
@@ -167,9 +188,9 @@ export default function DashboardPage() {
                   </li>
                 ))
               ) : isClient && actividadReciente.length === 0 ? (
-                <p className="text-muted-foreground">No hay actividad reciente.</p>
+                <p className="text-muted-foreground md:col-span-2">No hay actividad reciente.</p>
               ) : (
-                Array.from({ length: 5 }).map((_, index) => (
+                Array.from({ length: 10 }).map((_, index) => (
                   <li key={index} className="flex items-start gap-3">
                     <Skeleton className="h-5 w-5 rounded-full mt-0.5" />
                     <div className="space-y-1 w-full">

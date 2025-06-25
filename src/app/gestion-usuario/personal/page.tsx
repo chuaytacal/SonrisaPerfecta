@@ -174,7 +174,11 @@ export default function PersonalPage() {
         confirmButtonText: newStatus === "Activo" ? "Activar" : "Desactivar",
     });
     setConfirmAction(() => () => {
-        setPersonalList(prev => prev.map(p => p.id === personal.id ? {...p, estado: newStatus} : p));
+        const personalIndex = mockPersonalData.findIndex(p => p.id === personal.id);
+        if (personalIndex > -1) {
+            mockPersonalData[personalIndex].estado = newStatus;
+        }
+        setPersonalList([...mockPersonalData]);
         toast({
             title: "Estado Actualizado",
             description: `El estado de ${personal.persona.nombre} ${personal.persona.apellidoPaterno} ha sido cambiado a ${newStatus}.`
