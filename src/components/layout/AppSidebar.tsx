@@ -12,6 +12,7 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
   useSidebar,
+  SidebarFooter
 } from '@/components/ui/sidebar';
 import Logo from '@/components/Logo';
 import {
@@ -28,10 +29,13 @@ import {
   BarChart3,
   List,
   Tag,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import React, { useState, useEffect } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Button } from '../ui/button';
+import { logout } from '@/lib/actions';
 
 
 const sidebarNavItems = [
@@ -176,6 +180,14 @@ export default function AppSidebar() {
           {renderNavItems(sidebarNavItems)}
         </SidebarMenu>
       </SidebarContent>
+      <SidebarFooter className={cn("p-2 mt-auto", isDesktopCollapsed && "pt-2")}>
+          <form action={logout}>
+            <SidebarMenuButton type="submit" variant="ghost" className={cn("w-full", isDesktopCollapsed && "justify-center")} tooltip="Cerrar Sesión">
+                <LogOut />
+                <span className={cn(isDesktopCollapsed && "hidden")}>Cerrar Sesión</span>
+            </SidebarMenuButton>
+          </form>
+      </SidebarFooter>
     </Sidebar>
   );
 }

@@ -4,10 +4,7 @@ import './globals.css';
 import 'react-phone-number-input/style.css';
 import './phone-input.css';
 import { Toaster } from '@/components/ui/toaster';
-import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import AppSidebar from '@/components/layout/AppSidebar';
-import { Button } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
+import AppShell from '@/components/layout/AppShell';
 
 export const metadata: Metadata = {
   title: 'Centro Dental Especializado Loayza - Admin',
@@ -27,29 +24,9 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased bg-background">
-        <SidebarProvider defaultOpen>
-          <div className="flex min-h-screen w-full"> {/* Added w-full */}
-            <AppSidebar />
-            <SidebarInset> {/* Removed redundant flex-1 flex-col */}
-              <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background px-4 py-3 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-                {/* Placeholder for potential breadcrumbs or global actions */}
-                <div></div>
-                <div className="md:hidden">
-                  <SidebarTrigger>
-                    <Button variant="outline" size="icon">
-                      <Menu className="h-6 w-6" />
-                    </Button>
-                  </SidebarTrigger>
-                </div>
-                {/* Future: User menu / notifications can go here */}
-              </header>
-              {/* Main content area: removed overflow-auto here */}
-              <div className="flex-1 p-2 sm:p-3 md:p-4 lg:p-6">
-                {children}
-              </div>
-            </SidebarInset>
-          </div>
-        </SidebarProvider>
+        <AppShell>
+          {children}
+        </AppShell>
         <Toaster />
       </body>
     </html>
