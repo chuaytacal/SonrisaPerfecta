@@ -27,7 +27,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-primary/10 p-4">
+    <main className="flex min-h-screen items-center justify-center bg-secondary p-4">
       <div className="relative w-full max-w-4xl lg:h-[600px] lg:grid lg:grid-cols-2 rounded-2xl bg-card shadow-2xl overflow-hidden">
         
         {/* Left Panel: Image */}
@@ -44,13 +44,6 @@ export default function LoginPage() {
           <div className="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent" />
         </div>
         
-        {/* SVG Curve Separator */}
-        <div className="absolute top-0 bottom-0 left-1/2 w-32 -translate-x-1/2 hidden lg:block">
-            <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <path d="M 100 0 C 0 20, 0 80, 100 100 Z" fill="hsl(var(--card))" />
-            </svg>
-        </div>
-
         {/* Right Panel: Form */}
         <div className="flex flex-col justify-center p-8 sm:p-12 w-full">
           <div className="mb-6 flex justify-center">
