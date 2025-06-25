@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { KeyRound, Loader2, User, Eye, EyeOff } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import dentalPhoto from '@/components/assets/fondo-dental.jpg';
 
 function LoginButton() {
   const { pending } = useFormStatus();
@@ -32,12 +33,12 @@ export default function LoginPage() {
         {/* Left Panel: Image */}
         <div className="relative hidden h-full lg:block">
           <Image
-            src="https://placehold.co/800x600.png"
+            src={dentalPhoto}
             alt="Clínica Dental Loayza"
             fill
             style={{ objectFit: 'cover' }}
             priority
-            data-ai-hint="dental clinic"
+            placeholder="blur"
           />
           <div className="absolute inset-0 bg-primary/70 mix-blend-multiply" />
           <div className="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent" />
