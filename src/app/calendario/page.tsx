@@ -268,6 +268,7 @@ export default function CalendarioPage() {
 
         if (budgetToUpdate) {
             // Budget exists, sync it
+            budgetToUpdate.idHistoriaClinica = paciente.idHistoriaClinica;
             budgetToUpdate.fechaAtencion = appointmentToSave.start;
             budgetToUpdate.doctorResponsableId = appointmentToSave.idDoctor;
             budgetToUpdate.nombre = appointmentToSave.motivoCita.nombre;
@@ -700,5 +701,3 @@ export default function CalendarioPage() {
     </div>
   );
 }
-
-    
