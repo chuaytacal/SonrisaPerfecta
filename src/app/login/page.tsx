@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useActionState, useState } from 'react';
@@ -28,7 +27,6 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen w-full flex items-center justify-center p-4 bg-primary/10">
-      {/* Contenedor principal: más grande y con más sombra */}
       <div className="relative w-full max-w-7xl min-h-[80vh] bg-card rounded-2xl shadow-2xl flex overflow-hidden">
           
           {/* Panel Izquierdo: Ocupa la mitad del espacio y contiene la imagen y la curva */}
@@ -43,10 +41,10 @@ export default function LoginPage() {
               {/* Tinte azulado */}
               <div className="absolute inset-0 bg-primary/50"></div>
               
-              {/* Separador Curvo Mejorado: más ancho y superpuesto */}
+              {/* Separador Curvo Mejorado */}
               <div className="absolute top-0 right-0 h-full w-32 -mr-16 z-10">
                   <svg viewBox="0 0 100 700" className="h-full w-full" fill="hsl(var(--card))" preserveAspectRatio="none">
-                      <path d="M 0 0 Q 150 175, 0 350 T 0 700 L 100 700 L 100 0 Z" />
+                      <path d="M 25 0 C -5 175, 55 525, 25 700 L 100 700 L 100 0 Z" />
                   </svg>
               </div>
           </div>
