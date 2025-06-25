@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, Calendar, Users, DollarSign, Award, CheckCircle2, AlertTriangle } from "lucide-react";
 import { DateRange } from "react-day-picker";
-import { addDays, startOfDay, endOfDay, isWithinInterval, format, startOfMonth, endOfMonth } from 'date-fns';
+import { startOfDay, endOfDay, isWithinInterval, format, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -25,6 +25,7 @@ import {
   BarChart as RechartsBarChart
 } from 'recharts';
 import { ChartContainer, ChartTooltipContent, ChartLegendContent, ChartConfig } from '@/components/ui/chart';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { AppointmentState } from '@/types/calendar';
 
 const RADIAN = Math.PI / 180;
@@ -112,7 +113,9 @@ export default function ReportesPage() {
     });
 
     const pacientesEnRango: Paciente[] = mockPacientesData.filter(p => {
-        const fechaIngreso = new Date(p.fechaIngreso.split('/').reverse().join('-'));
+        // Correct parsing of "dd/MM/yyyy" string
+        const [day, month, year] = p.fechaIngreso.split('/').map(Number);
+        const fechaIngreso = new Date(year, month - 1, day);
         return isWithinInterval(fechaIngreso, { start: from, end: to });
     });
 
@@ -123,9 +126,10 @@ export default function ReportesPage() {
 
     // Ingresos por Dia
     const ingresosPorDiaData = pagosEnRango.reduce((acc, pago) => {
-        const d = pago.fechaPago;
-        // Use local date parts for grouping to reflect the clinic's day
-        const fechaKey = format(d, 'yyyy-MM-dd');
+        const d = new Date(pago.fechaPago);
+        const offset = d.getTimezoneOffset();
+        const dLocal = new Date(d.getTime() - (offset * 60 * 1000));
+        const fechaKey = dLocal.toISOString().split('T')[0];
         acc[fechaKey] = (acc[fechaKey] || 0) + pago.montoTotal;
         return acc;
     }, {} as Record<string, number>);
