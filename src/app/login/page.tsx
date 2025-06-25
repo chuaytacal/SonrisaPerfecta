@@ -29,7 +29,7 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen w-full flex items-center justify-center p-4 bg-primary/10">
         {/* Main Card Container */}
-        <div className="relative w-full max-w-4xl min-h-[60vh] max-h-[700px] bg-card rounded-2xl shadow-2xl flex overflow-hidden">
+        <div className="relative w-full max-w-6xl min-h-[75vh] bg-card rounded-2xl shadow-2xl flex overflow-hidden">
             
             {/* Left Panel (Image with Curve) */}
             <div className="w-1/2 hidden md:block relative">
@@ -46,7 +46,7 @@ export default function LoginPage() {
                 <div className="absolute top-0 right-0 h-full w-24 -mr-1 z-10">
                     <svg viewBox="0 0 100 700" className="h-full w-auto" fill="hsl(var(--card))" preserveAspectRatio="none">
                        {/* This path creates the S-curve shape that separates the two panels */}
-                       <path d="M 0 0 C 150 200, -50 500, 0 700 L 100 700 L 100 0 Z" />
+                       <path d="M 0 0 C 100 250, 0 450, 0 700 L 100 700 L 100 0 Z" />
                     </svg>
                 </div>
             </div>
