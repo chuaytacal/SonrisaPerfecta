@@ -6,8 +6,8 @@ import { Calendar, Users, DollarSign, CheckCircle2, FileClock, FileText, FilePlu
 import { mockAppointmentsData, mockPacientesData, mockPagosData, mockPresupuestosData } from "@/lib/data";
 import { isToday, isYesterday, isThisMonth, isSameMonth, subMonths, subDays, format, parse } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
-import { PieChart, Pie, Cell, Tooltip } from 'recharts';
+import { ChartContainer, ChartTooltipContent, ChartLegendContent, ChartConfig } from '@/components/ui/chart';
+import { PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import type { AppointmentState } from "@/types/calendar";
 import React, { useState, useEffect } from 'react';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -84,6 +84,15 @@ export default function DashboardPage() {
     Reprogramada: '#6b7280', // gray-500
   };
 
+  const chartConfig = {
+    value: { label: "Citas" },
+    ...Object.keys(STATUS_COLORS).reduce((acc, status) => {
+      acc[status] = { label: status, color: STATUS_COLORS[status as AppointmentState] };
+      return acc;
+    }, {} as any)
+  } satisfies ChartConfig;
+
+
   return (
     <div className="space-y-6">
       <div> 
@@ -139,8 +148,8 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="md:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Actividad Reciente</CardTitle>
             <CardDescription>Últimas acciones registradas en el sistema.</CardDescription>
@@ -210,14 +219,15 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="flex justify-center items-center h-[250px]">
              {isClient && appointmentStatusChartData.length > 0 ? (
-                <ChartContainer config={{}} className="w-full h-full">
+                <ChartContainer config={chartConfig} className="w-full h-full">
                   <PieChart>
-                    <Tooltip content={<ChartTooltipContent />} />
+                    <Tooltip content={<ChartTooltipContent hideLabel />} />
                     <Pie data={appointmentStatusChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false}>
                       {appointmentStatusChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as AppointmentState]} />
                       ))}
                     </Pie>
+                    <Legend content={<ChartLegendContent />} />
                   </PieChart>
                 </ChartContainer>
              ) : (

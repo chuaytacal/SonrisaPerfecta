@@ -23,7 +23,7 @@ import {
   Cell,
   BarChart as RechartsBarChart
 } from 'recharts';
-import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltipContent, ChartLegendContent, ChartConfig } from '@/components/ui/chart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { AppointmentState } from '@/types/calendar';
 
@@ -94,15 +94,19 @@ export default function ReportesPage() {
 
     // Ingresos por Dia
     const ingresosPorDiaData = pagosEnRango.reduce((acc, pago) => {
-        const fecha = format(new Date(pago.fechaPago), 'yyyy-MM-dd');
-        acc[fecha] = (acc[fecha] || 0) + pago.montoTotal;
+        const d = new Date(pago.fechaPago);
+        const fechaKey = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+        acc[fechaKey] = (acc[fechaKey] || 0) + pago.montoTotal;
         return acc;
     }, {} as Record<string, number>);
 
-    const ingresosPorDiaArray = Object.entries(ingresosPorDiaData).map(([fecha, total]) => ({
-        fecha: format(new Date(fecha), 'dd MMM'),
-        Ingresos: total
-    })).sort((a,b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+    const ingresosPorDiaArray = Object.entries(ingresosPorDiaData)
+        .map(([fecha, total]) => ({ fecha, Ingresos: total }))
+        .sort((a, b) => a.fecha.localeCompare(b.fecha))
+        .map(item => ({
+            ...item,
+            fecha: format(new Date(`${item.fecha}T00:00:00Z`), 'dd MMM', { locale: es }),
+        }));
 
     // Distribucion de Servicios
     const serviciosContador = pagosEnRango.flatMap(p => p.itemsPagados).reduce((acc, item) => {
@@ -161,6 +165,13 @@ export default function ReportesPage() {
   ];
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+  
+  const barChartConfig = {
+    Ingresos: {
+      label: "Ingresos",
+      color: "hsl(var(--chart-1))",
+    },
+  } satisfies ChartConfig;
 
 
   return (
@@ -259,13 +270,14 @@ export default function ReportesPage() {
           </CardHeader>
           <CardContent>
             {isClient ? (
-             <ChartContainer config={{}} className="h-[300px] w-full">
+             <ChartContainer config={barChartConfig} className="h-[300px] w-full">
               <RechartsBarChart data={ingresosPorDia}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="fecha" tickLine={false} axisLine={false} tickMargin={8} />
                 <YAxis />
                 <Tooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="Ingresos" fill="hsl(var(--primary))" radius={4} />
+                <Legend content={<ChartLegendContent />} />
+                <Bar dataKey="Ingresos" fill="var(--color-Ingresos)" radius={4} />
               </RechartsBarChart>
             </ChartContainer>
             ) : (<div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">Cargando gráfico...</div>) }
@@ -286,6 +298,7 @@ export default function ReportesPage() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
+                <Legend content={<ChartLegendContent />} />
               </PieChart>
             </ChartContainer>
             ) : (<div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">Cargando gráfico...</div>) }
