@@ -29,7 +29,6 @@ export default function LoginPage() {
     <main className="min-h-screen w-full flex items-center justify-center p-4 bg-primary/10">
       <div className="relative w-full max-w-7xl min-h-[80vh] bg-card rounded-2xl shadow-2xl flex overflow-hidden">
           
-          {/* Panel Izquierdo: Ocupa la mitad del espacio y contiene la imagen y la curva */}
           <div className="w-1/2 hidden md:block relative">
               <Image
                   src={dentalPhoto}
@@ -38,18 +37,15 @@ export default function LoginPage() {
                   className="object-cover"
                   priority
               />
-              {/* Tinte azulado */}
               <div className="absolute inset-0 bg-primary/50"></div>
               
-              {/* Separador Curvo Mejorado */}
               <div className="absolute top-0 right-0 h-full w-32 -mr-16 z-10">
                   <svg viewBox="0 0 100 700" className="h-full w-full" fill="hsl(var(--card))" preserveAspectRatio="none">
-                      <path d="M 25 0 C -5 175, 55 525, 25 700 L 100 700 L 100 0 Z" />
+                      <path d="M 25 0 C -40 175, 90 525, 25 700 L 100 700 L 100 0 Z" />
                   </svg>
               </div>
           </div>
 
-          {/* Panel Derecho: Ocupa la otra mitad y contiene el formulario */}
           <div className="w-full md:w-1/2 p-8 sm:p-12 flex flex-col justify-center bg-card">
               <div className="mx-auto w-full max-w-sm">
                   <div className="mb-8 flex justify-center">

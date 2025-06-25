@@ -1,34 +1,10 @@
 
 'use server'
  
-import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { mockUsuariosData } from './data'
- 
-const secretKey = process.env.JWT_SECRET
-const key = new TextEncoder().encode(secretKey)
- 
-export async function encrypt(payload: any) {
-  return await new SignJWT(payload)
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('8h') // 8-hour session
-    .sign(key)
-}
- 
-export async function decrypt(input: string): Promise<any> {
-    try {
-        const { payload } = await jwtVerify(input, key, {
-            algorithms: ['HS256'],
-        });
-        return payload;
-    } catch (error) {
-        // This can happen if the token is expired or invalid
-        console.log('Failed to verify session');
-        return null;
-    }
-}
+import { encrypt, decrypt } from './session'
  
 export async function login(prevState: { error: string | undefined } | undefined, formData: FormData) {
     const username = formData.get('usuario') as string;

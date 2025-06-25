@@ -1,5 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
+import { decrypt } from '@/lib/session';
 
 // List of routes that require authentication
 const protectedRoutes = [
@@ -16,26 +17,30 @@ const protectedRoutes = [
 // List of routes that are public (users should be redirected if logged in)
 const publicRoutes = ['/login'];
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
-  const session = req.cookies.get('session')?.value;
+  const sessionCookie = req.cookies.get('session')?.value;
+
+  // Decrypt the session to check for validity
+  const sessionPayload = sessionCookie ? await decrypt(sessionCookie) : null;
+  const user = sessionPayload?.user;
 
   const isProtectedRoute = protectedRoutes.some((route) => path.startsWith(route));
 
-  // If the user is trying to access a protected route without a session,
+  // If the user is trying to access a protected route without a valid session,
   // redirect them to the login page.
-  if (isProtectedRoute && !session) {
+  if (isProtectedRoute && !user) {
     return NextResponse.redirect(new URL('/login', req.nextUrl));
   }
 
   // If the user is logged in, prevent them from accessing public routes like /login.
   // Also, redirect from the root path '/' to the dashboard.
-  if (session && (publicRoutes.includes(path) || path === '/')) {
+  if (user && (publicRoutes.includes(path) || path === '/')) {
     return NextResponse.redirect(new URL('/dashboard', req.nextUrl));
   }
   
   // If the user is not logged in and is at the root, redirect to login
-  if (!session && path === '/') {
+  if (!user && path === '/') {
     return NextResponse.redirect(new URL('/login', req.nextUrl));
   }
 
