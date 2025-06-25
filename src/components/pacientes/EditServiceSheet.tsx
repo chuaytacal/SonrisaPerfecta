@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import type { ItemPresupuesto, Paciente, Presupuesto, Pago, MetodoPago } from '@/types';
+import type { ItemPresupuesto, Paciente, Presupuesto, Pago, MetodoPago, Personal } from '@/types';
 import { mockPagosData, mockPersonalData, mockPresupuestosData } from '@/lib/data';
 import { format } from 'date-fns';
 
@@ -51,6 +51,7 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isExceededAlertOpen, setIsExceededAlertOpen] = useState(false);
   const [exceededInfo, setExceededInfo] = useState<{ typed: number, max: number } | null>(null);
+  const [doctor, setDoctor] = useState<Personal | undefined>(undefined);
 
 
   useEffect(() => {
@@ -70,8 +71,10 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
         return acc;
       }, []);
       setEditablePagos(JSON.parse(JSON.stringify(pagosDelItem)));
+      const foundDoctor = mockPersonalData.find(d => d.id === presupuesto.doctorResponsableId);
+      setDoctor(foundDoctor);
     }
-  }, [isOpen, item, presupuesto.id]);
+  }, [isOpen, item, presupuesto.id, presupuesto.doctorResponsableId]);
 
   const subtotal = item.procedimiento.precioBase * item.cantidad;
   const pagado = editablePagos.reduce((acc, p) => acc + p.monto, 0);
@@ -150,12 +153,15 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
     if (itemIndex > -1) {
         mockPresupuestosData[presupuestoIndex].items[itemIndex].montoPagado = newItemMontoPagado;
     }
-
-    mockPresupuestosData[presupuestoIndex].montoPagado = mockPresupuestosData[presupuestoIndex].items.reduce((sum, i) => sum + (i.montoPagado || 0), 0);
+    
+    const montoPagadoActualizado = mockPresupuestosData[presupuestoIndex].items.reduce((sum, i) => sum + (i.montoPagado || 0), 0);
+    mockPresupuestosData[presupuestoIndex].montoPagado = montoPagadoActualizado;
     
     const totalPresupuestoCalculado = mockPresupuestosData[presupuestoIndex].items.reduce((acc, currentItem) => acc + (currentItem.procedimiento.precioBase * currentItem.cantidad), 0);
-    if (mockPresupuestosData[presupuestoIndex].montoPagado >= totalPresupuestoCalculado) {
+    if (montoPagadoActualizado >= totalPresupuestoCalculado) {
       mockPresupuestosData[presupuestoIndex].estado = 'Terminado';
+    } else {
+      mockPresupuestosData[presupuestoIndex].estado = 'Creado';
     }
 
     onUpdate();
@@ -195,6 +201,7 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
                   <TableHeader>
                     <TableRow>
                       <TableHead>Fecha</TableHead>
+                      <TableHead>Doctor</TableHead>
                       <TableHead>Medio de Pago</TableHead>
                       <TableHead className="text-right">Monto</TableHead>
                     </TableRow>
@@ -220,6 +227,9 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
                                       </PopoverContent>
                                   </Popover>
                               </TableCell>
+                              <TableCell>
+                                {doctor ? `${doctor.persona.nombre.split(' ')[0]} ${doctor.persona.apellidoPaterno}` : 'N/A'}
+                              </TableCell>
                               <TableCell className="w-[180px]">
                                    <Select value={pago.metodoPago} onValueChange={val => handlePagoChange(pago.id, 'metodoPago', val as MetodoPago)}>
                                       <SelectTrigger><SelectValue/></SelectTrigger>
@@ -227,14 +237,16 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
                                   </Select>
                               </TableCell>
                               <TableCell className="text-right w-[120px]">
+                                <div className="flex justify-end">
                                   <Input type="number" value={pago.monto} onChange={e => handlePagoChange(pago.id, 'monto', e.target.value)} onBlur={e => handleMontoBlur(pago.id, e.target.value)} className="w-24 text-right" />
+                                </div>
                               </TableCell>
                           </TableRow>
                         )
                       )
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={3} className="h-24 text-center">
+                        <TableCell colSpan={4} className="h-24 text-center">
                           No hay pagos registrados para este servicio.
                         </TableCell>
                       </TableRow>

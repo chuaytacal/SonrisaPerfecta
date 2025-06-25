@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, Calendar, Users, DollarSign, Award, CheckCircle2, AlertTriangle } from "lucide-react";
 import { DateRange } from "react-day-picker";
-import { addDays, startOfDay, endOfDay, isWithinInterval, format } from 'date-fns';
+import { addDays, startOfDay, endOfDay, isWithinInterval, format, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -35,10 +35,11 @@ export default function ReportesPage() {
   const [statusFilter, setStatusFilter] = useState<AppointmentState | 'all'>('all');
 
   useEffect(() => {
-    // Initialize date range on the client to avoid hydration mismatch
+    // Initialize date range on the client to the current month
+    const today = new Date();
     setDateRange({
-      from: addDays(new Date(), -29),
-      to: new Date(),
+      from: startOfMonth(today),
+      to: endOfMonth(today),
     });
     setIsClient(true);
   }, []);
@@ -108,7 +109,7 @@ export default function ReportesPage() {
         .sort((a, b) => a.fecha.localeCompare(b.fecha))
         .map(item => ({
             ...item,
-            fecha: format(new Date(`${item.fecha}T00:00:00Z`), 'dd MMM', { locale: es }), // Add UTC timezone indicator 'Z'
+            fecha: format(new Date(`${item.fecha}T12:00:00Z`), 'dd MMM', { locale: es }), // Use a neutral time like noon UTC
         }));
 
     // Distribucion de Servicios

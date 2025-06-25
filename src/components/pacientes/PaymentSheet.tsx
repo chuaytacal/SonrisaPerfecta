@@ -73,14 +73,12 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
     }, [isOpen]);
     
     const totalACobrar = useMemo(() => {
-      if (abonoManual !== '' && typeof abonoManual === 'number') {
-        return abonoManual;
-      }
-      return selectedItems.reduce((acc, itemId) => {
-              const abono = abonos[itemId];
+      // Manual input has been applied, so we can ignore it for the total calculation now
+      // The total is purely based on the 'abonos' object which reflects selected items
+      return Object.values(abonos).reduce((acc, abono) => {
               return acc + (typeof abono === 'number' ? abono : 0);
           }, 0);
-    }, [abonoManual, selectedItems, abonos]);
+    }, [abonos]);
 
     const handleItemAbonoChange = (itemId: string, value: string) => {
       let newAbonoNum = value === '' ? 0 : parseFloat(value);
@@ -96,8 +94,9 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
       }
       
       setAbonos(prev => ({...prev, [itemId]: newAbonoNum === 0 ? '' : newAbonoNum }));
-      setAbonoManual('');
+      setAbonoManual(''); // Clear manual input when individual items are edited
 
+      // Auto-select or deselect checkbox based on abono
       if (newAbonoNum > 0 && !selectedItems.includes(itemId)) {
         setSelectedItems(prev => [...prev, itemId]);
       } else if (newAbonoNum <= 0 && selectedItems.includes(itemId)) {
@@ -138,6 +137,7 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
   
       setAbonos(newAbonos);
       setSelectedItems(itemsConAbono);
+      setAbonoManual(''); // Clear the manual input after applying
     };
 
     const handleSelectAll = (checked: boolean) => {
@@ -182,6 +182,10 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
     const handleNextStep = () => {
         if (totalACobrar <= 0) {
             toast({ title: "Monto inválido", description: "Debe seleccionar ítems o ingresar un monto a cobrar.", variant: "destructive"});
+            return;
+        }
+        if (abonoManual && typeof abonoManual === 'number' && abonoManual > 0) {
+            toast({ title: "Acción requerida", description: "Por favor, haga clic en el botón 'Cobrar' para distribuir el monto antes de continuar.", variant: "destructive"});
             return;
         }
         if (totalACobrar > totalPorPagar) {
@@ -318,9 +322,9 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
                                             <TableCell>{item.procedimiento.denominacion}</TableCell>
                                             <TableCell className="text-right">S/ {porPagarItem.toFixed(2)}</TableCell>
                                             <TableCell className="w-[120px]">
-                                                <div className="relative">
+                                                <div className="relative flex justify-end">
                                                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">S/</span>
-                                                  <Input type="number" className="pl-7" 
+                                                  <Input type="number" className="pl-7 w-24 text-right" 
                                                     value={abonos[item.id] ?? ''}
                                                     onChange={e => handleItemAbonoChange(item.id, e.target.value)}
                                                   />
@@ -423,7 +427,7 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
                 <div>
                     <DialogTitle className="text-2xl font-semibold">Monto Excedido</DialogTitle>
                     <DialogDescription className="text-base leading-relaxed mt-2">
-                        El monto a cobrar (S/ {exceededInfo?.typed.toFixed(2)}) es mayor que el total por pagar (S/ {exceededInfo?.max.toFixed(2)}). Por favor, ajuste el monto.
+                        El monto a cobrar (S/ {(exceededInfo?.typed ?? 0).toFixed(2)}) es mayor que el total por pagar (S/ {(exceededInfo?.max ?? 0).toFixed(2)}). Por favor, ajuste el monto.
                     </DialogDescription>
                 </div>
             </div>
