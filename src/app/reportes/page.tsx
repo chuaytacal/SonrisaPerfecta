@@ -25,7 +25,6 @@ import {
   BarChart as RechartsBarChart
 } from 'recharts';
 import { ChartContainer, ChartTooltipContent, ChartLegendContent, ChartConfig } from '@/components/ui/chart';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { AppointmentState } from '@/types/calendar';
 
 const RADIAN = Math.PI / 180;
@@ -202,7 +201,11 @@ export default function ReportesPage() {
       { value: 'Reprogramada', label: 'Reprogramada' },
   ];
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+  const COLORS = [
+    '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF4560',
+    '#3498DB', '#2ECC71', '#F1C40F', '#E67E22', '#9B59B6', '#1ABC9C',
+    '#E74C3C', '#8E44AD', '#34495E', '#7F8C8D'
+  ];
   
   const barChartConfig = {
     Ingresos: {
