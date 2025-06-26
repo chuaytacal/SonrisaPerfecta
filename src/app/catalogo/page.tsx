@@ -61,7 +61,13 @@ export default function CatalogoPage() {
       try {
         setLoading(true);
         const response = await api.get('/procedures/');
-        setProcedimientos(response.data);
+        const mappedData = response.data.map((item: any) => ({
+          id: item.uuid,
+          denominacion: item.denominacion,
+          descripcion: item.descripcion,
+          precioBase: parseFloat(item.precioBase)
+        }));
+        setProcedimientos(mappedData);
       } catch (error) {
         console.error("Error fetching procedures:", error);
         toast({
@@ -83,13 +89,17 @@ export default function CatalogoPage() {
 
   const handleSaveProcedimiento = async (procedimiento: Procedimiento) => {
     const isEditing = !!editingProcedimiento;
+    const { id, ...payload } = procedimiento; // Exclude client-side ID from payload
+
     try {
       if (isEditing) {
-        const response = await api.patch(`/procedures/${procedimiento.id}`, procedimiento);
-        setProcedimientos(procedimientos.map(p => p.id === procedimiento.id ? response.data : p));
+        const response = await api.patch(`/procedures/${id}`, payload);
+        const savedProc = { ...response.data, id: response.data.uuid, precioBase: parseFloat(response.data.precioBase) };
+        setProcedimientos(procedimientos.map(p => p.id === savedProc.id ? savedProc : p));
       } else {
-        const response = await api.post('/procedures/', procedimiento);
-        setProcedimientos([...procedimientos, response.data]);
+        const response = await api.post('/procedures/', payload);
+        const newProc = { ...response.data, id: response.data.uuid, precioBase: parseFloat(response.data.precioBase) };
+        setProcedimientos(prev => [...prev, newProc]);
       }
       toast({ title: isEditing ? "Procedimiento Actualizado" : "Procedimiento Creado", description: `El procedimiento ha sido guardado correctamente.` });
       setIsProcedimientoModalOpen(false);
