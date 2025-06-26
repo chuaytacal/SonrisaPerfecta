@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import axios from 'axios'
-import { decrypt } from '@/lib/session'
+import { decrypt, encrypt } from '@/lib/session'
 
 type LoginState = {
     error?: string;
@@ -25,13 +25,28 @@ export async function login(prevState: LoginState | undefined, formData: FormDat
             password: password
         });
 
-        // Assume backend returns { token: 'jwt_string' }
-        const token = response.data.token;
+        const backendData = response.data;
+        const backendToken = backendData.token;
 
-        if (token) {
-            const expires = new Date(Date.now() + 8 * 60 * 60 * 1000) // 8 hours
-            cookies().set('session', token, { expires, httpOnly: true })
-            return { success: true, token: token }
+        if (backendToken) {
+            // Create a payload for our session cookie in the format the middleware expects
+            const sessionPayload = {
+                user: {
+                    uuid: backendData.uuid,
+                    username: backendData.username,
+                    email: backendData.email,
+                },
+            };
+
+            // Encrypt the payload to create our session token
+            const sessionToken = await encrypt(sessionPayload);
+            
+            // Set the session cookie with our custom session token
+            const expires = new Date(Date.now() + 8 * 60 * 60 * 1000); // 8 hours
+            cookies().set('session', sessionToken, { expires, httpOnly: true });
+
+            // Return the original backend token for localStorage
+            return { success: true, token: backendToken };
         } else {
             return { error: 'Respuesta de autenticación inválida del servidor.' };
         }
@@ -50,6 +65,7 @@ export async function login(prevState: LoginState | undefined, formData: FormDat
 export async function logout() {
   // Destroy the session
   cookies().set('session', '', { expires: new Date(0) })
+  localStorage.removeItem('authToken');
   redirect('/login')
 }
  
