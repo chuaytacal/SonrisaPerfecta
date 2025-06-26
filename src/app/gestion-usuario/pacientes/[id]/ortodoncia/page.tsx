@@ -99,7 +99,9 @@ export default function OrtodonciaPage() {
   useEffect(() => {
     if (paciente) {
         const historiaClinicaId = paciente.idHistoriaClinica;
-        const budgetsForPatient = mockPresupuestosData.filter(p => p.idHistoriaClinica === historiaClinicaId);
+        const budgetsForPatient = mockPresupuestosData.filter(p => 
+            p.idHistoriaClinica === historiaClinicaId && p.estado !== 'Cancelado'
+        );
         
         const historyItems: OrthoHistoryItem[] = [];
         const orthoTreatments = ["Ortodoncia cuota inicial", "Ortodoncia cuota mensual"];

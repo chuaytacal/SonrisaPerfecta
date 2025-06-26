@@ -24,6 +24,7 @@ import { DollarSign, Edit, Download, Trash2, ChevronDown, FileText, HeartOff, Ch
 import { cn } from '@/lib/utils';
 import { mockPagosData, mockPresupuestosData } from '@/lib/data';
 import { PaymentSheet } from './PaymentSheet';
+import { EditServiceSheet } from './EditServiceSheet';
 import { useToast } from '@/hooks/use-toast';
 import { ConfirmationDialog } from '../ui/confirmation-dialog';
 
@@ -50,6 +51,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
     items: ItemPresupuesto[];
   } | null>(null);
 
+  const [editingItem, setEditingItem] = useState<ItemPresupuesto | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   
   useEffect(() => {
@@ -220,23 +222,27 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                   {items.map((item) => {
                     const subtotal = item.procedimiento.precioBase * item.cantidad;
                     const porPagar = subtotal - (item.montoPagado || 0);
-                    const isPaid = porPagar <= 0;
+                    const isPaid = porPagar <= 0.009; // Use small epsilon for float comparison
 
                     return (
-                      <TableRow key={item.id} className="hover:bg-muted/50">
+                      <TableRow key={item.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => setEditingItem(item)}>
                         <TableCell className="font-medium">{item.procedimiento.denominacion}</TableCell>
                         <TableCell>{item.cantidad}</TableCell>
                         <TableCell className="text-right">S/ {subtotal.toFixed(2)}</TableCell>
                         <TableCell className="text-right text-green-600">S/ {(item.montoPagado || 0).toFixed(2)}</TableCell>
                         <TableCell className="text-right text-red-600">S/ {porPagar.toFixed(2)}</TableCell>
                         <TableCell className="text-right">
-                            {isPaid || estado === 'Cancelado' ? (
-                                <div className="flex justify-end items-center gap-1 text-green-600">
-                                    <CheckCircle2 className="h-5 w-5"/>
-                                </div>
-                            ) : (
-                                <Button variant="outline" size="sm" className="h-7" onClick={(e) => { e.stopPropagation(); handlePayItem(item); }}>Pagar</Button>
-                            )}
+                          {isPaid ? (
+                            <div className="flex justify-end items-center gap-1 text-green-600">
+                                <CheckCircle2 className="h-5 w-5"/>
+                            </div>
+                          ) : estado === 'Cancelado' ? (
+                              <div className="flex justify-end items-center gap-1 text-red-600">
+                                  <HeartOff className="h-4 w-4" />
+                              </div>
+                          ) : (
+                              <Button variant="outline" size="sm" className="h-7" onClick={(e) => { e.stopPropagation(); handlePayItem(item); }}>Pagar</Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     )
@@ -274,6 +280,21 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
             itemsToPay={paymentContext.items}
             title={paymentContext.title}
             onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
+      {editingItem && (
+        <EditServiceSheet
+            isOpen={!!editingItem}
+            onOpenChange={(open) => {
+                if (!open) setEditingItem(null);
+            }}
+            item={editingItem}
+            presupuesto={presupuesto}
+            paciente={paciente}
+            onUpdate={() => {
+                onUpdate();
+                setEditingItem(null);
+            }}
         />
       )}
       <ConfirmationDialog
