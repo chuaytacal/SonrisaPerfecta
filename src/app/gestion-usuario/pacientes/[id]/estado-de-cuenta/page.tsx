@@ -20,6 +20,7 @@ import { es } from 'date-fns/locale';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
 
 
 const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
@@ -54,19 +55,17 @@ export default function EstadoDeCuentaPage() {
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Presupuesto | null>(null);
-  const [summaryTotals, setSummaryTotals] = useState({ pagado: 0, porPagar: 0 });
 
   // State for payment history filtering and sorting
   const [doctorFilter, setDoctorFilter] = useState('all');
   const [conceptoFilter, setConceptoFilter] = useState('');
-  const [medioPagoFilter, setMedioPagoFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<{ key: keyof Pago; direction: 'asc' | 'desc' }>({ key: 'fechaPago', direction: 'desc' });
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
       id: true,
       fechaPago: true,
       doctorResponsableId: true,
       descripcion: true,
-      metodoPago: true,
+      estado: true,
       montoTotal: true,
   });
 
@@ -114,14 +113,6 @@ export default function EstadoDeCuentaPage() {
             .filter(p => p.itemsPagados.some(ip => presupuestoIds.includes(ip.idPresupuesto)))
             .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());
         setPagos(filteredPagos);
-
-        const totalGeneral = sortedBudgets.reduce((acc, presupuesto) => {
-            const totalItems = presupuesto.items.reduce((itemAcc, item) => itemAcc + (item.procedimiento.precioBase * item.cantidad), 0);
-            return acc + totalItems;
-        }, 0);
-        const totalAbonado = sortedBudgets.reduce((acc, presupuesto) => acc + presupuesto.montoPagado, 0);
-        setSummaryTotals({ pagado: totalAbonado, porPagar: totalGeneral - totalAbonado });
-
       }
     } else {
       setPaciente(null);
@@ -129,7 +120,6 @@ export default function EstadoDeCuentaPage() {
       setHistoriaClinica(null);
       setPresupuestos([]);
       setPagos([]);
-      setSummaryTotals({ pagado: 0, porPagar: 0 });
     }
     setLoading(false);
   };
@@ -143,11 +133,6 @@ export default function EstadoDeCuentaPage() {
         }
     });
     return [{ value: 'all', label: 'Todos los Doctores' }, ...Array.from(uniqueDoctors.values()).map(d => ({ value: d.id, label: `${d.persona.nombre} ${d.persona.apellidoPaterno}` }))];
-  }, [pagos]);
-
-  const medioPagoOptions = useMemo(() => {
-    const uniqueMethods = new Set(pagos.map(p => p.metodoPago));
-    return [{ value: 'all', label: 'Todos los Medios' }, ...Array.from(uniqueMethods).map(m => ({ value: m, label: m }))];
   }, [pagos]);
 
   const requestSort = (key: keyof Pago) => {
@@ -164,9 +149,6 @@ export default function EstadoDeCuentaPage() {
       if (doctorFilter !== 'all') {
           filtered = filtered.filter(p => p.doctorResponsableId === doctorFilter);
       }
-      if (medioPagoFilter !== 'all') {
-          filtered = filtered.filter(p => p.metodoPago === medioPagoFilter);
-      }
       if (conceptoFilter) {
           filtered = filtered.filter(p =>
               p.descripcion.toLowerCase().includes(conceptoFilter.toLowerCase())
@@ -182,7 +164,7 @@ export default function EstadoDeCuentaPage() {
       });
 
       return filtered;
-  }, [pagos, doctorFilter, conceptoFilter, medioPagoFilter, sortConfig]);
+  }, [pagos, doctorFilter, conceptoFilter, sortConfig]);
 
   const handleOpenAddSheet = () => {
     setEditingBudget(null);
@@ -214,13 +196,12 @@ export default function EstadoDeCuentaPage() {
         const deletedItemIds = [...originalItemIds].filter(id => !finalItemIds.has(id));
 
         if (deletedItemIds.length > 0) {
-            const paymentsToKeep = mockPagosData.filter(pago => 
-                !pago.itemsPagados.some(itemPagado => 
-                    itemPagado.idPresupuesto === data.id && deletedItemIds.includes(itemPagado.idItem)
-                )
-            );
-            mockPagosData.length = 0;
-            Array.prototype.push.apply(mockPagosData, paymentsToKeep);
+            const itemIdsToRemove = new Set(deletedItemIds);
+            mockPagosData.forEach(pago => {
+                if (pago.itemsPagados.some(ip => ip.idPresupuesto === data.id && itemIdsToRemove.has(ip.idItem))) {
+                    pago.estado = 'desactivo';
+                }
+            });
         }
 
         const updatedBudget: Presupuesto = {
@@ -315,7 +296,7 @@ export default function EstadoDeCuentaPage() {
     fechaPago: 'Fecha',
     doctorResponsableId: 'Doctor',
     descripcion: 'Concepto',
-    metodoPago: 'Medio de Pago',
+    estado: 'Estado',
     montoTotal: 'Monto',
   };
   
@@ -327,8 +308,6 @@ export default function EstadoDeCuentaPage() {
         paciente={paciente}
         persona={persona}
         onBack={() => router.push('/gestion-usuario/pacientes')}
-        totalPagado={summaryTotals.pagado}
-        porPagar={summaryTotals.porPagar}
       />
       <div className="flex-1">
         <EtiquetasNotasSalud
@@ -388,10 +367,6 @@ export default function EstadoDeCuentaPage() {
                               <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Filtrar por doctor..." /></SelectTrigger>
                               <SelectContent>{doctorOptions.map(option => (<SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>))}</SelectContent>
                           </Select>
-                          <Select value={medioPagoFilter} onValueChange={(val) => setMedioPagoFilter(val as MetodoPago | 'all')}>
-                              <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Filtrar por medio..." /></SelectTrigger>
-                              <SelectContent>{medioPagoOptions.map(option => (<SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>))}</SelectContent>
-                          </Select>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="outline" className="w-full sm:w-auto"><Settings2 className="mr-2 h-4 w-4" /> Columnas</Button>
@@ -419,7 +394,7 @@ export default function EstadoDeCuentaPage() {
                                 )}
                                 {columnVisibility.doctorResponsableId && <TableHead>Doctor</TableHead>}
                                 {columnVisibility.descripcion && <TableHead>Concepto</TableHead>}
-                                {columnVisibility.metodoPago && <TableHead>Medio de Pago</TableHead>}
+                                {columnVisibility.estado && <TableHead>Estado</TableHead>}
                                 {columnVisibility.montoTotal && <TableHead className="text-right">Monto</TableHead>}
                               </TableRow>
                             </TableHeader>
@@ -433,7 +408,7 @@ export default function EstadoDeCuentaPage() {
                                       {columnVisibility.fechaPago && <TableCell>{format(new Date(pago.fechaPago), 'dd/MM/yyyy')}</TableCell>}
                                       {columnVisibility.doctorResponsableId && <TableCell>{doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'N/A'}</TableCell>}
                                       {columnVisibility.descripcion && <TableCell>{pago.descripcion}</TableCell>}
-                                      {columnVisibility.metodoPago && <TableCell>{pago.metodoPago}</TableCell>}
+                                      {columnVisibility.estado && <TableCell><Badge variant={pago.estado === 'desactivo' ? 'destructive' : 'default'} className="capitalize">{pago.estado}</Badge></TableCell>}
                                       {columnVisibility.montoTotal && <TableCell className="text-right">S/ {pago.montoTotal.toFixed(2)}</TableCell>}
                                     </TableRow>
                                   )
@@ -464,4 +439,3 @@ export default function EstadoDeCuentaPage() {
     </div>
   );
 }
-

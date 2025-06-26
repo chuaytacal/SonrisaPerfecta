@@ -159,6 +159,20 @@ export default function CalendarioPage() {
     const appointmentIndex = mockAppointmentsData.findIndex(app => app.id === appointmentId);
     if(appointmentIndex > -1) {
         mockAppointmentsData[appointmentIndex].estado = newState;
+        
+        // Cascade state change to budget if appointment is cancelled
+        if (newState === 'Cancelada') {
+            const budgetToCancel = mockPresupuestosData.find(b => b.idCita === appointmentId);
+            if (budgetToCancel) {
+                budgetToCancel.estado = 'Cancelado';
+                // Deactivate associated payments
+                mockPagosData.forEach(pago => {
+                    if (pago.itemsPagados.some(ip => ip.idPresupuesto === budgetToCancel.id)) {
+                        pago.estado = 'desactivo';
+                    }
+                });
+            }
+        }
     }
     setAppointments([...mockAppointmentsData]);
     toast({
@@ -202,9 +216,8 @@ export default function CalendarioPage() {
         budgetToCancel.estado = 'Cancelado';
 
         // 3. Deactivate all associated payments
-        const budgetItemIds = new Set(budgetToCancel.items.map(i => i.id));
         mockPagosData.forEach(pago => {
-            if (pago.itemsPagados.some(ip => ip.idPresupuesto === budgetToCancel.id && budgetItemIds.has(ip.idItem))) {
+            if (pago.itemsPagados.some(ip => ip.idPresupuesto === budgetToCancel.id)) {
                 pago.estado = 'desactivo';
             }
         });

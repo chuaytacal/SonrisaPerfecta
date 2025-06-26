@@ -20,13 +20,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { DollarSign, Edit, Download, Trash2, ChevronDown, FileText, ThumbsUp, ThumbsDown, HeartOff, CheckCircle2, Circle } from 'lucide-react';
+import { DollarSign, Edit, Download, Trash2, ChevronDown, FileText, HeartOff, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { mockPagosData, mockPresupuestosData } from '@/lib/data';
 import { PaymentSheet } from './PaymentSheet';
 import { useToast } from '@/hooks/use-toast';
 import { ConfirmationDialog } from '../ui/confirmation-dialog';
-import { EditServiceSheet } from './EditServiceSheet';
 
 interface BudgetCardProps {
   presupuesto: Presupuesto;
@@ -52,7 +51,6 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
   } | null>(null);
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [editingService, setEditingService] = useState<ItemPresupuesto | null>(null);
   
   useEffect(() => {
     setPresupuesto(initialPresupuesto);
@@ -69,13 +67,15 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
     const index = mockPresupuestosData.findIndex(p => p.id === id);
     if (index > -1) {
       mockPresupuestosData[index].estado = newState;
-       if (newState === 'Cancelado') {
-        mockPagosData.forEach(pago => {
-          if(pago.itemsPagados.some(ip => ip.idPresupuesto === id)) {
-            pago.estado = 'desactivo';
-          }
-        });
-      }
+      
+      const shouldBeActive = newState === 'Creado' || newState === 'Pagado';
+      
+      mockPagosData.forEach(pago => {
+        if(pago.itemsPagados.some(ip => ip.idPresupuesto === id)) {
+          pago.estado = shouldBeActive ? 'activo' : 'desactivo';
+        }
+      });
+      
       setPresupuesto(mockPresupuestosData[index]);
       toast({ title: "Estado Actualizado", description: `El presupuesto ahora está "${newState}".`})
     }
@@ -183,9 +183,11 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
             </div>
               <TooltipProvider delayDuration={100}>
               <div className="flex items-center gap-1.5 ml-4">
-                  <Tooltip><TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePayMultiple}><DollarSign className="h-4 w-4" /></Button>
-                  </TooltipTrigger><TooltipContent><p>Cobrar varios servicios</p></TooltipContent></Tooltip>
+                  {estado !== 'Cancelado' && (
+                    <Tooltip><TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePayMultiple}><DollarSign className="h-4 w-4" /></Button>
+                    </TooltipTrigger><TooltipContent><p>Cobrar varios servicios</p></TooltipContent></Tooltip>
+                  )}
                   
                   <Tooltip><TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(presupuesto)}><Edit className="h-4 w-4" /></Button>
@@ -221,14 +223,14 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                     const isPaid = porPagar <= 0;
 
                     return (
-                      <TableRow key={item.id} onClick={() => setEditingService(item)} className="cursor-pointer hover:bg-muted/50">
+                      <TableRow key={item.id} className="hover:bg-muted/50">
                         <TableCell className="font-medium">{item.procedimiento.denominacion}</TableCell>
                         <TableCell>{item.cantidad}</TableCell>
                         <TableCell className="text-right">S/ {subtotal.toFixed(2)}</TableCell>
                         <TableCell className="text-right text-green-600">S/ {(item.montoPagado || 0).toFixed(2)}</TableCell>
                         <TableCell className="text-right text-red-600">S/ {porPagar.toFixed(2)}</TableCell>
                         <TableCell className="text-right">
-                            {isPaid ? (
+                            {isPaid || estado === 'Cancelado' ? (
                                 <div className="flex justify-end items-center gap-1 text-green-600">
                                     <CheckCircle2 className="h-5 w-5"/>
                                 </div>
@@ -242,19 +244,16 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                 </TableBody>
                 <TableFooter>
                   <TableRow>
-                      <TableCell colSpan={4} className="text-right font-bold">Total</TableCell>
+                      <TableCell colSpan={5} className="text-right font-bold">Total</TableCell>
                       <TableCell className="text-right font-bold">S/ {totalPresupuesto.toFixed(2)}</TableCell>
-                      <TableCell />
                   </TableRow>
                    <TableRow>
-                      <TableCell colSpan={4} className="text-right font-bold text-green-700">Pagado</TableCell>
+                      <TableCell colSpan={5} className="text-right font-bold text-green-700">Pagado</TableCell>
                       <TableCell className="text-right font-bold text-green-700">S/ {montoPagado.toFixed(2)}</TableCell>
-                      <TableCell />
                   </TableRow>
                    <TableRow>
-                      <TableCell colSpan={4} className="text-right font-bold text-red-700">Por Pagar</TableCell>
+                      <TableCell colSpan={5} className="text-right font-bold text-red-700">Por Pagar</TableCell>
                       <TableCell className="text-right font-bold text-red-700">S/ {(totalPresupuesto - montoPagado).toFixed(2)}</TableCell>
-                      <TableCell />
                   </TableRow>
                 </TableFooter>
               </Table>
@@ -275,19 +274,6 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
             itemsToPay={paymentContext.items}
             title={paymentContext.title}
             onPaymentSuccess={handlePaymentSuccess}
-        />
-      )}
-      {editingService && (
-        <EditServiceSheet
-          isOpen={!!editingService}
-          onOpenChange={(open) => !open && setEditingService(null)}
-          item={editingService}
-          presupuesto={presupuesto}
-          paciente={paciente}
-          onUpdate={() => {
-              setEditingService(null); // Close sheet on update
-              onUpdate(); // Refresh parent
-          }}
         />
       )}
       <ConfirmationDialog

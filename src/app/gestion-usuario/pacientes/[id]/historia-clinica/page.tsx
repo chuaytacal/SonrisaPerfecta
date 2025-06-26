@@ -102,7 +102,10 @@ export default function HistoriaClinicaPage() {
   useEffect(() => {
     if (paciente) {
         const historiaClinicaId = paciente.idHistoriaClinica;
-        const budgetsForPatient = mockPresupuestosData.filter(p => p.idHistoriaClinica === historiaClinicaId);
+        const budgetsForPatient = mockPresupuestosData.filter(p => 
+          p.idHistoriaClinica === historiaClinicaId && 
+          (p.estado === 'Creado' || p.estado === 'Pagado')
+        );
         
         const historyItems: ClinicalHistoryItem[] = [];
 
