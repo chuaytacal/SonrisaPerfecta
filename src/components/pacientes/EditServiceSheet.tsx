@@ -134,22 +134,37 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
 
 
   const handleSaveChanges = () => {
-    // 1. Update the state of all relevant payments in the mock database
+    // 1. Update the payments in the master data list
     editablePagos.forEach(editablePago => {
       const originalPagoIndex = mockPagosData.findIndex(p => p.id === editablePago.id);
       if (originalPagoIndex > -1) {
-        // This is the key change: update the state of the *entire payment record*
-        mockPagosData[originalPagoIndex].estado = editablePago.estado;
+        const originalPago = mockPagosData[originalPagoIndex];
 
-        // Optionally update other details if the payment is active
-        if (editablePago.estado === 'activo') {
-            mockPagosData[originalPagoIndex].fechaPago = editablePago.fechaPago;
-            mockPagosData[originalPagoIndex].metodoPago = editablePago.metodoPago;
+        // Update the amount for the specific item within the payment record
+        const itemPagadoIndex = originalPago.itemsPagados.findIndex(
+          ip => ip.idPresupuesto === presupuesto.id && ip.idItem === item.id
+        );
+
+        if (itemPagadoIndex > -1) {
+          originalPago.itemsPagados[itemPagadoIndex].monto = editablePago.monto;
+        }
+
+        // Recalculate the payment's total monto based on ALL its items
+        const newTotalMonto = originalPago.itemsPagados.reduce((sum, ip) => sum + ip.monto, 0);
+        originalPago.montoTotal = newTotalMonto;
+        
+        // A payment's state is determined by its total. If 0, it's inactive.
+        originalPago.estado = newTotalMonto > 0.009 ? 'activo' : 'desactivo';
+        
+        // Update other details only if it remains active
+        if (originalPago.estado === 'activo') {
+            originalPago.fechaPago = editablePago.fechaPago;
+            originalPago.metodoPago = editablePago.metodoPago;
         }
       }
     });
 
-    // 2. Recalculate all paid amounts for the entire budget from the source of truth
+    // 2. Recalculate all paid amounts for the entire budget from the updated source of truth
     const presupuestoIndex = mockPresupuestosData.findIndex(p => p.id === presupuesto.id);
     if (presupuestoIndex === -1) return;
     
@@ -173,8 +188,9 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
     // 3. Update the budget's total paid amount and its state
     budgetToUpdate.montoPagado = totalBudgetPaid;
     const totalPresupuestoCalculado = budgetToUpdate.items.reduce((acc, item) => acc + (item.procedimiento.precioBase * item.cantidad), 0);
+    
     if (budgetToUpdate.estado !== 'Cancelado') {
-      if (totalBudgetPaid >= totalPresupuestoCalculado) {
+      if (totalBudgetPaid >= totalPresupuestoCalculado - 0.001) { // Epsilon for float comparison
         budgetToUpdate.estado = 'Pagado';
       } else {
         budgetToUpdate.estado = 'Creado';
@@ -319,3 +335,5 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
     </>
   );
 }
+
+    

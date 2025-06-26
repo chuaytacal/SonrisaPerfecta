@@ -81,11 +81,12 @@ export default function ReportesPage() {
     const to = dateRange?.to ? endOfDay(dateRange.to) : undefined;
 
     // --- Global KPIs (not affected by filters) ---
-    const totalPresupuestadoGlobal = mockPresupuestosData.reduce((acc, presupuesto) => {
+    const presupuestosActivosGlobal = mockPresupuestosData.filter(p => p.estado === 'Creado' || p.estado === 'Pagado');
+    const totalPresupuestadoGlobal = presupuestosActivosGlobal.reduce((acc, presupuesto) => {
       const totalItems = presupuesto.items.reduce((itemAcc, item) => itemAcc + (item.procedimiento.precioBase * item.cantidad), 0);
       return acc + totalItems;
     }, 0);
-    const totalPagadoGlobal = mockPresupuestosData.reduce((acc, presupuesto) => acc + presupuesto.montoPagado, 0);
+    const totalPagadoGlobal = presupuestosActivosGlobal.reduce((acc, presupuesto) => acc + presupuesto.montoPagado, 0);
     const saldoPendienteGlobal = totalPresupuestadoGlobal - totalPagadoGlobal;
 
 
@@ -385,3 +386,5 @@ export default function ReportesPage() {
     </div>
   );
 }
+
+    
