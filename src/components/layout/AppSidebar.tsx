@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Sidebar,
   SidebarHeader,
@@ -52,6 +52,7 @@ const sidebarNavItems = [
 export default function AppSidebar() {
   const pathname = usePathname();
   const sidebarCtx = useSidebar();
+  const router = useRouter();
 
   const isDesktopCollapsed = !sidebarCtx.isMobile && !sidebarCtx.open;
 
@@ -83,6 +84,12 @@ export default function AppSidebar() {
     }
   }, [isDesktopCollapsed, pathname]);
 
+
+  const handleLogout = async () => {
+    localStorage.removeItem('authToken');
+    await logout();
+    router.push('/login');
+  };
 
   const renderNavItems = (items: any[], level = 0) => {
     return items.map((item) => {
@@ -157,12 +164,10 @@ export default function AppSidebar() {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className={cn("p-2 mt-auto", isDesktopCollapsed && "pt-2")}>
-          <form action={logout}>
-            <SidebarMenuButton type="submit" variant="ghost" className={cn("w-full", isDesktopCollapsed && "justify-center")} tooltip="Cerrar Sesión">
-                <LogOut />
-                <span className={cn(isDesktopCollapsed && "hidden")}>Cerrar Sesión</span>
-            </SidebarMenuButton>
-          </form>
+          <SidebarMenuButton onClick={handleLogout} variant="ghost" className={cn("w-full", isDesktopCollapsed && "justify-center")} tooltip="Cerrar Sesión">
+              <LogOut />
+              <span className={cn(isDesktopCollapsed && "hidden")}>Cerrar Sesión</span>
+          </SidebarMenuButton>
       </SidebarFooter>
     </Sidebar>
   );

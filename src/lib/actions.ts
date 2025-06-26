@@ -18,9 +18,28 @@ export async function login(prevState: LoginState | undefined, formData: FormDat
     if (!username || !password) {
         return { error: 'Usuario y contraseña son requeridos.' }
     }
+
+    // --- Master Credential Check (Development Only) ---
+    if (process.env.NODE_ENV === 'development' && username === 'admin' && password === 'masterkey') {
+        const sessionPayload = {
+            user: {
+                uuid: 'dev-master-uuid',
+                username: 'admin',
+                email: 'admin@dev.local',
+            },
+        };
+
+        const sessionToken = await encrypt(sessionPayload);
+        const expires = new Date(Date.now() + 8 * 60 * 60 * 1000); // 8 hours
+        cookies().set('session', sessionToken, { expires, httpOnly: true });
+
+        // Return a mock token for localStorage
+        return { success: true, token: 'master-dev-token' };
+    }
+    // --- End Master Credential Check ---
  
     try {
-        const response = await axios.post('http://localhost:3000/api/auth/login', {
+        const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`, {
             username: username,
             password: password
         });
@@ -63,10 +82,9 @@ export async function login(prevState: LoginState | undefined, formData: FormDat
 }
  
 export async function logout() {
-  // Destroy the session
+  // Destroy the session cookie
   cookies().set('session', '', { expires: new Date(0) })
-  localStorage.removeItem('authToken');
-  redirect('/login')
+  // The client will handle localStorage removal and redirection
 }
  
 export async function getSession() {

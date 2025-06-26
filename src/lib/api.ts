@@ -2,17 +2,13 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api', // Recommended to use an environment variable
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
 // Interceptor to add the auth token to every request.
-// NOTE: The current login system uses httpOnly cookies and does not provide a token
-// to the client. For this interceptor to work, you would need to adjust the
-// login flow to store a bearer token in a place accessible by the client,
-// like localStorage.
 api.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
