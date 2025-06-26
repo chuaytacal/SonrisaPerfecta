@@ -5,8 +5,14 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { mockUsuariosData } from './data'
 import { encrypt, decrypt } from './session'
+
+type LoginState = {
+    error?: string;
+    success?: boolean;
+    token?: string;
+}
  
-export async function login(prevState: { error: string | undefined } | undefined, formData: FormData) {
+export async function login(prevState: LoginState | undefined, formData: FormData): Promise<LoginState> {
     const username = formData.get('usuario') as string;
     const password = formData.get('contrasena') as string;
  
@@ -22,12 +28,13 @@ export async function login(prevState: { error: string | undefined } | undefined
  
     // Create the session
     const expires = new Date(Date.now() + 8 * 60 * 60 * 1000) // 8 hours from now
-    const session = await encrypt({ user, expires })
+    const sessionToken = await encrypt({ user, expires })
  
     // Save the session in a cookie
-    cookies().set('session', session, { expires, httpOnly: true })
+    cookies().set('session', sessionToken, { expires, httpOnly: true })
       
-    redirect('/dashboard')
+    // Return the token to the client for localStorage
+    return { success: true, token: sessionToken }
 }
  
 export async function logout() {

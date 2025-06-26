@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useState, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
 import Image from 'next/image';
 import { login } from '@/lib/actions';
@@ -10,6 +10,7 @@ import { KeyRound, Loader2, User, Eye, EyeOff } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import dentalPhoto from '@/components/assets/fondo-dental.jpg';
+import { useRouter } from 'next/navigation';
 
 function LoginButton() {
   const { pending } = useFormStatus();
@@ -24,6 +25,14 @@ function LoginButton() {
 export default function LoginPage() {
   const [state, formAction] = useActionState(login, undefined);
   const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state?.success && state.token) {
+      localStorage.setItem('authToken', state.token);
+      router.push('/dashboard');
+    }
+  }, [state, router]);
 
   return (
     <main className="min-h-screen w-full flex items-center justify-center p-4 bg-primary/10">
