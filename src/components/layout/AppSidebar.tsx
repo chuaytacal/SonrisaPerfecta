@@ -20,15 +20,9 @@ import {
   CalendarDays,
   Users,
   Briefcase,
-  Archive,
-  PlusSquare,
   BookMarked,
   History,
-  ClipboardType,
-  FilePlus,
   BarChart3,
-  List,
-  Tag,
   LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -50,25 +44,7 @@ const sidebarNavItems = [
       { href: '/gestion-usuario/personal', label: 'Personal', icon: Briefcase },
     ],
   },
-  {
-    label: 'Inventario',
-    icon: Archive,
-    basePathForActive: '/inventario',
-    subItems: [
-      { href: '/inventario/productos/lista', label: 'Lista de Productos', icon: List },
-      { href: '/inventario/productos/registrar', label: 'Registrar Productos', icon: PlusSquare },
-    ],
-  },
   { href: '/historial-pago', label: 'Historial de Pagos', icon: History },
-  {
-    label: 'Recetas',
-    icon: ClipboardType,
-    basePathForActive: '/recetas',
-    subItems: [
-      { href: '/recetas/registrar', label: 'Registrar Recetas', icon: FilePlus },
-      { href: '/recetas/etiquetas', label: 'Etiquetas', icon: Tag },
-    ],
-  },
   { href: '/catalogo', label: 'Catálogo', icon: BookMarked },
   { href: '/reportes', label: 'Reportes', icon: BarChart3 },
 ];

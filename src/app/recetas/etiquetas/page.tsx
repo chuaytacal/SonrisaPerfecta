@@ -1,9 +1,5 @@
-export default function EtiquetasRecetasPage() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold">Gestión de Etiquetas (Recetas)</h1>
-      <p>Administración de etiquetas para recetas.</p>
-      {/* Placeholder for tag management */}
-    </div>
-  );
+
+// This page is no longer in use and can be deleted.
+export default function DeprecatedPage() {
+  return null;
 }
