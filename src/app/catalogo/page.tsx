@@ -1,12 +1,12 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Loader2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
@@ -19,8 +19,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AddProcedimientoModal } from '@/components/catalogo/AddProcedimientoModal';
+import { Skeleton } from "@/components/ui/skeleton";
+import api from '@/lib/api';
 
-import { mockProcedimientos, mockMotivosCita, mockEtiquetas } from '@/lib/data';
+import { mockMotivosCita, mockEtiquetas } from '@/lib/data';
 import type { Procedimiento, MotivoCita } from '@/types';
 import type { ColumnDef } from '@tanstack/react-table';
 
@@ -36,7 +38,8 @@ type ModalType = 'procedimiento' | 'motivo' | 'etiqueta';
 
 export default function CatalogoPage() {
   const { toast } = useToast();
-  const [procedimientos, setProcedimientos] = useState(mockProcedimientos);
+  const [procedimientos, setProcedimientos] = useState<Procedimiento[]>([]);
+  const [loading, setLoading] = useState(true);
   const [motivosCita, setMotivosCita] = useState(mockMotivosCita);
   const [etiquetas, setEtiquetas] = useState(mockEtiquetas.map(e => ({ id: e, nombre: e })));
 
@@ -53,22 +56,52 @@ export default function CatalogoPage() {
   const formMotivo = useForm<z.infer<typeof motivoCitaSchema>>({ resolver: zodResolver(motivoCitaSchema) });
   const formEtiqueta = useForm<z.infer<typeof etiquetaSchema>>({ resolver: zodResolver(etiquetaSchema) });
 
+  useEffect(() => {
+    const fetchProcedimientos = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/procedures/');
+        setProcedimientos(response.data);
+      } catch (error) {
+        console.error("Error fetching procedures:", error);
+        toast({
+          title: "Error al cargar procedimientos",
+          description: "No se pudo conectar con el servidor.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProcedimientos();
+  }, [toast]);
+
   const handleOpenProcedimientoModal = (item: Procedimiento | null = null) => {
     setEditingProcedimiento(item);
     setIsProcedimientoModalOpen(true);
   };
 
-  const handleSaveProcedimiento = (procedimiento: Procedimiento) => {
-    if (editingProcedimiento) {
-      const index = mockProcedimientos.findIndex(p => p.id === procedimiento.id);
-      mockProcedimientos[index] = procedimiento;
-    } else {
-      mockProcedimientos.push(procedimiento);
+  const handleSaveProcedimiento = async (procedimiento: Procedimiento) => {
+    const isEditing = !!editingProcedimiento;
+    try {
+      if (isEditing) {
+        const response = await api.patch(`/procedures/${procedimiento.id}`, procedimiento);
+        setProcedimientos(procedimientos.map(p => p.id === procedimiento.id ? response.data : p));
+      } else {
+        const response = await api.post('/procedures/', procedimiento);
+        setProcedimientos([...procedimientos, response.data]);
+      }
+      toast({ title: isEditing ? "Procedimiento Actualizado" : "Procedimiento Creado", description: `El procedimiento ha sido guardado correctamente.` });
+      setIsProcedimientoModalOpen(false);
+      setEditingProcedimiento(null);
+    } catch (error) {
+      console.error("Error saving procedure:", error);
+      toast({
+        title: "Error al guardar",
+        description: "No se pudo guardar el procedimiento. Intente nuevamente.",
+        variant: "destructive",
+      });
     }
-    setProcedimientos([...mockProcedimientos]);
-    toast({ title: editingProcedimiento ? "Procedimiento Actualizado" : "Procedimiento Creado", description: `El procedimiento ha sido guardado correctamente.` });
-    setIsProcedimientoModalOpen(false);
-    setEditingProcedimiento(null);
   };
   
   const handleOpenGenericModal = (type: 'motivo' | 'etiqueta', item: any = null) => {
@@ -121,25 +154,35 @@ export default function CatalogoPage() {
     setIsConfirmOpen(true);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!itemToDelete) return;
     const { type, id, name } = itemToDelete;
 
     if (type === 'procedimiento') {
-      const index = mockProcedimientos.findIndex(p => p.id === id);
-      if(index > -1) mockProcedimientos.splice(index, 1);
-      setProcedimientos([...mockProcedimientos]);
+      try {
+        await api.delete(`/procedures/${id}`);
+        setProcedimientos(procedimientos.filter(p => p.id !== id));
+        toast({ title: "Elemento Eliminado", description: `"${name}" ha sido eliminado.`, variant: 'destructive' });
+      } catch (error) {
+          console.error("Error deleting procedure:", error);
+          toast({
+            title: "Error al eliminar",
+            description: "No se pudo eliminar el procedimiento.",
+            variant: "destructive",
+          });
+      }
     } else if (type === 'motivo') {
       const index = mockMotivosCita.findIndex(m => m.id === id);
       if(index > -1) mockMotivosCita.splice(index, 1);
       setMotivosCita([...mockMotivosCita]);
+      toast({ title: "Elemento Eliminado", description: `"${name}" ha sido eliminado.`, variant: 'destructive' });
     } else if (type === 'etiqueta') {
       const index = mockEtiquetas.findIndex(e => e === id);
       if(index > -1) mockEtiquetas.splice(index, 1);
       setEtiquetas(mockEtiquetas.map(e => ({ id: e, nombre: e })));
+      toast({ title: "Elemento Eliminado", description: `"${name}" ha sido eliminado.`, variant: 'destructive' });
     }
 
-    toast({ title: "Elemento Eliminado", description: `"${name}" ha sido eliminado.`, variant: 'destructive' });
     setIsConfirmOpen(false);
     setItemToDelete(null);
   };
@@ -241,7 +284,16 @@ export default function CatalogoPage() {
               <CardDescription>Servicios ofrecidos en la clínica. Estos se usan en el odontograma y citas.</CardDescription>
             </CardHeader>
             <CardContent>
-              <DataTable columns={columnsProcedimientos} data={procedimientos} onAdd={() => handleOpenProcedimientoModal(null)} addButtonLabel="Añadir Procedimiento" searchPlaceholder="Buscar procedimiento..." searchColumnId="denominacion" />
+              {loading ? (
+                <div className="space-y-4 p-4">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : (
+                <DataTable columns={columnsProcedimientos} data={procedimientos} onAdd={() => handleOpenProcedimientoModal(null)} addButtonLabel="Añadir Procedimiento" searchPlaceholder="Buscar procedimiento..." searchColumnId="denominacion" />
+              )}
             </CardContent>
           </Card>
         </TabsContent>

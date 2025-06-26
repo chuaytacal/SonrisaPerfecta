@@ -2,17 +2,18 @@
 'use client';
 
 import React from 'react';
-import type { DientesMap } from './setting';
+import type { DientesMap, OdontogramDataItem } from './setting';
 import TreatmentPlanTable from './TreatmentPlan';
 import Teeth from './Teeth';
 
 interface OdontogramProps {
   dientesData: DientesMap;
   onDientesChange: (newDientesMap: DientesMap) => void;
+  onOdontogramDataChange: (odontogramData: OdontogramDataItem[]) => void;
   odontogramType: 'Permanent' | 'Primary';
 }
 
-export function Odontogram({ dientesData, onDientesChange, odontogramType }: OdontogramProps) {
+export function Odontogram({ dientesData, onDientesChange, odontogramType, onOdontogramDataChange }: OdontogramProps) {
   
   const scalaTeeth = odontogramType === 'Primary' 
     ? {x:650, y:450, moveTeethX: 100, moveTeethY: 40}
@@ -51,7 +52,7 @@ export function Odontogram({ dientesData, onDientesChange, odontogramType }: Odo
         <TreatmentPlanTable
           dientesMap={dientesData}
           odontogramType={odontogramType}
-          onDientesChange={onDientesChange}
+          onOdontogramDataChange={onOdontogramDataChange}
         />
       </div>
     </div>

@@ -1,6 +1,17 @@
 
 import type { Procedimiento } from '@/types';
 
+export type DientesMap = {
+  [idDiente: number]: HallazgosPorDiente;
+};
+
+export type OdontogramDataItem = {
+  diente: number | number[];
+  hallazgo: Omit<Hallazgo, 'grupo' | 'servicios'>;
+  nota: string;
+  servicios: Procedimiento[];
+};
+
 export type Hallazgo = {
   tipo: any ; 
   abreviatura: any;
@@ -13,7 +24,6 @@ export type Hallazgo = {
   servicios?: Procedimiento[];
 };
 
-
 export type DetalleHallazgo = {
   abreviatura: any;
   nombre: string; 
@@ -21,10 +31,6 @@ export type DetalleHallazgo = {
 
 export type HallazgosPorDiente = {
   [tipo: string]: Hallazgo;
-};
-
-export type DientesMap = {
-  [idDiente: number]: HallazgosPorDiente;
 };
 
 export type HallazgoCaraCurrent = {
@@ -55,6 +61,7 @@ export type OpenModeal = {
   detalle?: any[];
   to: 'toConfirmDelGroup'| 'toToothFace' | '';
 };
+
 export const Hallazgos = [
   { tipo:'AOF', abreviatura: '', nombre:'Aparato Ortodóntico Fijo',color:'', detalle:[] },
   { tipo:'AOR', abreviatura: '', nombre:'Aparato Ortodóntico Removible',color:'', detalle:[] },

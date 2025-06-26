@@ -12,7 +12,7 @@ import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { DientesMap } from '@/components/odontograma/setting';
+import type { DientesMap, OdontogramDataItem } from '@/components/odontograma/setting';
 import { useToast } from '@/hooks/use-toast';
 
 // Define ToothIconCustomSvg locally for error display or import from a shared location if available
@@ -53,12 +53,59 @@ export default function OdontogramaPage() {
 
   const [permanenteData, setPermanenteData] = useState<DientesMap>({});
   const [primariaData, setPrimariaData] = useState<DientesMap>({});
+  const [odontogramData, setOdontogramData] = useState<OdontogramDataItem[]>([]); 
   const [activeTab, setActiveTab] = useState<OdontogramType>('Permanente');
 
   const [displayedNotas, setDisplayedNotas] = useState<string>("Sin notas registradas.");
   const [displayedEtiquetas, setDisplayedEtiquetas] = useState<EtiquetaPaciente[]>([]);
   const [displayedAlergias, setDisplayedAlergias] = useState<string[]>([]);
   const [displayedEnfermedades, setDisplayedEnfermedades] = useState<string[]>([]);
+
+ // los 3 sgt son los modificidos
+  const convertirOdontogramDataItemADientesMap = (plan: OdontogramDataItem[]): DientesMap => {
+  const resultado: DientesMap = {};
+
+  plan.forEach(item => {
+    const dientes = Array.isArray(item.diente) ? item.diente : [item.diente];
+
+    dientes.forEach(dienteId => {
+      if (!resultado[dienteId]) {
+        resultado[dienteId] = {};
+      }
+
+      const hallazgo: Hallazgo = {
+        tipo: item.hallazgo.tipo,
+        abreviatura: item.hallazgo.abreviatura,
+        color: item.hallazgo.color,
+        nombre: item.hallazgo.nombre
+      };
+
+      if (item.hallazgo.cara && Object.keys(item.hallazgo.cara).length > 0) {
+        hallazgo.cara = item.hallazgo.cara;
+      }
+
+      if (item.hallazgo.detalle && item.hallazgo.detalle.length > 0) {
+        hallazgo.detalle = item.hallazgo.detalle;
+      }
+
+      if (Array.isArray(item.diente)) {
+        hallazgo.grupo = item.diente;
+      }
+
+      resultado[dienteId][item.hallazgo.tipo] = hallazgo;
+    });
+  });
+
+  return resultado;
+  };
+  useEffect(() => {
+    console.log(odontogramData);
+  }, [odontogramData]);
+
+  const handleOdontogramaDataChange = useCallback((newData: OdontogramDataItem[]) => {
+    setOdontogramData(newData);
+  }, [activeTab, permanenteData, primariaData, patientId]);
+  
 
   const deriveAlergiasFromAntecedentes = (antecedentes?: PacienteType['antecedentesMedicos']): string[] => {
     if (antecedentes && antecedentes.q3_cuales && antecedentes.q3_alergico === "Sí") {
@@ -140,7 +187,6 @@ export default function OdontogramaPage() {
     }
   }, [activeTab, permanenteData, primariaData, patientId]);
 
-
   const handleUpdateNotes = (newNotes: string) => {
     const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
     if (pacienteIndex > -1 && paciente) {
@@ -211,7 +257,8 @@ export default function OdontogramaPage() {
               <TabsContent value="Permanente">
                  <OdontogramComponent 
                     dientesData={permanenteData} 
-                    onDientesChange={handleOdontogramaChange} 
+                    onDientesChange={handleOdontogramaChange}
+                    onOdontogramDataChange={handleOdontogramaDataChange} 
                     odontogramType="Permanent"
                  />
               </TabsContent>
@@ -219,6 +266,7 @@ export default function OdontogramaPage() {
                  <OdontogramComponent 
                     dientesData={primariaData} 
                     onDientesChange={handleOdontogramaChange} 
+                    onOdontogramDataChange={handleOdontogramaDataChange}
                     odontogramType="Primary"
                  />
               </TabsContent>
