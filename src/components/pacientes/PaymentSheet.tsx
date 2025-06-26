@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -234,7 +233,7 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
 
         const totalPresupuestoCalculado = mockPresupuestosData[presupuestoIndex].items.reduce((acc, item) => acc + (item.procedimiento.precioBase * item.cantidad), 0);
         if (mockPresupuestosData[presupuestoIndex].montoPagado >= totalPresupuestoCalculado) {
-          mockPresupuestosData[presupuestoIndex].estado = 'Terminado';
+          mockPresupuestosData[presupuestoIndex].estado = 'Pagado';
         }
 
         const newPago: Pago = {
@@ -245,6 +244,7 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
           tipoComprobante: comprobante,
           doctorResponsableId: presupuesto.doctorResponsableId!,
           descripcion: conceptoTexto,
+          estado: 'activo',
           itemsPagados: itemsPagadosParaRegistro,
         };
         mockPagosData.push(newPago);

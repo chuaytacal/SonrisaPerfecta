@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -159,7 +158,7 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
     
     const totalPresupuestoCalculado = mockPresupuestosData[presupuestoIndex].items.reduce((acc, currentItem) => acc + (currentItem.procedimiento.precioBase * currentItem.cantidad), 0);
     if (montoPagadoActualizado >= totalPresupuestoCalculado) {
-      mockPresupuestosData[presupuestoIndex].estado = 'Terminado';
+      mockPresupuestosData[presupuestoIndex].estado = 'Pagado';
     } else {
       mockPresupuestosData[presupuestoIndex].estado = 'Creado';
     }
