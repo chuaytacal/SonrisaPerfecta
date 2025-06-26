@@ -146,7 +146,7 @@ export default function ReportesPage() {
     const presupuestosEnRango: Presupuesto[] = mockPresupuestosData.filter(pr => {
         const fechaPresupuesto = new Date(pr.fechaAtencion); // Use attention date for relevance
         const doctorMatch = doctorFilter === 'all' || pr.doctorResponsableId === doctorFilter;
-        return isWithinInterval(fechaPresupuesto, { start: from, end: to }) && doctorMatch;
+        return isWithinInterval(fechaPresupuesto, { start: from, end: to }) && doctorMatch && (pr.estado === 'Creado' || pr.estado === 'Pagado');
     });
 
     // Distribucion de Servicios (now based on quantity)

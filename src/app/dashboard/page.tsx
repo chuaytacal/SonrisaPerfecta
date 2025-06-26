@@ -53,8 +53,8 @@ export default function DashboardPage() {
   const lastMonth = subMonths(today, 1);
 
   // 1. Citas Hoy
-  const citasHoy = mockAppointmentsData.filter(c => isToday(c.start)).length;
-  const citasAyer = mockAppointmentsData.filter(c => isSameMonth(c.start, yesterday) && c.start.getDate() === yesterday.getDate()).length;
+  const citasHoy = mockAppointmentsData.filter(c => isToday(c.start) && c.estado !== 'Cancelada').length;
+  const citasAyer = mockAppointmentsData.filter(c => isSameMonth(c.start, yesterday) && c.start.getDate() === yesterday.getDate() && c.estado !== 'Cancelada').length;
   const citasHoyChange = (() => {
     if (citasAyer === 0) return citasHoy > 0 ? 100 : 0;
     return Math.round(((citasHoy - citasAyer) / citasAyer) * 100);
@@ -81,7 +81,7 @@ export default function DashboardPage() {
   
   // 5. Actividad Reciente
   const sortedAppointments = [...mockAppointmentsData].sort((a,b) => b.start.getTime() - a.start.getTime());
-  const sortedPagos = [...mockPagosData].sort((a,b) => b.fechaPago.getTime() - a.fechaPago.getTime());
+  const sortedPagos = [...mockPagosData].filter(p => p.estado === 'activo').sort((a,b) => b.fechaPago.getTime() - a.fechaPago.getTime());
   const sortedPacientes = [...mockPacientesData].sort((a,b) => parse(b.fechaIngreso, 'dd/MM/yyyy', new Date()).getTime() - parse(a.fechaIngreso, 'dd/MM/yyyy', new Date()).getTime());
   const sortedPresupuestos = [...mockPresupuestosData].sort((a,b) => b.fechaCreacion.getTime() - a.fechaCreacion.getTime());
   
