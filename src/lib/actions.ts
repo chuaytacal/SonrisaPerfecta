@@ -1,10 +1,9 @@
-
 'use server'
  
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { mockUsuariosData } from './data'
-import { encrypt, decrypt } from './session'
+import axios from 'axios'
+import { decrypt } from '@/lib/session'
 
 type LoginState = {
     error?: string;
@@ -20,21 +19,32 @@ export async function login(prevState: LoginState | undefined, formData: FormDat
         return { error: 'Usuario y contraseña son requeridos.' }
     }
  
-    const user = mockUsuariosData.find(u => u.usuario.toLowerCase() === username.toLowerCase() && u.contrasena === password);
- 
-    if (!user) {
-        return { error: 'Credenciales inválidas.' };
+    try {
+        const response = await axios.post('http://localhost:3000/api/auth/login', {
+            username: username,
+            password: password
+        });
+
+        // Assume backend returns { token: 'jwt_string' }
+        const token = response.data.token;
+
+        if (token) {
+            const expires = new Date(Date.now() + 8 * 60 * 60 * 1000) // 8 hours
+            cookies().set('session', token, { expires, httpOnly: true })
+            return { success: true, token: token }
+        } else {
+            return { error: 'Respuesta de autenticación inválida del servidor.' };
+        }
+
+    } catch (error: any) {
+        if (axios.isAxiosError(error) && error.response) {
+            const errorMessage = error.response.data?.message || 'Credenciales inválidas.';
+            return { error: errorMessage };
+        } else {
+            console.error('Login error:', error);
+            return { error: 'Ocurrió un error inesperado al iniciar sesión.' };
+        }
     }
- 
-    // Create the session
-    const expires = new Date(Date.now() + 8 * 60 * 60 * 1000) // 8 hours from now
-    const sessionToken = await encrypt({ user, expires })
- 
-    // Save the session in a cookie
-    cookies().set('session', sessionToken, { expires, httpOnly: true })
-      
-    // Return the token to the client for localStorage
-    return { success: true, token: sessionToken }
 }
  
 export async function logout() {
