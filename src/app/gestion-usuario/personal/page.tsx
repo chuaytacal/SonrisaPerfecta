@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight, ArrowUpDown } from "lucide-react";
+import { MoreHorizontal, Edit, ToggleLeft, ToggleRight, ArrowUpDown } from "lucide-react";
 import { AddPersonalForm } from "@/components/personal/AddPersonalForm";
 import { SelectPersonaModal } from "@/components/personal/SelectPersonaModal";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -142,27 +142,6 @@ export default function PersonalPage() {
     }
     setIsCreatingNewPersonaFlow(false);
     setIsAddPersonalFormOpen(true);
-  };
-
-  const handleDelete = (personal: Personal) => {
-    setPersonalToAction(personal);
-    setConfirmDialogProps({
-        title: "Confirmar Eliminación",
-        description: `¿Estás seguro de que deseas eliminar a ${personal.persona.nombre} ${personal.persona.apellidoPaterno}? Esta acción no se puede deshacer.`,
-        confirmButtonText: "Eliminar",
-        confirmButtonVariant: "destructive"
-    });
-    setConfirmAction(() => () => {
-        setPersonalList(prev => prev.filter(p => p.id !== personal.id));
-        toast({
-            title: "Personal Eliminado",
-            description: `${personal.persona.nombre} ${personal.persona.apellidoPaterno} ha sido eliminado.`,
-            variant: "destructive"
-        });
-        setIsConfirmDeleteDialogOpen(false);
-        setPersonalToAction(null);
-    });
-    setIsConfirmDeleteDialogOpen(true);
   };
 
   const handleToggleStatus = (personal: Personal) => {
@@ -345,9 +324,6 @@ const columns: ColumnDef<Personal>[] = [
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => openEditModal(personal)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleDelete(personal)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-              <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleToggleStatus(personal)}>
               {personal.estado === "Activo" ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
               {personal.estado === "Activo" ? "Desactivar" : "Activar"}

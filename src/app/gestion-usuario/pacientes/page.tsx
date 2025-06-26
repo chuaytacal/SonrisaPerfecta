@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight, Eye, ArrowUpDown, PlusCircle } from "lucide-react";
+import { MoreHorizontal, Edit, ToggleLeft, ToggleRight, Eye, ArrowUpDown, PlusCircle } from "lucide-react";
 import { AddPacienteForm } from "@/components/pacientes/AddPacienteForm"; 
 import { SelectPersonaModal } from "@/components/personal/SelectPersonaModal"; 
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -219,27 +219,6 @@ export default function PacientesPage() {
     setIsAddPacienteFormOpen(true);
   };
 
-  const handleDelete = (paciente: Paciente) => {
-    setPacienteToAction(paciente);
-    setConfirmDialogProps({
-        title: "Confirmar Eliminación",
-        description: `¿Estás seguro de que deseas eliminar a ${paciente.persona.nombre} ${paciente.persona.apellidoPaterno}? Esta acción no se puede deshacer.`,
-        confirmButtonText: "Eliminar",
-        confirmButtonVariant: "destructive"
-    });
-    setConfirmAction(() => () => {
-        setPacienteList(prev => prev.filter(p => p.id !== paciente.id));
-        toast({
-            title: "Paciente Eliminado",
-            description: `${paciente.persona.nombre} ${paciente.persona.apellidoPaterno} ha sido eliminado.`,
-            variant: "destructive"
-        });
-        setIsConfirmDeleteDialogOpen(false);
-        setPacienteToAction(null);
-    });
-    setIsConfirmDeleteDialogOpen(true);
-  };
-
   const handleToggleStatus = (paciente: Paciente) => {
     setPacienteToAction(paciente);
     const newStatus = paciente.estado === "Activo" ? "Inactivo" : "Activo";
@@ -432,10 +411,6 @@ const columns: ColumnDef<Paciente>[] = [
             <DropdownMenuItem onSelect={() => handleToggleStatus(paciente)}>
               {paciente.estado === "Activo" ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
               {paciente.estado === "Activo" ? "Desactivar" : "Activar"}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => handleDelete(paciente)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-              <Trash2 className="mr-2 h-4 w-4" /> Eliminar
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
