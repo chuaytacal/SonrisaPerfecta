@@ -27,6 +27,8 @@ import { PaymentSheet } from './PaymentSheet';
 import { EditServiceSheet } from './EditServiceSheet';
 import { useToast } from '@/hooks/use-toast';
 import { ConfirmationDialog } from '../ui/confirmation-dialog';
+import { generateBudgetPDF } from '@/lib/pdfGenerator';
+
 
 interface BudgetCardProps {
   presupuesto: Presupuesto;
@@ -63,7 +65,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
 
   const totalPresupuesto = items.reduce((acc, item) => acc + item.procedimiento.precioBase * item.cantidad, 0);
   
-  const CurrentStatusIcon = statusConfig[estado].icon;
+  const CurrentStatusIcon = statusConfig[estado]?.icon || FileText; // Fallback icon
   
   const handleStateChange = (newState: EstadoPresupuesto) => {
     const index = mockPresupuestosData.findIndex(p => p.id === id);
@@ -140,6 +142,10 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
   const displayName = nombre 
     ? `${nombre} - (${format(new Date(fechaAtencion), "dd/MM/yyyy")})` 
     : format(new Date(fechaAtencion), "dd MMMM yyyy", { locale: es });
+    
+  const handlePrint = () => {
+    generateBudgetPDF(presupuesto, paciente);
+  };
 
   return (
     <>
@@ -149,10 +155,10 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
             <div className="flex items-center gap-4">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className={cn("text-xs font-semibold h-7 px-2 gap-1 group", statusConfig[estado].badgeClass, statusConfig[estado].textClass, statusConfig[estado].hoverFocusClass, `hover:${statusConfig[estado].textClass}`)}>
+                        <Button variant="outline" className={cn("text-xs font-semibold h-7 px-2 gap-1 group", statusConfig[estado]?.badgeClass, statusConfig[estado]?.textClass, statusConfig[estado]?.hoverFocusClass, `hover:${statusConfig[estado]?.textClass}`)}>
                             <ChevronDown className="h-3 w-3" />
                             <CurrentStatusIcon className="h-4 w-4" />
-                            {statusConfig[estado].label}
+                            {statusConfig[estado]?.label || 'Desconocido'}
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
@@ -196,7 +202,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                   </TooltipTrigger><TooltipContent><p>Editar</p></TooltipContent></Tooltip>
                   
                   <Tooltip><TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8"><Download className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePrint}><Download className="h-4 w-4" /></Button>
                   </TooltipTrigger><TooltipContent><p>Imprimir</p></TooltipContent></Tooltip>
 
                   <Tooltip><TooltipTrigger asChild>
