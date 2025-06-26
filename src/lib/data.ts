@@ -133,6 +133,7 @@ export let mockPagosData: Pago[] = [
     tipoComprobante: 'Boleta',
     doctorResponsableId: 'personal-2',
     descripcion: '(1) Limpieza Dental Completa',
+    estado: 'activo',
     itemsPagados: [{
       idPresupuesto: 'presupuesto-1',
       idItem: 'item-1',
@@ -148,6 +149,7 @@ export let mockPagosData: Pago[] = [
     tipoComprobante: 'Factura',
     doctorResponsableId: 'personal-3',
     descripcion: '(1) Extracción Simple',
+    estado: 'activo',
     itemsPagados: [{
       idPresupuesto: 'presupuesto-2',
       idItem: 'item-3',
@@ -185,7 +187,7 @@ export let mockPresupuestosData: Presupuesto[] = [
       nombre: 'Control General',
       fechaCreacion: new Date('2024-06-20'),
       fechaAtencion: new Date('2024-06-20'),
-      estado: 'Terminado',
+      estado: 'Pagado',
       montoPagado: 120,
       items: [
         { id: 'item-3', procedimiento: mockProcedimientos.find(p => p.id === 'proc-5')!, cantidad: 1, montoPagado: 120 },
@@ -252,7 +254,7 @@ const generateInitialAppointments = (): Appointment[] => {
   
   return [
     {
-      id: crypto.randomUUID(),
+      id: "cita-1",
       title: `${motivo1.nombre} - ${paciente1.persona.nombre}`,
       start: setMinutes(setHours(today, 10), 0),
       end: setMinutes(setHours(today, 11), 0),
@@ -285,3 +287,6 @@ const generateInitialAppointments = (): Appointment[] => {
 
 // Export a mutable array to simulate a database
 export let mockAppointmentsData: Appointment[] = generateInitialAppointments();
+// Associate budget with initial appointment
+mockPresupuestosData.find(p => p.id === 'presupuesto-1')!.idCita = "cita-1";
+

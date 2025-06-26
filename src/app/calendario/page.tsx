@@ -18,7 +18,7 @@ import { RescheduleModal } from '@/components/calendario/RescheduleModal';
 import { RescheduleConfirmationModal } from '@/components/calendario/RescheduleConfirmationModal';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import type { Appointment, AppointmentFormData, AppointmentState, RescheduleData } from '@/types/calendar';
-import type { Presupuesto } from '@/types';
+import type { Presupuesto, ItemPresupuesto } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { mockPacientesData, mockPersonalData, mockMotivosCita, mockAppointmentsData, mockPresupuestosData, mockPagosData } from '@/lib/data';
@@ -186,41 +186,38 @@ export default function CalendarioPage() {
     setPopoverOpen(false);
   }
 
-  const confirmDelete = () => {
+  const confirmCancelAppointment = () => {
     if(!appointmentToAction) return;
 
-    // Find and delete associated budget and payments
-    const budgetToDelete = mockPresupuestosData.find(b => b.idCita === appointmentToAction.id);
-    if (budgetToDelete) {
-        // Find all payments related to this budget and remove them
-        const paymentsToKeep = mockPagosData.filter(pago => 
-            !pago.itemsPagados.some(item => item.idPresupuesto === budgetToDelete.id)
-        );
-        mockPagosData.length = 0;
-        Array.prototype.push.apply(mockPagosData, paymentsToKeep);
-
-        // Delete the budget
-        const budgetIndex = mockPresupuestosData.findIndex(p => p.id === budgetToDelete.id);
-        if (budgetIndex > -1) {
-            mockPresupuestosData.splice(budgetIndex, 1);
-        }
-    }
-    
-    // Delete the appointment
-    const indexToDelete = mockAppointmentsData.findIndex(app => app.id === appointmentToAction.id);
-    if (indexToDelete > -1) {
-        mockAppointmentsData.splice(indexToDelete, 1);
+    // 1. Mark appointment as Cancelada
+    const appIndex = mockAppointmentsData.findIndex(app => app.id === appointmentToAction.id);
+    if (appIndex > -1) {
+        mockAppointmentsData[appIndex].estado = 'Cancelada';
     }
     setAppointments([...mockAppointmentsData]);
 
+    // 2. Find associated budget and mark as Cancelado
+    const budgetToCancel = mockPresupuestosData.find(b => b.idCita === appointmentToAction.id);
+    if (budgetToCancel) {
+        budgetToCancel.estado = 'Cancelado';
+
+        // 3. Deactivate all associated payments
+        const budgetItemIds = new Set(budgetToCancel.items.map(i => i.id));
+        mockPagosData.forEach(pago => {
+            if (pago.itemsPagados.some(ip => ip.idPresupuesto === budgetToCancel.id && budgetItemIds.has(ip.idItem))) {
+                pago.estado = 'desactivo';
+            }
+        });
+    }
+
     toast({
-      title: "Cita Eliminada",
-      description: `La cita y su presupuesto asociado (si existía) han sido eliminados.`,
-      variant: 'destructive' 
+      title: "Cita Cancelada",
+      description: `La cita para "${appointmentToAction.paciente?.persona.nombre}" ha sido marcada como cancelada. No se eliminó ningún registro.`,
+      variant: 'destructive'
     });
     setIsConfirmDeleteDialogOpen(false);
     setAppointmentToAction(null);
-  }
+  };
 
 
   const handleSaveAppointment = (formData: AppointmentFormData) => {
@@ -263,53 +260,72 @@ export default function CalendarioPage() {
     if (existingIndex > -1) {
         mockAppointmentsData[existingIndex] = appointmentToSave;
         
-        // Find and sync the associated budget
         const budgetToUpdate = mockPresupuestosData.find(b => b.idCita === appointmentToSave.id);
 
         if (budgetToUpdate) {
-            // Budget exists, sync it
+            // Sync basic budget info
             budgetToUpdate.idHistoriaClinica = paciente.idHistoriaClinica;
             budgetToUpdate.fechaAtencion = appointmentToSave.start;
             budgetToUpdate.doctorResponsableId = appointmentToSave.idDoctor;
             budgetToUpdate.nombre = appointmentToSave.motivoCita.nombre;
-
+    
             const newProcedimientoIds = new Set((appointmentToSave.procedimientos || []).map(p => p.id));
-            
-            // Remove items (and their payments) no longer in the appointment
-            const itemsToRemove = budgetToUpdate.items.filter(item => !newProcedimientoIds.has(item.procedimiento.id));
+            const oldItems = [...budgetToUpdate.items];
+    
+            // Deactivate payments for removed items
+            const itemsToRemove = oldItems.filter(item => !newProcedimientoIds.has(item.procedimiento.id));
             if (itemsToRemove.length > 0) {
                 const itemIdsToRemove = new Set(itemsToRemove.map(item => item.id));
-                const paymentsToKeep = mockPagosData.filter(pago => 
-                    !pago.itemsPagados.some(itemPagado => 
-                        itemPagado.idPresupuesto === budgetToUpdate.id && itemIdsToRemove.has(itemPagado.idItem)
-                    )
-                );
-                mockPagosData.length = 0;
-                Array.prototype.push.apply(mockPagosData, paymentsToKeep);
+                mockPagosData.forEach(pago => {
+                    if (pago.itemsPagados.some(ip => ip.idPresupuesto === budgetToUpdate.id && itemIdsToRemove.has(ip.idItem))) {
+                        pago.estado = 'desactivo';
+                    }
+                });
             }
             
-            // Filter out old items and add new ones
-            const existingItems = budgetToUpdate.items.filter(item => newProcedimientoIds.has(item.procedimiento.id));
-            const newProcedures = (appointmentToSave.procedimientos || []).filter(p => !existingItems.some(item => item.procedimiento.id === p.id));
-            
-            const newItems = newProcedures.map(proc => ({
-              id: `item-${crypto.randomUUID()}`,
-              procedimiento: proc,
-              cantidad: 1,
-              montoPagado: 0,
-            }));
-
-            budgetToUpdate.items = [...existingItems, ...newItems];
-
-            // Recalculate total paid amount for the budget
-            budgetToUpdate.montoPagado = budgetToUpdate.items.reduce((sum, item) => sum + (item.montoPagado || 0), 0);
-            
-            // If all procedures are removed, delete the budget
-            if (budgetToUpdate.items.length === 0) {
-                 const budgetIndex = mockPresupuestosData.findIndex(p => p.id === budgetToUpdate.id);
-                if (budgetIndex > -1) {
-                    mockPresupuestosData.splice(budgetIndex, 1);
+            // Rebuild the items list for the budget
+            const newItems: ItemPresupuesto[] = [];
+            (appointmentToSave.procedimientos || []).forEach(proc => {
+                const existingItem = oldItems.find(item => item.procedimiento.id === proc.id);
+                if (existingItem) {
+                    newItems.push(existingItem);
+                } else {
+                    newItems.push({
+                        id: `item-${crypto.randomUUID()}`,
+                        procedimiento: proc,
+                        cantidad: 1,
+                        montoPagado: 0,
+                    });
                 }
+            });
+            budgetToUpdate.items = newItems;
+    
+            // Recalculate total paid amount for the budget based ONLY on its current items
+            let newTotalPaid = 0;
+            budgetToUpdate.items.forEach(item => {
+                let itemPaidAmount = 0;
+                 mockPagosData.forEach(pago => {
+                    if (pago.estado === 'activo') {
+                       pago.itemsPagados.forEach(ip => {
+                           if (ip.idPresupuesto === budgetToUpdate.id && ip.idItem === item.id) {
+                               itemPaidAmount += ip.monto;
+                           }
+                       });
+                    }
+                });
+                item.montoPagado = itemPaidAmount; // Sync item's paid amount
+                newTotalPaid += item.montoPagado;
+            });
+            budgetToUpdate.montoPagado = newTotalPaid;
+            
+            // If all procedures are removed, cancel the budget and associated payments
+            if (budgetToUpdate.items.length === 0) {
+                budgetToUpdate.estado = 'Cancelado';
+                mockPagosData.forEach(pago => {
+                    if (pago.itemsPagados.some(ip => ip.idPresupuesto === budgetToUpdate.id)) {
+                        pago.estado = 'desactivo';
+                    }
+                });
             }
         } else if (formData.procedimientos && formData.procedimientos.length > 0) {
             // No budget existed, but now there are procedures, so create one
@@ -401,10 +417,19 @@ export default function CalendarioPage() {
     
     // 2. Handle the original appointment based on the switch.
     if (shouldDeleteOnReschedule) {
-        // Find and remove the original appointment
-        const indexToDelete = mockAppointmentsData.findIndex(app => app.id === selectedEventForPopover.id);
-        if (indexToDelete > -1) {
-            mockAppointmentsData.splice(indexToDelete, 1);
+        const appIndex = mockAppointmentsData.findIndex(app => app.id === selectedEventForPopover.id);
+        if (appIndex > -1) {
+            mockAppointmentsData[appIndex].estado = 'Cancelada';
+        }
+        
+        const budget = mockPresupuestosData.find(b => b.idCita === selectedEventForPopover.id);
+        if (budget) {
+            budget.estado = 'Cancelado';
+            mockPagosData.forEach(p => {
+                if (p.itemsPagados.some(ip => ip.idPresupuesto === budget.id)) {
+                    p.estado = 'desactivo';
+                }
+            });
         }
         toast({ title: "Cita Reprogramada", description: "La cita original ha sido cancelada y la nueva agendada." });
     } else {
@@ -684,18 +709,18 @@ export default function CalendarioPage() {
     <ConfirmationDialog
         isOpen={isConfirmDeleteDialogOpen}
         onOpenChange={setIsConfirmDeleteDialogOpen}
-        onConfirm={confirmDelete}
-        title="Confirmar Eliminación"
+        onConfirm={confirmCancelAppointment}
+        title="Confirmar Cancelación"
         description={
             <span>
-                ¿Estás seguro de que deseas eliminar la cita para <strong>{appointmentToAction?.paciente?.persona.nombre}</strong>?
+                ¿Estás seguro de que deseas cancelar la cita para <strong>{appointmentToAction?.paciente?.persona.nombre}</strong>?
                 <br />
                 <span className="mt-2 inline-block text-sm text-destructive">
-                    Si esta cita generó un presupuesto, este también será eliminado junto con sus pagos asociados.
+                    La cita y su presupuesto asociado (si existe) se marcarán como "Cancelado" pero no se eliminarán del sistema.
                 </span>
             </span>
         }
-        confirmButtonText="Eliminar"
+        confirmButtonText="Sí, cancelar cita"
         confirmButtonVariant="destructive"
     />
     </div>

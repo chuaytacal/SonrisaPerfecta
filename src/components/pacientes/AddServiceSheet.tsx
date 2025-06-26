@@ -19,7 +19,7 @@ import { mockProcedimientos, mockPersonalData, mockPagosData, mockUsuariosData }
 import type { Procedimiento, Presupuesto, ItemPresupuesto } from '@/types';
 import { Combobox } from '@/components/ui/combobox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, PlusCircle, MinusCircle, Plus, FileText, ThumbsUp, ThumbsDown, HeartOff, CheckCircle2, Circle } from 'lucide-react';
+import { Trash2, PlusCircle, MinusCircle, Plus, FileText, CheckCircle2, HeartOff, Circle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AddProcedimientoModal } from '@/components/catalogo/AddProcedimientoModal';
@@ -100,11 +100,8 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
 
   const estadoOptions: { label: string, value: Presupuesto['estado'], icon: React.ElementType }[] = [
     { label: 'Creado', value: 'Creado', icon: FileText },
-    { label: 'Aceptado', value: 'Aceptado', icon: ThumbsUp },
-    { label: 'Rechazado', value: 'Rechazado', icon: ThumbsDown },
-    { label: 'Abandonado', value: 'Abandonado', icon: HeartOff },
-    { label: 'Terminado', value: 'Terminado', icon: CheckCircle2 },
-    { label: 'Otro', value: 'Otro', icon: Circle },
+    { label: 'Pagado', value: 'Pagado', icon: CheckCircle2 },
+    { label: 'Cancelado', value: 'Cancelado', icon: HeartOff },
   ];
 
   const handleAddServicio = (procedimientoId: string) => {

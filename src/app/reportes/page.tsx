@@ -102,7 +102,7 @@ export default function ReportesPage() {
     const pagosEnRango: Pago[] = mockPagosData.filter(p => {
         const fechaPago = new Date(p.fechaPago);
         const doctorMatch = doctorFilter === 'all' || p.doctorResponsableId === doctorFilter;
-        return isWithinInterval(fechaPago, { start: from, end: to }) && doctorMatch;
+        return isWithinInterval(fechaPago, { start: from, end: to }) && doctorMatch && p.estado === 'activo';
     });
 
     const citasEnRango: Appointment[] = mockAppointmentsData.filter(c => {
@@ -164,7 +164,7 @@ export default function ReportesPage() {
     
     // Rendimiento por Doctor
     const rendimientoData = mockPersonalData.map(doctor => {
-        const pagosDoctor = mockPagosData.filter(p => p.doctorResponsableId === doctor.id && isWithinInterval(new Date(p.fechaPago), { start: from, end: to }));
+        const pagosDoctor = mockPagosData.filter(p => p.doctorResponsableId === doctor.id && p.estado === 'activo' && isWithinInterval(new Date(p.fechaPago), { start: from, end: to }));
         const citasDoctor = mockAppointmentsData.filter(c => c.idDoctor === doctor.id && c.estado === 'Atendido' && isWithinInterval(new Date(c.start), { start: from, end: to }));
         
         return {

@@ -1,4 +1,5 @@
 
+
 // import type { DientesMap } from "@/components/odontograma/setting";
 
 export type TipoDocumento = "DNI" | "EXTRANJERIA" | "PASAPORTE";
@@ -52,7 +53,7 @@ export interface AntecedentesMedicosData {
   q11_motivoConsulta?: string;
 }
 
-export type EstadoPresupuesto = 'Creado' | 'Aceptado' | 'Rechazado' | 'Abandonado' | 'Terminado' | 'Otro';
+export type EstadoPresupuesto = 'Creado' | 'Pagado' | 'Cancelado';
 
 
 export interface ItemPresupuesto {
@@ -160,6 +161,7 @@ export interface Pago {
   tipoComprobante: TipoComprobante;
   doctorResponsableId: string;
   descripcion: string;
+  estado: 'activo' | 'desactivo';
   itemsPagados: {
     idPresupuesto: string;
     idItem: string;

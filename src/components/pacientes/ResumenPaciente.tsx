@@ -1,3 +1,4 @@
+
 // src/components/pacientes/ResumenPaciente.tsx
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -9,19 +10,19 @@ import { Button } from '@/components/ui/button';
 import type { Paciente as PacienteType, Persona, Presupuesto } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { MessageSquare, ArrowLeft, Users, CalendarDays as CalendarIconLucide, Smile, CircleDollarSign, CalendarPlus } from 'lucide-react';
+import { MessageSquare, ArrowLeft, Users, CalendarDays as CalendarIconLucide, Smile, CircleDollarSign, CalendarPlus, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AppointmentModal } from '@/components/calendario/AppointmentModal';
 import { useToast } from '@/hooks/use-toast';
-import { mockAppointmentsData, mockMotivosCita, mockPersonalData, mockPresupuestosData } from '@/lib/data';
+import { mockAppointmentsData, mockMotivosCita, mockPersonalData, mockPresupuestosData, mockPagosData } from '@/lib/data';
 import type { Appointment, AppointmentFormData } from '@/types/calendar';
 
 
 interface ResumenPacienteProps {
   paciente: PacienteType;
   persona: Persona;
-  onBack?: () => void; // Make onBack optional if router.back() is primary
+  onBack?: () => void;
 }
 
 // Re-define ToothIconCustom here or import if it's moved to a shared location
@@ -44,13 +45,20 @@ const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
   );
 
 
-export default function ResumenPaciente({ paciente, persona, onBack }: ResumenPacienteProps) {
+export default function ResumenPaciente({
+  paciente,
+  persona,
+  onBack,
+}: ResumenPacienteProps) {
     const router = useRouter();
     const pathname = usePathname();
     const [age, setAge] = useState<string | number>('Calculando...');
     const [createdDate, setCreatedDate] = useState<string>('Calculando...');
     const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
     const { toast } = useToast();
+
+    const [totalPagado, setTotalPagado] = useState(0);
+    const [porPagar, setPorPagar] = useState(0);
 
     useEffect(() => {
         if (persona) {
@@ -77,6 +85,31 @@ export default function ResumenPaciente({ paciente, persona, onBack }: ResumenPa
               setCreatedDate('N/A');
           }
         }, [persona, paciente]);
+
+    useEffect(() => {
+        if (paciente && paciente.idHistoriaClinica) {
+            const presupuestosPaciente = mockPresupuestosData.filter(p => p.idHistoriaClinica === paciente.idHistoriaClinica);
+
+            const totalGeneral = presupuestosPaciente.reduce((acc, presupuesto) => {
+                if (presupuesto.estado === 'Cancelado') return acc;
+                const totalItems = presupuesto.items.reduce((itemAcc, item) => itemAcc + (item.procedimiento.precioBase * item.cantidad), 0);
+                return acc + totalItems;
+            }, 0);
+
+            const totalAbonado = mockPagosData
+                .filter(p => p.estado === 'activo')
+                .reduce((acc, pago) => {
+                    const pagoParaPaciente = pago.itemsPagados.some(ip => 
+                        presupuestosPaciente.some(presup => presup.id === ip.idPresupuesto)
+                    );
+                    return pagoParaPaciente ? acc + pago.montoTotal : acc;
+                }, 0);
+            
+            setTotalPagado(totalAbonado);
+            setPorPagar(totalGeneral - totalAbonado);
+        }
+    }, [paciente, mockPresupuestosData, mockPagosData]);
+
 
     const navItems = [
         { label: "Filiación", href: `/gestion-usuario/pacientes/${paciente.id}/filiacion`, icon: Users },
@@ -190,6 +223,26 @@ export default function ResumenPaciente({ paciente, persona, onBack }: ResumenPa
                 </Tooltip>
               </div>
           </TooltipProvider>
+
+          {porPagar > 0.009 && (
+            <div className="w-full mt-4 space-y-2 text-left">
+              <div className="flex items-center justify-between p-2 rounded-md bg-red-100/80 text-red-900 border border-red-200">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="text-sm font-medium">Por Pagar:</span>
+                </div>
+                <span className="text-sm font-semibold">S/ {porPagar.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-md bg-green-100/80 text-green-900 border border-green-200">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span className="text-sm font-medium">Pagado:</span>
+                </div>
+                <span className="text-sm font-semibold">S/ {totalPagado.toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+
           <Separator className="my-6" />
           <div className="w-full space-y-1 text-left">
             {navItems.map((item) => {

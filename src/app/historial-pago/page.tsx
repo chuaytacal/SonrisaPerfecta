@@ -18,6 +18,7 @@ import { ArrowUpDown } from 'lucide-react';
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 
 interface EnhancedPago extends Pago {
@@ -37,8 +38,6 @@ export default function HistorialPagosPage() {
 
   const enhancedPagos: EnhancedPago[] = React.useMemo(() => {
     return mockPagosData.map(pago => {
-      // This logic is a bit tricky because a payment is linked to an item in a budget, which is linked to a patient.
-      // For simplicity, we find the first patient linked to the payment.
       const firstItem = pago.itemsPagados[0];
       let paciente: Paciente | undefined;
       if (firstItem) {
@@ -105,6 +104,15 @@ export default function HistorialPagosPage() {
     {
       accessorKey: 'metodoPago',
       header: 'Medio de Pago'
+    },
+    {
+        accessorKey: 'estado',
+        header: 'Estado',
+        cell: ({ row }) => (
+            <Badge variant={row.original.estado === 'desactivo' ? 'destructive' : 'default'} className="capitalize">
+                {row.original.estado}
+            </Badge>
+        )
     },
     {
       accessorKey: 'montoTotal',

@@ -66,10 +66,10 @@ export default function DashboardPage() {
 
   // 3. Ingresos del Mes
   const ingresosEsteMes = mockPagosData
-    .filter(p => isThisMonth(p.fechaPago))
+    .filter(p => isThisMonth(p.fechaPago) && p.estado === 'activo')
     .reduce((sum, pago) => sum + pago.montoTotal, 0);
   const ingresosMesPasado = mockPagosData
-    .filter(p => isSameMonth(p.fechaPago, lastMonth))
+    .filter(p => isSameMonth(p.fechaPago, lastMonth) && p.estado === 'activo')
     .reduce((sum, pago) => sum + pago.montoTotal, 0);
   const ingresosChange = (() => {
     if (ingresosMesPasado === 0) return ingresosEsteMes > 0 ? 100 : 0;
@@ -77,7 +77,7 @@ export default function DashboardPage() {
   })();
   
   // 4. Presupuestos Pendientes
-  const presupuestosPendientes = mockPresupuestosData.filter(p => p.estado === 'Creado' || p.estado === 'Aceptado').length;
+  const presupuestosPendientes = mockPresupuestosData.filter(p => p.estado === 'Creado').length;
   
   // 5. Actividad Reciente
   const sortedAppointments = [...mockAppointmentsData].sort((a,b) => b.start.getTime() - a.start.getTime());
@@ -170,7 +170,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{presupuestosPendientes}</div>
-            <p className="text-xs text-muted-foreground">En estado "Creado" o "Aceptado"</p>
+            <p className="text-xs text-muted-foreground">En estado "Creado"</p>
           </CardContent>
         </Card>
       </div>

@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import type { Presupuesto, EstadoPresupuesto, ItemPresupuesto, Paciente as PacienteType } from '@/types';
+import type { Presupuesto, EstadoPresupuesto, ItemPresupuesto, Paciente as PacienteType, Pago } from '@/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -20,7 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { DollarSign, Edit, Download, Trash2, ChevronDown, FileText, ThumbsUp, ThumbsDown, HeartOff, CheckCircle2, Circle, CheckCircle } from 'lucide-react';
+import { DollarSign, Edit, Download, Trash2, ChevronDown, FileText, ThumbsUp, ThumbsDown, HeartOff, CheckCircle2, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { mockPagosData, mockPresupuestosData } from '@/lib/data';
 import { PaymentSheet } from './PaymentSheet';
@@ -37,11 +37,8 @@ interface BudgetCardProps {
 
 const statusConfig: Record<EstadoPresupuesto, { label: string; icon: React.ElementType, badgeClass: string, textClass: string, color: string, hoverFocusClass: string }> = {
   Creado: { label: 'Creado', icon: FileText, badgeClass: 'border-blue-500', textClass: 'text-blue-600', color: '#3b82f6', hoverFocusClass: 'hover:bg-blue-500/10 focus:bg-blue-500/20' },
-  Aceptado: { label: 'Aceptado', icon: ThumbsUp, badgeClass: 'border-green-600', textClass: 'text-green-600', color: '#16a34a', hoverFocusClass: 'hover:bg-green-600/10 focus:bg-green-600/20' },
-  Rechazado: { label: 'Rechazado', icon: ThumbsDown, badgeClass: 'border-red-600', textClass: 'text-red-600', color: '#dc2626', hoverFocusClass: 'hover:bg-red-600/10 focus:bg-red-600/20' },
-  Abandonado: { label: 'Abandonado', icon: HeartOff, badgeClass: 'border-gray-500', textClass: 'text-gray-500', color: '#6b7280', hoverFocusClass: 'hover:bg-gray-500/10 focus:bg-gray-500/20' },
-  Terminado: { label: 'Terminado', icon: CheckCircle2, badgeClass: 'border-purple-600', textClass: 'text-purple-600', color: '#9333ea', hoverFocusClass: 'hover:bg-purple-600/10 focus:bg-purple-600/20' },
-  Otro: { label: 'Otro', icon: Circle, badgeClass: 'border-gray-500', textClass: 'text-gray-500', color: '#6b7280', hoverFocusClass: 'hover:bg-gray-500/10 focus:bg-gray-500/20' },
+  Pagado: { label: 'Pagado', icon: CheckCircle2, badgeClass: 'border-green-600', textClass: 'text-green-600', color: '#16a34a', hoverFocusClass: 'hover:bg-green-600/10 focus:bg-green-600/20' },
+  Cancelado: { label: 'Cancelado', icon: HeartOff, badgeClass: 'border-red-600', textClass: 'text-red-600', color: '#dc2626', hoverFocusClass: 'hover:bg-red-600/10 focus:bg-red-600/20' },
 };
 
 
@@ -72,6 +69,13 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
     const index = mockPresupuestosData.findIndex(p => p.id === id);
     if (index > -1) {
       mockPresupuestosData[index].estado = newState;
+       if (newState === 'Cancelado') {
+        mockPagosData.forEach(pago => {
+          if(pago.itemsPagados.some(ip => ip.idPresupuesto === id)) {
+            pago.estado = 'desactivo';
+          }
+        });
+      }
       setPresupuesto(mockPresupuestosData[index]);
       toast({ title: "Estado Actualizado", description: `El presupuesto ahora está "${newState}".`})
     }
@@ -226,7 +230,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                         <TableCell className="text-right">
                             {isPaid ? (
                                 <div className="flex justify-end items-center gap-1 text-green-600">
-                                    <CheckCircle className="h-5 w-5"/>
+                                    <CheckCircle2 className="h-5 w-5"/>
                                 </div>
                             ) : (
                                 <Button variant="outline" size="sm" className="h-7" onClick={(e) => { e.stopPropagation(); handlePayItem(item); }}>Pagar</Button>
