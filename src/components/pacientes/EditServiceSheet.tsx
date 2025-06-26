@@ -86,7 +86,6 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
 
   const handlePagoChange = (pagoId: string, field: 'fechaPago' | 'metodoPago' | 'monto', value: any) => {
     let finalValue = value;
-    let newEstado: 'activo' | 'desactivo' | undefined = undefined;
     
     if (field === 'monto') {
         const newMonto = parseFloat(value) || 0;
@@ -104,21 +103,21 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
         } else {
              finalValue = newMonto;
         }
-        
-        // Implicitly reactivate if a positive amount is entered
-        if (finalValue > 0) {
-            newEstado = 'activo';
-        }
+
+        const newEstado = finalValue > 0 ? 'activo' : 'desactivo';
+        setEditablePagos(prev =>
+          prev.map(p => (p.id === pagoId ? { ...p, monto: finalValue, estado: newEstado } : p))
+        );
+
+    } else {
+       setEditablePagos(prev =>
+        prev.map(p => (p.id === pagoId ? { ...p, [field]: value } : p))
+      );
     }
-    
-    setEditablePagos(prev =>
-      prev.map(p => (p.id === pagoId ? { ...p, [field]: finalValue, ...(newEstado && { estado: newEstado }) } : p))
-    );
   };
   
   const handleMontoBlur = (pagoId: string) => {
       const pago = editablePagos.find(p => p.id === pagoId);
-      // Only show confirmation if amount is 0 and it's currently active
       if(pago && pago.monto <= 0 && pago.estado === 'activo') {
         setPaymentToDeactivate(pago);
         setIsDeactivateConfirmOpen(true);
@@ -127,7 +126,7 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
 
   const confirmDeactivatePayment = () => {
     if (!paymentToDeactivate) return;
-    setEditablePagos(prev => prev.map(p => p.id === paymentToDeactivate.id ? { ...p, monto: 0, estado: 'desactivo' } : p));
+    setEditablePagos(prev => prev.map(p => p.id === paymentToDeactivate.id ? { ...p, estado: 'desactivo' } : p));
     setIsDeactivateConfirmOpen(false);
     setPaymentToDeactivate(null);
     toast({ title: "Cambio pendiente", description: "El pago se marcará como 'desactivo' al guardar los cambios." });
@@ -135,40 +134,54 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
 
 
   const handleSaveChanges = () => {
-    const presupuestoIndex = mockPresupuestosData.findIndex(p => p.id === presupuesto.id);
-    if (presupuestoIndex === -1) return;
+    // 1. Update the state of all relevant payments in the mock database
+    editablePagos.forEach(editablePago => {
+      const originalPagoIndex = mockPagosData.findIndex(p => p.id === editablePago.id);
+      if (originalPagoIndex > -1) {
+        // This is the key change: update the state of the *entire payment record*
+        mockPagosData[originalPagoIndex].estado = editablePago.estado;
 
-    mockPagosData.forEach(pago => {
-        const pagoEditable = editablePagos.find(ep => ep.id === pago.id);
-        const itemPagadoOriginal = pago.itemsPagados.find(ip => ip.idItem === item.id && ip.idPresupuesto === presupuesto.id);
-
-        if (pagoEditable && itemPagadoOriginal) {
-            itemPagadoOriginal.monto = pagoEditable.monto;
-            pago.fechaPago = pagoEditable.fechaPago;
-            pago.metodoPago = pagoEditable.metodoPago;
-            pago.estado = pagoEditable.estado; // Update the state
+        // Optionally update other details if the payment is active
+        if (editablePago.estado === 'activo') {
+            mockPagosData[originalPagoIndex].fechaPago = editablePago.fechaPago;
+            mockPagosData[originalPagoIndex].metodoPago = editablePago.metodoPago;
         }
-
-        // Recalculate total for the whole payment record
-        pago.montoTotal = pago.itemsPagados.reduce((sum, ip) => sum + ip.monto, 0);
+      }
     });
 
-    const newItemMontoPagado = editablePagos.filter(p => p.estado === 'activo').reduce((sum, p) => sum + p.monto, 0);
-    const itemIndex = mockPresupuestosData[presupuestoIndex].items.findIndex(i => i.id === item.id);
-    if (itemIndex > -1) {
-        mockPresupuestosData[presupuestoIndex].items[itemIndex].montoPagado = newItemMontoPagado;
-    }
+    // 2. Recalculate all paid amounts for the entire budget from the source of truth
+    const presupuestoIndex = mockPresupuestosData.findIndex(p => p.id === presupuesto.id);
+    if (presupuestoIndex === -1) return;
     
-    const montoPagadoActualizado = mockPresupuestosData[presupuestoIndex].items.reduce((sum, i) => sum + (i.montoPagado || 0), 0);
-    mockPresupuestosData[presupuestoIndex].montoPagado = montoPagadoActualizado;
-    
-    const totalPresupuestoCalculado = mockPresupuestosData[presupuestoIndex].items.reduce((acc, currentItem) => acc + (currentItem.procedimiento.precioBase * currentItem.cantidad), 0);
-    if (montoPagadoActualizado >= totalPresupuestoCalculado) {
-      mockPresupuestosData[presupuestoIndex].estado = 'Pagado';
-    } else {
-      mockPresupuestosData[presupuestoIndex].estado = 'Creado';
+    const budgetToUpdate = mockPresupuestosData[presupuestoIndex];
+    let totalBudgetPaid = 0;
+
+    budgetToUpdate.items.forEach(budgetItem => {
+        let itemPaidAmount = 0;
+        mockPagosData.forEach(pago => {
+            if (pago.estado === 'activo') { // Only consider active payments
+                const itemPagado = pago.itemsPagados.find(ip => ip.idItem === budgetItem.id && ip.idPresupuesto === budgetToUpdate.id);
+                if (itemPagado) {
+                    itemPaidAmount += itemPagado.monto;
+                }
+            }
+        });
+        budgetItem.montoPagado = itemPaidAmount;
+        totalBudgetPaid += itemPaidAmount;
+    });
+
+    // 3. Update the budget's total paid amount and its state
+    budgetToUpdate.montoPagado = totalBudgetPaid;
+    const totalPresupuestoCalculado = budgetToUpdate.items.reduce((acc, item) => acc + (item.procedimiento.precioBase * item.cantidad), 0);
+    if (budgetToUpdate.estado !== 'Cancelado') {
+      if (totalBudgetPaid >= totalPresupuestoCalculado) {
+        budgetToUpdate.estado = 'Pagado';
+      } else {
+        budgetToUpdate.estado = 'Creado';
+      }
     }
 
+    // 4. Trigger parent component re-render and close
     onUpdate();
     toast({ title: "Servicio Actualizado", description: `Los pagos de "${item.procedimiento.denominacion}" han sido actualizados.` });
     onOpenChange(false);
