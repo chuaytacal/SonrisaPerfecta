@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import type { ItemPresupuesto, Paciente, Presupuesto, Pago, MetodoPago, Personal } from '@/types';
-import { mockPagosData, mockPresupuestosData } from '@/lib/data';
+import { mockPagosData, mockPresupuestosData, mockPersonalData } from '@/lib/data';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 

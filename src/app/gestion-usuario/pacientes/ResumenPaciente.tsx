@@ -23,8 +23,6 @@ interface ResumenPacienteProps {
   paciente: PacienteType;
   persona: Persona;
   onBack?: () => void;
-  totalPagado?: number;
-  porPagar?: number;
 }
 
 // Re-define ToothIconCustom here or import if it's moved to a shared location
@@ -51,8 +49,6 @@ export default function ResumenPaciente({
   paciente,
   persona,
   onBack,
-  totalPagado: totalPagadoProp,
-  porPagar: porPagarProp,
 }: ResumenPacienteProps) {
     const router = useRouter();
     const pathname = usePathname();
@@ -61,12 +57,8 @@ export default function ResumenPaciente({
     const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
     const { toast } = useToast();
 
-    const [totalPagadoLocal, setTotalPagadoLocal] = useState(0);
-    const [porPagarLocal, setPorPagarLocal] = useState(0);
-
-    const totalPagado = totalPagadoProp !== undefined ? totalPagadoProp : totalPagadoLocal;
-    const porPagar = porPagarProp !== undefined ? porPagarProp : porPagarLocal;
-
+    const [totalPagado, setTotalPagado] = useState(0);
+    const [porPagar, setPorPagar] = useState(0);
 
     useEffect(() => {
         if (persona) {
@@ -95,24 +87,25 @@ export default function ResumenPaciente({
         }, [persona, paciente]);
 
     useEffect(() => {
-      // This effect calculates totals ONLY if they are not passed as props.
-      // This maintains functionality on other pages that don't need real-time updates.
-      if (totalPagadoProp === undefined) {
         if (paciente && paciente.idHistoriaClinica) {
-            const presupuestosPaciente = mockPresupuestosData.filter(p => p.idHistoriaClinica === paciente.idHistoriaClinica);
-
-            const totalGeneral = presupuestosPaciente.reduce((acc, presupuesto) => {
+             // Filter budgets that are not 'Cancelado'
+            const presupuestosActivos = mockPresupuestosData.filter(p => 
+                p.idHistoriaClinica === paciente.idHistoriaClinica && p.estado !== 'Cancelado'
+            );
+    
+            // Calculate total cost ONLY from active budgets
+            const totalGeneral = presupuestosActivos.reduce((acc, presupuesto) => {
                 const totalItems = presupuesto.items.reduce((itemAcc, item) => itemAcc + (item.procedimiento.precioBase * item.cantidad), 0);
                 return acc + totalItems;
             }, 0);
-
-            const totalAbonado = presupuestosPaciente.reduce((acc, presupuesto) => acc + presupuesto.montoPagado, 0);
+    
+            // Calculate total paid amount ONLY from active budgets
+            const totalAbonado = presupuestosActivos.reduce((acc, presupuesto) => acc + presupuesto.montoPagado, 0);
             
-            setTotalPagadoLocal(totalAbonado);
-            setPorPagarLocal(totalGeneral - totalAbonado);
+            setTotalPagado(totalAbonado);
+            setPorPagar(totalGeneral - totalAbonado);
         }
-      }
-    }, [paciente, mockPresupuestosData, mockPagosData, totalPagadoProp]);
+    }, [paciente, mockPresupuestosData]);
 
 
     const navItems = [
@@ -283,4 +276,3 @@ export default function ResumenPaciente({
     </>
   );
 }
-
