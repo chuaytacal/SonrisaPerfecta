@@ -20,7 +20,7 @@ export function generateBudgetPDF(presupuesto: Presupuesto, paciente: Paciente) 
   doc.text('Centro Dental Especializado Loayza', doc.internal.pageSize.getWidth() - 14, 20, { align: 'right' });
   doc.text('Urb. Bolognesi, MCAL Castilla 1800 - Int. 2do. Piso', doc.internal.pageSize.getWidth() - 14, 25, { align: 'right' });
   doc.text('Urb. Bolognesi, Cercado, Tacna', doc.internal.pageSize.getWidth() - 14, 30, { align: 'right' });
-  doc.text('Tel: 977289572', doc.internal.pageSize.getWidth() - 14, 35, { align: 'right' });
+  doc.text('Tel: 910352359', doc.internal.pageSize.getWidth() - 14, 35, { align: 'right' });
 
   // --- Title ---
   doc.setFontSize(14);
