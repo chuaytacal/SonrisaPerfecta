@@ -1,9 +1,11 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import type { ItemPresupuesto, Paciente, Presupuesto, Pago, MetodoPago, Personal } from '@/types';
-import { mockPagosData, mockPersonalData, mockPresupuestosData } from '@/lib/data';
+import { mockPagosData, mockPresupuestosData } from '@/lib/data';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 import {
   Sheet,
@@ -25,6 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { ConfirmationDialog } from '../ui/confirmation-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Megaphone } from 'lucide-react';
+import { Badge } from '../ui/badge';
 
 
 interface EditServiceSheetProps {
@@ -41,13 +44,14 @@ interface EditablePago {
     fechaPago: Date;
     metodoPago: MetodoPago;
     monto: number;
+    estado: 'activo' | 'desactivo';
 }
 
 export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUpdate }: EditServiceSheetProps) {
   const { toast } = useToast();
   const [editablePagos, setEditablePagos] = useState<EditablePago[]>([]);
-  const [paymentToDelete, setPaymentToDelete] = useState<EditablePago | null>(null);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [paymentToDeactivate, setPaymentToDeactivate] = useState<EditablePago | null>(null);
+  const [isDeactivateConfirmOpen, setIsDeactivateConfirmOpen] = useState(false);
   const [isExceededAlertOpen, setIsExceededAlertOpen] = useState(false);
   const [exceededInfo, setExceededInfo] = useState<{ typed: number, max: number } | null>(null);
   const [doctor, setDoctor] = useState<Personal | undefined>(undefined);
@@ -65,6 +69,7 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
             fechaPago: pago.fechaPago,
             metodoPago: pago.metodoPago,
             monto: itemPagado.monto,
+            estado: pago.estado,
           });
         }
         return acc;
@@ -76,19 +81,21 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
   }, [isOpen, item, presupuesto.id, presupuesto.doctorResponsableId]);
 
   const subtotal = item.procedimiento.precioBase * item.cantidad;
-  const pagado = editablePagos.reduce((acc, p) => acc + p.monto, 0);
+  const pagado = editablePagos.filter(p => p.estado === 'activo').reduce((acc, p) => acc + p.monto, 0);
   const porPagar = subtotal - pagado;
 
   const handlePagoChange = (pagoId: string, field: 'fechaPago' | 'metodoPago' | 'monto', value: any) => {
     let finalValue = value;
+    let newEstado: 'activo' | 'desactivo' | undefined = undefined;
+    
     if (field === 'monto') {
         const newMonto = parseFloat(value) || 0;
         
-        const otrosPagosMonto = editablePagos
-            .filter(p => p.id !== pagoId)
+        const otrosPagosActivosMonto = editablePagos
+            .filter(p => p.id !== pagoId && p.estado === 'activo')
             .reduce((acc, p) => acc + p.monto, 0);
         
-        const maxPermitido = parseFloat((subtotal - otrosPagosMonto).toFixed(2));
+        const maxPermitido = parseFloat((subtotal - otrosPagosActivosMonto).toFixed(2));
 
         if (newMonto > maxPermitido) {
             setExceededInfo({ typed: newMonto, max: maxPermitido });
@@ -97,30 +104,33 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
         } else {
              finalValue = newMonto;
         }
+        
+        // Implicitly reactivate if a positive amount is entered
+        if (finalValue > 0) {
+            newEstado = 'activo';
+        }
     }
     
     setEditablePagos(prev =>
-      prev.map(p => (p.id === pagoId ? { ...p, [field]: finalValue } : p))
+      prev.map(p => (p.id === pagoId ? { ...p, [field]: finalValue, ...(newEstado && { estado: newEstado }) } : p))
     );
   };
   
-  const handleMontoBlur = (pagoId: string, currentMontoStr: string) => {
-      const currentMonto = parseFloat(currentMontoStr) || 0;
-      if(currentMonto <= 0) {
-          const p = editablePagos.find(p => p.id === pagoId);
-          if(p) {
-            setPaymentToDelete(p);
-            setIsDeleteConfirmOpen(true);
-          }
+  const handleMontoBlur = (pagoId: string) => {
+      const pago = editablePagos.find(p => p.id === pagoId);
+      // Only show confirmation if amount is 0 and it's currently active
+      if(pago && pago.monto <= 0 && pago.estado === 'activo') {
+        setPaymentToDeactivate(pago);
+        setIsDeactivateConfirmOpen(true);
       }
   };
 
-  const confirmDeletePayment = () => {
-    if (!paymentToDelete) return;
-    setEditablePagos(prev => prev.filter(p => p.id !== paymentToDelete.id));
-    setIsDeleteConfirmOpen(false);
-    setPaymentToDelete(null);
-    toast({ title: "Eliminación pendiente", description: "El pago se eliminará permanentemente al guardar los cambios." });
+  const confirmDeactivatePayment = () => {
+    if (!paymentToDeactivate) return;
+    setEditablePagos(prev => prev.map(p => p.id === paymentToDeactivate.id ? { ...p, monto: 0, estado: 'desactivo' } : p));
+    setIsDeactivateConfirmOpen(false);
+    setPaymentToDeactivate(null);
+    toast({ title: "Cambio pendiente", description: "El pago se marcará como 'desactivo' al guardar los cambios." });
   };
 
 
@@ -136,18 +146,14 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
             itemPagadoOriginal.monto = pagoEditable.monto;
             pago.fechaPago = pagoEditable.fechaPago;
             pago.metodoPago = pagoEditable.metodoPago;
-        } else if (!pagoEditable && itemPagadoOriginal) {
-             pago.itemsPagados = pago.itemsPagados.filter(ip => ip.idItem !== item.id);
+            pago.estado = pagoEditable.estado; // Update the state
         }
 
+        // Recalculate total for the whole payment record
         pago.montoTotal = pago.itemsPagados.reduce((sum, ip) => sum + ip.monto, 0);
     });
 
-    const paymentsToKeep = mockPagosData.filter(p => p.itemsPagados.length > 0);
-    mockPagosData.length = 0;
-    Array.prototype.push.apply(mockPagosData, paymentsToKeep);
-    
-    const newItemMontoPagado = editablePagos.reduce((sum, p) => sum + p.monto, 0);
+    const newItemMontoPagado = editablePagos.filter(p => p.estado === 'activo').reduce((sum, p) => sum + p.monto, 0);
     const itemIndex = mockPresupuestosData[presupuestoIndex].items.findIndex(i => i.id === item.id);
     if (itemIndex > -1) {
         mockPresupuestosData[presupuestoIndex].items[itemIndex].montoPagado = newItemMontoPagado;
@@ -208,11 +214,11 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
                   <TableBody>
                     {editablePagos.length > 0 ? (
                       editablePagos.map(pago => (
-                          <TableRow key={pago.id}>
+                          <TableRow key={pago.id} className={cn(pago.estado === 'desactivo' && 'bg-muted/50 text-muted-foreground')}>
                               <TableCell className="w-[140px]">
                                   <Popover>
                                       <PopoverTrigger asChild>
-                                          <Button variant="outline" size="sm" className="text-xs w-full">
+                                          <Button variant="outline" size="sm" className="text-xs w-full" disabled={pago.estado === 'desactivo'}>
                                               {format(new Date(pago.fechaPago), 'dd/MM/yyyy')}
                                           </Button>
                                       </PopoverTrigger>
@@ -234,14 +240,18 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
                                 />
                                </TableCell>
                               <TableCell className="w-[180px]">
-                                   <Select value={pago.metodoPago} onValueChange={val => handlePagoChange(pago.id, 'metodoPago', val as MetodoPago)}>
-                                      <SelectTrigger><SelectValue/></SelectTrigger>
-                                      <SelectContent>{metodoPagoOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
-                                  </Select>
+                                   {pago.estado === 'desactivo' ? (
+                                      <Badge variant="destructive">Desactivo</Badge>
+                                   ) : (
+                                      <Select value={pago.metodoPago} onValueChange={val => handlePagoChange(pago.id, 'metodoPago', val as MetodoPago)}>
+                                          <SelectTrigger><SelectValue/></SelectTrigger>
+                                          <SelectContent>{metodoPagoOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
+                                      </Select>
+                                   )}
                               </TableCell>
                               <TableCell className="text-right w-[120px]">
                                 <div className="flex justify-end">
-                                  <Input type="number" value={pago.monto} onChange={e => handlePagoChange(pago.id, 'monto', e.target.value)} onBlur={e => handleMontoBlur(pago.id, e.target.value)} className="w-24 text-right" />
+                                  <Input type="number" value={pago.monto} onChange={e => handlePagoChange(pago.id, 'monto', e.target.value)} onBlur={() => handleMontoBlur(pago.id)} className={cn("w-24 text-right", pago.estado === 'desactivo' && 'line-through')} />
                                 </div>
                               </TableCell>
                           </TableRow>
@@ -267,12 +277,12 @@ export function EditServiceSheet({ isOpen, onOpenChange, item, presupuesto, onUp
       </SheetContent>
     </Sheet>
     <ConfirmationDialog
-        isOpen={isDeleteConfirmOpen}
-        onOpenChange={setIsDeleteConfirmOpen}
-        onConfirm={confirmDeletePayment}
-        title="Confirmar Eliminación de Pago"
-        description="¿Está seguro de que desea eliminar este pago? Esta acción no se puede deshacer y se eliminará del historial de pagos."
-        confirmButtonText="Sí, eliminar"
+        isOpen={isDeactivateConfirmOpen}
+        onOpenChange={setIsDeactivateConfirmOpen}
+        onConfirm={confirmDeactivatePayment}
+        title="Desactivar Pago"
+        description="Está a punto de desactivar este pago al establecer su monto en cero. El pago no se eliminará pero no se considerará en los totales. ¿Desea continuar?"
+        confirmButtonText="Sí, desactivar pago"
         confirmButtonVariant="destructive"
       />
     <Dialog open={isExceededAlertOpen} onOpenChange={setIsExceededAlertOpen}>

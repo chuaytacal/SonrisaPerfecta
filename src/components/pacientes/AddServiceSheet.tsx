@@ -138,16 +138,16 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
     const item = selectedItems.find(i => i.procedimiento.id === procedimientoId);
     if (!item) return;
 
-    const newQuantity = item.cantidad + delta;
-    const originalItem = originalItems.find(original => original.id === item.id);
-
-    // Show confirmation only if reducing quantity BELOW the original quantity and there are payments.
-    if (delta < 0 && originalItem && newQuantity < originalItem.cantidad && (item.montoPagado || 0) > 0) {
-        setItemToDecrease(item);
-        setIsConfirmDecreaseOpen(true);
+    if (delta < 0) {
+        toast({
+            title: "Acción no permitida",
+            description: "No se puede disminuir la cantidad de un servicio. Elimine el servicio y vuelva a agregarlo si es necesario.",
+            variant: "destructive"
+        });
         return;
     }
     
+    const newQuantity = item.cantidad + delta;
     if (newQuantity >= 1) {
         setSelectedItems(prev =>
           prev.map(i =>
@@ -157,34 +157,6 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
           )
         );
     }
-  };
-  
-  const confirmDecreaseQuantity = () => {
-    if (!itemToDecrease) return;
-
-    const newQuantity = itemToDecrease.cantidad - 1;
-
-    // 1. Find and delete associated payments from the master data
-    const paymentsToKeep = mockPagosData.filter(pago => 
-        !pago.itemsPagados.some(itemPagado => 
-            itemPagado.idPresupuesto === editingBudget?.id && itemPagado.idItem === itemToDecrease.id
-        )
-    );
-    mockPagosData.length = 0;
-    Array.prototype.push.apply(mockPagosData, paymentsToKeep);
-
-    // 2. Update the item in the local sheet state
-    setSelectedItems(prev => prev.map(i =>
-        i.id === itemToDecrease.id
-            ? { ...i, cantidad: newQuantity, montoPagado: 0 } // Reset montoPagado
-            : i
-    ));
-    
-    toast({ title: "Pagos eliminados", description: `Los pagos asociados a ${itemToDecrease.procedimiento.denominacion} han sido eliminados.`, variant: "destructive" });
-
-    // 3. Close modal
-    setIsConfirmDecreaseOpen(false);
-    setItemToDecrease(null);
   };
   
   const handleSaveProcedimiento = (procedimiento: Procedimiento) => {
@@ -359,21 +331,12 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
         title="Confirmar Eliminación de Servicio"
         description={
             <>
-                Este servicio ya tiene pagos registrados (S/ {itemToDelete?.montoPagado.toFixed(2)}).
+                Este servicio ya tiene pagos registrados (S/ {(itemToDelete?.montoPagado || 0).toFixed(2)}).
                 <br />
-                Si lo elimina, los pagos asociados también se anularán. ¿Está seguro?
+                Si lo elimina, <strong>los pagos asociados se marcarán como inactivos</strong> pero no se eliminarán del historial. ¿Está seguro?
             </>
         }
-        confirmButtonText="Sí, eliminar"
-        confirmButtonVariant="destructive"
-    />
-     <ConfirmationDialog
-        isOpen={isConfirmDecreaseOpen}
-        onOpenChange={setIsConfirmDecreaseOpen}
-        onConfirm={confirmDecreaseQuantity}
-        title="Confirmar Reducción de Cantidad"
-        description={<>Este servicio ya tiene pagos registrados. Si reduce la cantidad, <strong>todos los pagos asociados se eliminarán</strong>. ¿Está seguro?</>}
-        confirmButtonText="Sí, reducir y eliminar pagos"
+        confirmButtonText="Sí, eliminar y desactivar pagos"
         confirmButtonVariant="destructive"
     />
     <AddProcedimientoModal

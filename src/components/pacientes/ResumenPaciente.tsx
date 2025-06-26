@@ -88,22 +88,16 @@ export default function ResumenPaciente({
 
     useEffect(() => {
         if (paciente && paciente.idHistoriaClinica) {
-            const presupuestosPaciente = mockPresupuestosData.filter(p => p.idHistoriaClinica === paciente.idHistoriaClinica);
+            const presupuestosActivosPaciente = mockPresupuestosData.filter(p => 
+                p.idHistoriaClinica === paciente.idHistoriaClinica && p.estado !== 'Cancelado'
+            );
 
-            const totalGeneral = presupuestosPaciente.reduce((acc, presupuesto) => {
-                if (presupuesto.estado === 'Cancelado') return acc;
+            const totalGeneral = presupuestosActivosPaciente.reduce((acc, presupuesto) => {
                 const totalItems = presupuesto.items.reduce((itemAcc, item) => itemAcc + (item.procedimiento.precioBase * item.cantidad), 0);
                 return acc + totalItems;
             }, 0);
 
-            const totalAbonado = mockPagosData
-                .filter(p => p.estado === 'activo')
-                .reduce((acc, pago) => {
-                    const pagoParaPaciente = pago.itemsPagados.some(ip => 
-                        presupuestosPaciente.some(presup => presup.id === ip.idPresupuesto)
-                    );
-                    return pagoParaPaciente ? acc + pago.montoTotal : acc;
-                }, 0);
+            const totalAbonado = presupuestosActivosPaciente.reduce((acc, presupuesto) => acc + presupuesto.montoPagado, 0);
             
             setTotalPagado(totalAbonado);
             setPorPagar(totalGeneral - totalAbonado);

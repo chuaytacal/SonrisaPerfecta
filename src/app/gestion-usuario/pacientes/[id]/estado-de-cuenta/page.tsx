@@ -193,17 +193,19 @@ export default function EstadoDeCuentaPage() {
         const originalBudget = mockPresupuestosData[budgetIndex];
         const originalItemIds = new Set(originalBudget.items.map(item => item.id));
         const finalItemIds = new Set(data.items.map(item => item.id));
-        const deletedItemIds = [...originalItemIds].filter(id => !finalItemIds.has(id));
 
-        if (deletedItemIds.length > 0) {
-            const itemIdsToRemove = new Set(deletedItemIds);
+        // Find items that were removed
+        const deletedItemIds = new Set([...originalItemIds].filter(id => !finalItemIds.has(id)));
+
+        // Deactivate payments for removed items
+        if (deletedItemIds.size > 0) {
             mockPagosData.forEach(pago => {
-                if (pago.itemsPagados.some(ip => ip.idPresupuesto === data.id && itemIdsToRemove.has(ip.idItem))) {
+                if (pago.itemsPagados.some(ip => ip.idPresupuesto === data.id && deletedItemIds.has(ip.idItem))) {
                     pago.estado = 'desactivo';
                 }
             });
         }
-
+        
         const updatedBudget: Presupuesto = {
             ...originalBudget,
             nombre: data.nombre,
@@ -307,7 +309,6 @@ export default function EstadoDeCuentaPage() {
       <ResumenPaciente
         paciente={paciente}
         persona={persona}
-        onBack={() => router.push('/gestion-usuario/pacientes')}
       />
       <div className="flex-1">
         <EtiquetasNotasSalud

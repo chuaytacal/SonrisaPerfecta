@@ -112,24 +112,24 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
     });
   };
 
-  const handleDelete = () => {
-    const budgetIdToDelete = presupuesto.id;
+  const handleCancelBudget = () => {
+    const budgetIdToCancel = presupuesto.id;
 
-    const budgetIndex = mockPresupuestosData.findIndex(p => p.id === budgetIdToDelete);
+    const budgetIndex = mockPresupuestosData.findIndex(p => p.id === budgetIdToCancel);
     if (budgetIndex > -1) {
-        mockPresupuestosData.splice(budgetIndex, 1);
+        mockPresupuestosData[budgetIndex].estado = 'Cancelado';
     }
     
-    // Find all payments related to this budget and remove them
-    const paymentsToKeep = mockPagosData.filter(pago => 
-        !pago.itemsPagados.some(item => item.idPresupuesto === budgetIdToDelete)
-    );
-    mockPagosData.length = 0;
-    Array.prototype.push.apply(mockPagosData, paymentsToKeep);
+    // Deactivate all associated payments
+    mockPagosData.forEach(pago => {
+        if (pago.itemsPagados.some(item => item.idPresupuesto === budgetIdToCancel)) {
+            pago.estado = 'desactivo';
+        }
+    });
 
     toast({
-        title: "Presupuesto Eliminado",
-        description: `El presupuesto #${budgetIdToDelete.slice(-6)} y sus pagos asociados han sido eliminados.`,
+        title: "Presupuesto Cancelado",
+        description: `El presupuesto #${budgetIdToCancel.slice(-6)} y sus pagos asociados han sido desactivados.`,
         variant: "destructive"
     });
     
@@ -201,7 +201,7 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
 
                   <Tooltip><TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground" onClick={() => setIsConfirmOpen(true)}><Trash2 className="h-4 w-4" /></Button>
-                  </TooltipTrigger><TooltipContent><p>Eliminar</p></TooltipContent></Tooltip>
+                  </TooltipTrigger><TooltipContent><p>Cancelar Presupuesto</p></TooltipContent></Tooltip>
               </div>
               </TooltipProvider>
           </div>
@@ -225,14 +225,14 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
                     const isPaid = porPagar <= 0.009; // Use small epsilon for float comparison
 
                     return (
-                      <TableRow key={item.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => setEditingItem(item)}>
+                      <TableRow key={item.id} className={cn("hover:bg-muted/50", estado !== 'Cancelado' && "cursor-pointer")} onClick={() => estado !== 'Cancelado' && setEditingItem(item)}>
                         <TableCell className="font-medium">{item.procedimiento.denominacion}</TableCell>
                         <TableCell>{item.cantidad}</TableCell>
                         <TableCell className="text-right">S/ {subtotal.toFixed(2)}</TableCell>
                         <TableCell className="text-right text-green-600">S/ {(item.montoPagado || 0).toFixed(2)}</TableCell>
                         <TableCell className="text-right text-red-600">S/ {porPagar.toFixed(2)}</TableCell>
                         <TableCell className="text-right">
-                          {isPaid ? (
+                          {isPaid && estado !== 'Cancelado' ? (
                             <div className="flex justify-end items-center gap-1 text-green-600">
                                 <CheckCircle2 className="h-5 w-5"/>
                             </div>
@@ -300,10 +300,10 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
       <ConfirmationDialog
         isOpen={isConfirmOpen}
         onOpenChange={setIsConfirmOpen}
-        onConfirm={handleDelete}
-        title="Confirmar Eliminación"
-        description="¿Estás seguro de que deseas eliminar este presupuesto y todos sus pagos asociados? Esta acción no se puede deshacer."
-        confirmButtonText="Sí, eliminar"
+        onConfirm={handleCancelBudget}
+        title="Confirmar Cancelación"
+        description="¿Está seguro de que desea cancelar este presupuesto? Todos los pagos asociados se marcarán como inactivos. Esta acción no se puede deshacer."
+        confirmButtonText="Sí, cancelar presupuesto"
         confirmButtonVariant="destructive"
       />
     </>
