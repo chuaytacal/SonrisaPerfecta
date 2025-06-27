@@ -255,23 +255,27 @@ export default function FiliacionPage() {
             mockPersonasData[personaIndex] = updatedPacienteFromForm.persona;
         }
         
-        mockPacientesData[pacienteIndex] = updatedPacienteFromForm;
+        const mergedPatient = {
+            ...mockPacientesData[pacienteIndex],
+            ...updatedPacienteFromForm
+        };
+        mockPacientesData[pacienteIndex] = mergedPatient;
       
         // Update local state to reflect changes immediately
-        setPaciente(updatedPacienteFromForm); 
-        setPersona(updatedPacienteFromForm.persona);
+        setPaciente(mergedPatient); 
+        setPersona(mergedPatient.persona);
         
         // Re-calculate age and minority status and update state
-        const calculatedAge = updatedPacienteFromForm.persona.fechaNacimiento 
-            ? differenceInYears(new Date(), new Date(updatedPacienteFromForm.persona.fechaNacimiento)) 
+        const calculatedAge = mergedPatient.persona.fechaNacimiento 
+            ? differenceInYears(new Date(), new Date(mergedPatient.persona.fechaNacimiento)) 
             : NaN;
         setIsMinor(!isNaN(calculatedAge) && calculatedAge < 18);
 
         // Update derived state for EtiquetasNotasSalud for consistency
-        setDisplayedNotas(updatedPacienteFromForm.notas || "Sin notas registradas.");
-        setDisplayedEtiquetas(updatedPacienteFromForm.etiquetas || []);
-        setDisplayedAlergias(deriveAlergiasFromAntecedentes(updatedPacienteFromForm.antecedentesMedicos));
-        setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(updatedPacienteFromForm.antecedentesMedicos));
+        setDisplayedNotas(mergedPatient.notas || "Sin notas registradas.");
+        setDisplayedEtiquetas(mergedPatient.etiquetas || []);
+        setDisplayedAlergias(deriveAlergiasFromAntecedentes(mergedPatient.antecedentesMedicos));
+        setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(mergedPatient.antecedentesMedicos));
     }
 
     setIsAddPacienteFormOpen(false);

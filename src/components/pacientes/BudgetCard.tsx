@@ -192,22 +192,24 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
               <TooltipProvider delayDuration={100}>
               <div className="flex items-center gap-1.5 ml-4">
                   {estado !== 'Cancelado' && (
-                    <Tooltip><TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePayMultiple}><DollarSign className="h-4 w-4" /></Button>
-                    </TooltipTrigger><TooltipContent><p>Cobrar varios servicios</p></TooltipContent></Tooltip>
+                    <>
+                      <Tooltip><TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePayMultiple}><DollarSign className="h-4 w-4" /></Button>
+                      </TooltipTrigger><TooltipContent><p>Cobrar varios servicios</p></TooltipContent></Tooltip>
+                      
+                      <Tooltip><TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(presupuesto)}><Edit className="h-4 w-4" /></Button>
+                      </TooltipTrigger><TooltipContent><p>Editar</p></TooltipContent></Tooltip>
+                      
+                      <Tooltip><TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground" onClick={() => setIsConfirmOpen(true)}><Trash2 className="h-4 w-4" /></Button>
+                      </TooltipTrigger><TooltipContent><p>Cancelar Presupuesto</p></TooltipContent></Tooltip>
+                    </>
                   )}
-                  
-                  <Tooltip><TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(presupuesto)}><Edit className="h-4 w-4" /></Button>
-                  </TooltipTrigger><TooltipContent><p>Editar</p></TooltipContent></Tooltip>
                   
                   <Tooltip><TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePrint}><Download className="h-4 w-4" /></Button>
                   </TooltipTrigger><TooltipContent><p>Imprimir</p></TooltipContent></Tooltip>
-
-                  <Tooltip><TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground" onClick={() => setIsConfirmOpen(true)}><Trash2 className="h-4 w-4" /></Button>
-                  </TooltipTrigger><TooltipContent><p>Cancelar Presupuesto</p></TooltipContent></Tooltip>
               </div>
               </TooltipProvider>
           </div>

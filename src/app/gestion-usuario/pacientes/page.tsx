@@ -116,7 +116,11 @@ export default function PacientesPage() {
     // 4. Update/Add Paciente in the "DB"
     const pacienteIndex = mockPacientesData.findIndex(p => p.id === savedPaciente.id);
     if (pacienteIndex > -1) {
-      mockPacientesData[pacienteIndex] = savedPaciente;
+      // Merge the updated data with the existing data to preserve fields not in the form
+      mockPacientesData[pacienteIndex] = {
+        ...mockPacientesData[pacienteIndex], // The original patient data
+        ...savedPaciente,                   // The updated data from the form
+      };
     } else {
       mockPacientesData.unshift(savedPaciente);
     }
