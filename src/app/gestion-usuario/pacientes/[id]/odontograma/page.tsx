@@ -16,7 +16,7 @@ import type { DientesMap, OdontogramDataItem } from '@/components/odontograma/se
 import { useToast } from '@/hooks/use-toast';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { DataTable } from '@/components/ui/data-table';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, Row } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -232,6 +232,40 @@ export default function OdontogramaPage() {
       id: "resumen",
       header: "Resumen de Hallazgos y Servicios",
       cell: ResumenOdontogramaCell,
+      filterFn: (row, id, value) => {
+        const searchTerm = String(value).toLowerCase();
+        if (!searchTerm) return true;
+
+        const historial = row.original;
+        let matchFound = false;
+
+        const checkMap = (map: DientesMap) => {
+            if (matchFound || !map) return;
+            for (const diente in map) {
+                for (const hallazgo of Object.values(map[diente])) {
+                    if (hallazgo.nombre.toLowerCase().includes(searchTerm)) {
+                        matchFound = true;
+                        return;
+                    }
+                    if (hallazgo.servicios) {
+                        for (const servicio of hallazgo.servicios) {
+                            if (servicio.denominacion.toLowerCase().includes(searchTerm)) {
+                                matchFound = true;
+                                return;
+                            }
+                        }
+                    }
+                }
+                if (matchFound) return;
+            }
+        };
+
+        checkMap(historial.odontogramaPermanente);
+        if (matchFound) return true;
+
+        checkMap(historial.odontogramaPrimaria);
+        return matchFound;
+      },
     },
     {
       id: "actions",
@@ -305,7 +339,8 @@ export default function OdontogramaPage() {
                   <DataTable
                     columns={columns}
                     data={paciente.historialOdontogramas || []}
-                    searchPlaceholder='Buscar...'
+                    searchPlaceholder='Buscar por hallazgo o servicio...'
+                    searchColumnId="resumen"
                   />
                 </TabsContent>
               </Tabs>
