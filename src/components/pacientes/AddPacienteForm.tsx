@@ -32,7 +32,7 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import type { Paciente, Persona, TipoDocumento, Sexo, EtiquetaPaciente } from "@/types"; 
+import type { Paciente, Persona, TipoDocumento, Sexo, EtiquetaPaciente, HistorialOdontograma } from "@/types"; 
 import { Calendar } from "@/components/ui/calendar"
 import {
   Popover,
@@ -307,8 +307,19 @@ export function AddPacienteForm({
         telefono: values.telefono,
         email: (isEditMode && initialPacienteData?.persona.email) || (selectedPersonaToPreload?.email) || "", 
     };
+    
+    let historial: HistorialOdontograma[] = initialPacienteData?.historialOdontogramas || [];
+    if (!historial || historial.length === 0) {
+      historial = [{
+        id: `historial-odont-${crypto.randomUUID()}`,
+        fechaCreacion: values.fechaIngreso,
+        odontogramaPermanente: {},
+        odontogramaPrimaria: {},
+      }];
+    }
 
     const pacienteOutput: Paciente = {
+        // --- Fields from Form ---
         id: initialPacienteData?.id || `paciente-${crypto.randomUUID()}`, 
         idPersona: personaData.id,
         persona: personaData,
@@ -323,6 +334,7 @@ export function AddPacienteForm({
         antecedentesMedicos: initialPacienteData?.antecedentesMedicos,
         odontogramaPermanente: initialPacienteData?.odontogramaPermanente,
         odontogramaPrimaria: initialPacienteData?.odontogramaPrimaria,
+        historialOdontogramas: historial,
     };
 
     await new Promise(resolve => setTimeout(resolve, 500));

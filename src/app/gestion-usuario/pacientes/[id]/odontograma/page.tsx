@@ -2,18 +2,23 @@
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { mockPacientesData } from '@/lib/data';
-import type { Paciente as PacienteType, Persona, EtiquetaPaciente } from '@/types';
+import type { Paciente as PacienteType, Persona, EtiquetaPaciente, HistorialOdontograma } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { DientesMap, OdontogramDataItem } from '@/components/odontograma/setting';
 import { useToast } from '@/hooks/use-toast';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { DataTable } from '@/components/ui/data-table';
+import type { ColumnDef } from '@tanstack/react-table';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 // Define ToothIconCustomSvg locally for error display or import from a shared location if available
 const ToothIconCustomSvg = (props: React.SVGProps<SVGSVGElement>) => (
@@ -39,7 +44,46 @@ const OdontogramComponent = dynamic(() => import('@/components/odontograma/Odont
   loading: () => <p className="text-center py-10">Cargando Odontograma...</p>
 });
 
-type OdontogramType = 'Permanente' | 'Primaria';
+const ResumenOdontogramaCell = ({ row }: { row: { original: HistorialOdontograma } }) => {
+  const historial = row.original;
+  const hallazgos: { diente: string; hallazgo: string; servicios: any[] | undefined }[] = [];
+
+  const processMap = (map: DientesMap, type: string) => {
+    if (!map) return;
+    Object.entries(map).forEach(([diente, data]) => {
+      Object.values(data).forEach(hallazgo => {
+        hallazgos.push({
+          diente: `${diente} (${type})`,
+          hallazgo: hallazgo.nombre,
+          servicios: hallazgo.servicios,
+        });
+      });
+    });
+  };
+
+  processMap(historial.odontogramaPermanente, 'P');
+  processMap(historial.odontogramaPrimaria, 'D');
+
+  if (hallazgos.length === 0) {
+    return <span className="text-muted-foreground">Sin hallazgos</span>;
+  }
+
+  return (
+    <div className="max-w-sm space-y-1">
+      {hallazgos.map((h, index) => (
+        <div key={index} className="text-xs">
+          <p className="truncate"><strong>Diente {h.diente}:</strong> {h.hallazgo}</p>
+          {h.servicios && h.servicios.length > 0 && (
+            <p className="pl-2 text-muted-foreground truncate"><strong>Servicios:</strong> {h.servicios.map(s => s.denominacion).join(', ')}</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+
+type OdontogramType = 'Permanente' | 'Primaria' | 'Historial';
 
 export default function OdontogramaPage() {
   const params = useParams();
@@ -50,62 +94,30 @@ export default function OdontogramaPage() {
   const [paciente, setPaciente] = useState<PacienteType | null>(null);
   const [persona, setPersona] = useState<Persona | null>(null);
   const [loading, setLoading] = useState(true);
-
+  
   const [permanenteData, setPermanenteData] = useState<DientesMap>({});
   const [primariaData, setPrimariaData] = useState<DientesMap>({});
   const [odontogramData, setOdontogramData] = useState<OdontogramDataItem[]>([]); 
   const [activeTab, setActiveTab] = useState<OdontogramType>('Permanente');
+
+  const [isNewConfirmOpen, setIsNewConfirmOpen] = useState(false);
+  const [isViewConfirmOpen, setIsViewConfirmOpen] = useState(false);
+  const [historicalToLoad, setHistoricalToLoad] = useState<HistorialOdontograma | null>(null);
 
   const [displayedNotas, setDisplayedNotas] = useState<string>("Sin notas registradas.");
   const [displayedEtiquetas, setDisplayedEtiquetas] = useState<EtiquetaPaciente[]>([]);
   const [displayedAlergias, setDisplayedAlergias] = useState<string[]>([]);
   const [displayedEnfermedades, setDisplayedEnfermedades] = useState<string[]>([]);
 
- // los 3 sgt son los modificidos
-  const convertirOdontogramDataItemADientesMap = (plan: OdontogramDataItem[]): DientesMap => {
-  const resultado: DientesMap = {};
-
-  plan.forEach(item => {
-    const dientes = Array.isArray(item.diente) ? item.diente : [item.diente];
-
-    dientes.forEach(dienteId => {
-      if (!resultado[dienteId]) {
-        resultado[dienteId] = {};
-      }
-
-      const hallazgo: Hallazgo = {
-        tipo: item.hallazgo.tipo,
-        abreviatura: item.hallazgo.abreviatura,
-        color: item.hallazgo.color,
-        nombre: item.hallazgo.nombre
-      };
-
-      if (item.hallazgo.cara && Object.keys(item.hallazgo.cara).length > 0) {
-        hallazgo.cara = item.hallazgo.cara;
-      }
-
-      if (item.hallazgo.detalle && item.hallazgo.detalle.length > 0) {
-        hallazgo.detalle = item.hallazgo.detalle;
-      }
-
-      if (Array.isArray(item.diente)) {
-        hallazgo.grupo = item.diente;
-      }
-
-      resultado[dienteId][item.hallazgo.tipo] = hallazgo;
-    });
-  });
-
-  return resultado;
-  };
   useEffect(() => {
-    console.log(odontogramData);
-  }, [odontogramData]);
+    console.log("Datos para guardar (formato lógico):", odontogramData);
+    const dientesMap = activeTab === 'Permanente' ? permanenteData : primariaData;
+    console.log("Datos para dibujar (formato visual):", dientesMap);
+  }, [odontogramData, permanenteData, primariaData, activeTab]);
 
   const handleOdontogramaDataChange = useCallback((newData: OdontogramDataItem[]) => {
     setOdontogramData(newData);
-  }, [activeTab, permanenteData, primariaData, patientId]);
-  
+  }, []);
 
   const deriveAlergiasFromAntecedentes = (antecedentes?: PacienteType['antecedentesMedicos']): string[] => {
     if (antecedentes && antecedentes.q3_cuales && antecedentes.q3_alergico === "Sí") {
@@ -136,85 +148,104 @@ export default function OdontogramaPage() {
     setLoading(false);
   }, [patientId]);
   
-  // Helper to count top-level findings.
-  const countTopLevelFindings = (data: DientesMap) => {
-    if (!data) return 0;
-    return Object.values(data).reduce((acc, tooth) => acc + Object.keys(tooth).length, 0);
-  };
-
   const handleOdontogramaChange = useCallback((newData: DientesMap) => {
-    const oldData = activeTab === 'Permanente' ? permanenteData : primariaData;
-    
-    if (JSON.stringify(oldData) === JSON.stringify(newData)) {
-        return;
-    }
-
-    const oldCount = countTopLevelFindings(oldData);
-    const newCount = countTopLevelFindings(newData);
-    
-    let actionOccurred = true;
-    let toastMessage = "Hallazgo modificado con éxito.";
-
-    if (newCount > oldCount) {
-        toastMessage = "Hallazgo agregado con éxito.";
-    } else if (newCount < oldCount) {
-        toastMessage = "Hallazgo eliminado con éxito.";
-    } else if (oldCount === 0 && newCount === 0) {
-        actionOccurred = false;
-    }
-
     if (activeTab === 'Permanente') {
       setPermanenteData(newData);
     } else {
       setPrimariaData(newData);
     }
+  }, [activeTab]);
 
-    const patientIndex = mockPacientesData.findIndex(p => p.id === patientId);
-    if (patientIndex > -1) {
-      if (activeTab === 'Permanente') {
-        mockPacientesData[patientIndex].odontogramaPermanente = newData;
-      } else {
-        mockPacientesData[patientIndex].odontogramaPrimaria = newData;
-      }
-      
-      if (actionOccurred) {
-        // Toast notifications disabled by user request to prevent loops
-        // toast({
-        //   title: "Guardado Automático",
-        //   description: toastMessage,
-        // });
-      }
+  const handleSaveCurrentOdontogram = (): boolean => {
+    const isPermanenteEmpty = Object.keys(permanenteData).length === 0;
+    const isPrimariaEmpty = Object.keys(primariaData).length === 0;
+    
+    if (isPermanenteEmpty && isPrimariaEmpty) {
+      return false; // Nothing to save
     }
-  }, [activeTab, permanenteData, primariaData, patientId]);
 
-  const handleUpdateNotes = (newNotes: string) => {
     const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
-    if (pacienteIndex > -1 && paciente) {
-        const updatedPatient = { ...paciente, notas: newNotes };
-        mockPacientesData[pacienteIndex] = updatedPatient;
-        setPaciente(updatedPatient); 
-        setDisplayedNotas(newNotes);
-        toast({ title: "Notas Guardadas", description: "Las notas del paciente han sido actualizadas."});
+    if (pacienteIndex === -1) return false;
+
+    const newHistoryEntry: HistorialOdontograma = {
+      id: `historial-${crypto.randomUUID()}`,
+      fechaCreacion: new Date(),
+      odontogramaPermanente: permanenteData,
+      odontogramaPrimaria: primariaData,
+    };
+    
+    const updatedPatient = { ...mockPacientesData[pacienteIndex] };
+    if (!updatedPatient.historialOdontogramas) {
+      updatedPatient.historialOdontogramas = [];
+    }
+    updatedPatient.historialOdontogramas.push(newHistoryEntry);
+    
+    mockPacientesData[pacienteIndex] = updatedPatient;
+    setPaciente(updatedPatient); // Update local state to re-render history table
+    
+    toast({ title: "Guardado Automático", description: "El odontograma actual ha sido guardado en el historial." });
+    return true;
+  };
+  
+  const handleNewOdontogram = () => setIsNewConfirmOpen(true);
+  
+  const confirmNewOdontogram = () => {
+    const saved = handleSaveCurrentOdontogram();
+    if (!saved) {
+      toast({ title: "Odontograma Vacío", description: "No hay hallazgos que guardar. Ya estás en un odontograma nuevo." });
+    }
+    setPermanenteData({});
+    setPrimariaData({});
+    setActiveTab('Permanente');
+    setIsNewConfirmOpen(false);
+  };
+  
+  const handleViewHistorical = (historial: HistorialOdontograma) => {
+    const isPermanenteEmpty = Object.keys(permanenteData).length === 0;
+    const isPrimariaEmpty = Object.keys(primariaData).length === 0;
+
+    if (isPermanenteEmpty && isPrimariaEmpty) {
+      loadHistoricalOdontogram(historial);
+    } else {
+      setHistoricalToLoad(historial);
+      setIsViewConfirmOpen(true);
     }
   };
 
-  const handleAddTag = (newTag: EtiquetaPaciente): boolean => {
-    const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
-    if (pacienteIndex > -1 && paciente) {
-        if (paciente.etiquetas && paciente.etiquetas.includes(newTag)) {
-            toast({ title: "Etiqueta Duplicada", description: "Esta etiqueta ya existe para el paciente.", variant: "destructive"});
-            return false;
-        }
-        const newTags = [...(paciente.etiquetas || []), newTag];
-        const updatedPatient = { ...paciente, etiquetas: newTags };
-        mockPacientesData[pacienteIndex] = updatedPatient;
-        setPaciente(updatedPatient);
-        setDisplayedEtiquetas(newTags);
-        toast({ title: "Etiqueta Agregada", description: `Etiqueta "${newTag}" agregada al paciente.`});
-        return true;
-    }
-    return false;
+  const loadHistoricalOdontogram = (historial: HistorialOdontograma) => {
+    setPermanenteData(historial.odontogramaPermanente || {});
+    setPrimariaData(historial.odontogramaPrimaria || {});
+    setActiveTab('Permanente');
+    toast({ title: "Historial Cargado", description: "Se ha cargado el odontograma seleccionado." });
   };
+  
+  const confirmSaveAndLoad = () => {
+    if (!historicalToLoad) return;
+    handleSaveCurrentOdontogram();
+    loadHistoricalOdontogram(historicalToLoad);
+    setIsViewConfirmOpen(false);
+    setHistoricalToLoad(null);
+  };
+
+  const columns: ColumnDef<HistorialOdontograma>[] = [
+    {
+      accessorKey: "fechaCreacion",
+      header: "Fecha de Creación",
+      cell: ({ row }) => format(new Date(row.original.fechaCreacion), "dd MMM yyyy, HH:mm", { locale: es }),
+    },
+    {
+      id: "resumen",
+      header: "Resumen de Hallazgos y Servicios",
+      cell: ResumenOdontogramaCell,
+    },
+    {
+      id: "actions",
+      header: "Acciones",
+      cell: ({ row }) => (
+        <Button variant="outline" size="sm" onClick={() => handleViewHistorical(row.original)}>Ver Odontograma</Button>
+      ),
+    },
+  ];
 
   if (loading) return <div className="flex justify-center items-center h-screen"><p>Cargando datos del odontograma...</p></div>;
   if (!paciente || !persona) {
@@ -229,51 +260,81 @@ export default function OdontogramaPage() {
   }
   
   return (
-    <div className="flex flex-col lg:flex-row gap-6 bg-background min-h-screen">
-      <ResumenPaciente paciente={paciente} persona={persona} onBack={() => router.push('/gestion-usuario/pacientes')} />
-      <div className="flex-1 space-y-6">
-        <EtiquetasNotasSalud
-          etiquetas={displayedEtiquetas}
-          notas={displayedNotas}
-          alergias={displayedAlergias}
-          enfermedades={displayedEnfermedades}
-          onSaveNotes={handleUpdateNotes}
-          onAddTag={handleAddTag}
-          patientId={patientId}
-        />
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Odontograma</CardTitle>
-              <CardDescription>Registre los hallazgos dentales del paciente. Los cambios se guardan automáticamente.</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
-             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as OdontogramType)} className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger value="Permanente">Permanente</TabsTrigger>
-                <TabsTrigger value="Primaria">Primaria (Decidua)</TabsTrigger>
-              </TabsList>
-              <TabsContent value="Permanente">
-                 <OdontogramComponent 
-                    dientesData={permanenteData} 
-                    onDientesChange={handleOdontogramaChange}
-                    onOdontogramDataChange={handleOdontogramaDataChange} 
-                    odontogramType="Permanent"
-                 />
-              </TabsContent>
-              <TabsContent value="Primaria">
-                 <OdontogramComponent 
-                    dientesData={primariaData} 
-                    onDientesChange={handleOdontogramaChange} 
-                    onOdontogramDataChange={handleOdontogramaDataChange}
-                    odontogramType="Primary"
-                 />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+    <>
+      <div className="flex flex-col lg:flex-row gap-6 bg-background min-h-screen">
+        <ResumenPaciente paciente={paciente} persona={persona} onBack={() => router.push('/gestion-usuario/pacientes')} />
+        <div className="flex-1 space-y-6">
+          <EtiquetasNotasSalud
+            etiquetas={displayedEtiquetas}
+            notas={displayedNotas}
+            alergias={displayedAlergias}
+            enfermedades={displayedEnfermedades}
+            onSaveNotes={() => {}}
+            onAddTag={() => true}
+            patientId={patientId}
+          />
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Odontograma</CardTitle>
+                  <CardDescription>Registre los hallazgos dentales del paciente.</CardDescription>
+                </div>
+                <Button onClick={handleNewOdontogram}>Nuevo Odontograma</Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as OdontogramType)} className="w-full">
+                <TabsList className="mb-4 grid grid-cols-3">
+                  <TabsTrigger value="Permanente">Permanente</TabsTrigger>
+                  <TabsTrigger value="Primaria">Primaria (Decidua)</TabsTrigger>
+                  <TabsTrigger value="Historial">Historial</TabsTrigger>
+                </TabsList>
+                <TabsContent value="Permanente">
+                  <OdontogramComponent 
+                      dientesData={permanenteData} 
+                      onDientesChange={handleOdontogramaChange}
+                      onOdontogramDataChange={handleOdontogramaDataChange} 
+                      odontogramType="Permanent"
+                  />
+                </TabsContent>
+                <TabsContent value="Primaria">
+                  <OdontogramComponent 
+                      dientesData={primariaData} 
+                      onDientesChange={handleOdontogramaChange} 
+                      onOdontogramDataChange={handleOdontogramaDataChange}
+                      odontogramType="Primary"
+                  />
+                </TabsContent>
+                <TabsContent value="Historial">
+                  <DataTable
+                    columns={columns}
+                    data={paciente.historialOdontogramas || []}
+                    searchPlaceholder='Buscar...'
+                  />
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+
+      <ConfirmationDialog
+        isOpen={isNewConfirmOpen}
+        onOpenChange={setIsNewConfirmOpen}
+        onConfirm={confirmNewOdontogram}
+        title="Crear Nuevo Odontograma"
+        description="¿Está seguro de que desea crear un nuevo odontograma? El odontograma actual con sus hallazgos se guardará en el historial del paciente."
+        confirmButtonText="Sí, crear nuevo"
+      />
+      <ConfirmationDialog
+        isOpen={isViewConfirmOpen}
+        onOpenChange={setIsViewConfirmOpen}
+        onConfirm={confirmSaveAndLoad}
+        title="Guardar Odontograma Actual"
+        description="Tiene cambios sin guardar en el odontograma actual. ¿Desea guardarlos en el historial antes de ver el odontograma seleccionado?"
+        confirmButtonText="Guardar y Ver"
+      />
+    </>
   );
 }

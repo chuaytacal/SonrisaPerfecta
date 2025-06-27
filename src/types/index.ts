@@ -1,6 +1,6 @@
 
 
-// import type { DientesMap } from "@/components/odontograma/setting";
+import type { DientesMap } from "@/components/odontograma/setting";
 
 export type TipoDocumento = "DNI" | "EXTRANJERIA" | "PASAPORTE";
 export type Sexo = "M" | "F";
@@ -84,6 +84,12 @@ export interface Presupuesto {
   nota?: string;
 }
 
+export interface HistorialOdontograma {
+  id: string;
+  fechaCreacion: Date;
+  odontogramaPermanente: DientesMap;
+  odontogramaPrimaria: DientesMap;
+}
 
 export interface Paciente {
   id: string;
@@ -96,8 +102,9 @@ export interface Paciente {
   notas?: string;
   antecedentesMedicos?: AntecedentesMedicosData;
   idApoderado?: string;
-  odontogramaPermanente?: any; // DientesMap;
-  odontogramaPrimaria?: any; // DientesMap;
+  odontogramaPermanente?: DientesMap;
+  odontogramaPrimaria?: DientesMap;
+  historialOdontogramas?: HistorialOdontograma[];
 }
 
 export interface Procedimiento {

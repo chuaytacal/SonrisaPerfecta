@@ -1,7 +1,7 @@
 
-import type { MotivoCita, Procedimiento, Persona, Paciente, Personal, AntecedentesMedicosData, Presupuesto, Pago, HistoriaClinica, Usuario, Rol } from '@/types';
+import type { MotivoCita, Procedimiento, Persona, Paciente, Personal, AntecedentesMedicosData, Presupuesto, Pago, HistoriaClinica, Usuario, Rol, HistorialOdontograma } from '@/types';
 import type { Appointment } from '@/types/calendar';
-import { addDays, setHours, setMinutes } from 'date-fns';
+import { addDays, setHours, setMinutes, parse } from 'date-fns';
 import type { DientesMap } from '@/components/odontograma/setting';
 
 // Mock data for Personas (can be shared or fetched)
@@ -15,7 +15,7 @@ export const mockPersonasData: Persona[] = [
   { id: "persona-7", tipoDocumento: "DNI", numeroDocumento: "85017429", nombre: "Nina", apellidoPaterno: "Francini", apellidoMaterno: "Green", fechaNacimiento: new Date("1989-09-05"), sexo: "F", direccion: "Av. Luna 404", telefono: "+51975320461", email: "nina.francini@example.com" },
   { id: "persona-8", tipoDocumento: "DNI", numeroDocumento: "76309152", nombre: "Caroline", apellidoPaterno: "Mallet", apellidoMaterno: "Peralta", fechaNacimiento: new Date("1993-12-12"), sexo: "F", direccion: "Jr. Estrella 505", telefono: "+51928547103", email: "caroline.mallet@example.com" },
   { id: "persona-p1", tipoDocumento: "DNI", numeroDocumento: "76543210", nombre: "Mario", apellidoPaterno: "Bros", apellidoMaterno: "Nintendo", fechaNacimiento: new Date("1983-07-09"), sexo: "M", direccion: "Mushroom Kingdom", telefono: "+51912345678", email: "mario@example.com" },
-  { id: "persona-p2", tipoDocumento: "EXTRANJERIA", numeroDocumento: "X1234567", nombre: "Luigi", apellidoPaterno: "Bros", apellidoMaterno: "Nintendo", fechaNacimiento: new Date("2015-04-10"), sexo: "M", direccion: "Mushroom Kingdom", telefono: "+51987654321", email: "luigi@example.com" },
+  { id: "persona-p2", tipoDocumento: "DNI", numeroDocumento: "X1234567", nombre: "Luigi", apellidoPaterno: "Bros", apellidoMaterno: "Nintendo", fechaNacimiento: new Date("2015-04-10"), sexo: "M", direccion: "Mushroom Kingdom", telefono: "+51987654321", email: "luigi@example.com" },
   { id: "persona-g1", tipoDocumento: "DNI", numeroDocumento: "29876543", nombre: "Peach", apellidoPaterno: "Toadstool", apellidoMaterno: "Mushroom", fechaNacimiento: new Date("1985-11-18"), sexo: "F", direccion: "Mushroom Castle", telefono: "+51999888777", email: "peach@example.com" },
 ];
 
@@ -209,6 +209,12 @@ export let mockPacientesData: Paciente[] = [
     antecedentesMedicos: initialAntecedentesExample,
     odontogramaPermanente: sampleOdontogramaPermanente,
     odontogramaPrimaria: {},
+    historialOdontogramas: [{
+      id: 'hist-1',
+      fechaCreacion: parse("10/01/2024", "dd/MM/yyyy", new Date()),
+      odontogramaPermanente: sampleOdontogramaPermanente,
+      odontogramaPrimaria: {},
+    }]
   },
   {
     id: "paciente-2",
@@ -223,6 +229,12 @@ export let mockPacientesData: Paciente[] = [
     idApoderado: "persona-g1",
     odontogramaPermanente: {},
     odontogramaPrimaria: {},
+    historialOdontogramas: [{
+      id: 'hist-2',
+      fechaCreacion: parse("15/03/2024", "dd/MM/yyyy", new Date()),
+      odontogramaPermanente: {},
+      odontogramaPrimaria: {},
+    }]
   },
   {
     id: "paciente-3",
@@ -236,6 +248,12 @@ export let mockPacientesData: Paciente[] = [
     antecedentesMedicos: { ...initialAntecedentesExample, q8_embarazada: "Sí", q8_semanas: "12" },
     odontogramaPermanente: {},
     odontogramaPrimaria: {},
+    historialOdontogramas: [{
+      id: 'hist-3',
+      fechaCreacion: parse("20/05/2023", "dd/MM/yyyy", new Date()),
+      odontogramaPermanente: {},
+      odontogramaPrimaria: {},
+    }]
   }
 ];
 
@@ -289,4 +307,3 @@ const generateInitialAppointments = (): Appointment[] => {
 export let mockAppointmentsData: Appointment[] = generateInitialAppointments();
 // Associate budget with initial appointment
 mockPresupuestosData.find(p => p.id === 'presupuesto-1')!.idCita = "cita-1";
-
