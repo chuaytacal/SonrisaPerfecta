@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -247,6 +248,12 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
           estado: 'activo',
           itemsPagados: itemsPagadosParaRegistro,
         };
+        
+        // This is where you would send the `newPago` object to your backend API
+        // For example: await api.post('/pagos', newPago);
+        console.log('--- ESTRUCTURA DEL PAGO A ENVIAR AL BACKEND ---');
+        console.log(newPago);
+
         mockPagosData.push(newPago);
 
         toast({ title: "Pago Registrado", description: `Se registró un pago de S/ ${totalACobrar.toFixed(2)} con ${metodoPago}.`});
