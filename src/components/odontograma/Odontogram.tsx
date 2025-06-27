@@ -53,6 +53,7 @@ export function Odontogram({ dientesData, onDientesChange, odontogramType, onOdo
           dientesMap={dientesData}
           odontogramType={odontogramType}
           onOdontogramDataChange={onOdontogramDataChange}
+          onUpdateDientesMap={onDientesChange}
         />
       </div>
     </div>

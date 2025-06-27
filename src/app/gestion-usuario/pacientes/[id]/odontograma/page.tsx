@@ -101,8 +101,6 @@ export default function OdontogramaPage() {
   const [activeTab, setActiveTab] = useState<OdontogramType>('Permanente');
 
   const [isNewConfirmOpen, setIsNewConfirmOpen] = useState(false);
-  const [isViewConfirmOpen, setIsViewConfirmOpen] = useState(false);
-  const [historicalToLoad, setHistoricalToLoad] = useState<HistorialOdontograma | null>(null);
 
   const [displayedNotas, setDisplayedNotas] = useState<string>("Sin notas registradas.");
   const [displayedEtiquetas, setDisplayedEtiquetas] = useState<EtiquetaPaciente[]>([]);
@@ -110,10 +108,8 @@ export default function OdontogramaPage() {
   const [displayedEnfermedades, setDisplayedEnfermedades] = useState<string[]>([]);
 
   useEffect(() => {
-    console.log("Datos para guardar (formato lógico):", odontogramData);
-    const dientesMap = activeTab === 'Permanente' ? permanenteData : primariaData;
-    console.log("Datos para dibujar (formato visual):", dientesMap);
-  }, [odontogramData, permanenteData, primariaData, activeTab]);
+    console.log(odontogramData);
+  }, [odontogramData]);
 
   const handleOdontogramaDataChange = useCallback((newData: OdontogramDataItem[]) => {
     setOdontogramData(newData);
@@ -135,8 +131,14 @@ export default function OdontogramaPage() {
     if (foundPaciente) {
       setPaciente(foundPaciente);
       setPersona(foundPaciente.persona);
-      setPermanenteData(foundPaciente.odontogramaPermanente || {});
-      setPrimariaData(foundPaciente.odontogramaPrimaria || {});
+      const latestHistory = foundPaciente.historialOdontogramas?.[0];
+      if (latestHistory) {
+        setPermanenteData(latestHistory.odontogramaPermanente || {});
+        setPrimariaData(latestHistory.odontogramaPrimaria || {});
+      } else {
+        setPermanenteData({});
+        setPrimariaData({});
+      }
       setDisplayedNotas(foundPaciente.notas || "Sin notas registradas.");
       setDisplayedEtiquetas(foundPaciente.etiquetas || []);
       setDisplayedAlergias(deriveAlergiasFromAntecedentes(foundPaciente.antecedentesMedicos));
@@ -148,83 +150,76 @@ export default function OdontogramaPage() {
     setLoading(false);
   }, [patientId]);
   
+  // This "autosave" function directly modifies the latest historical record.
   const handleOdontogramaChange = useCallback((newData: DientesMap) => {
+    const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
+    if (pacienteIndex === -1) return;
+
+    const updatedPatient = { ...mockPacientesData[pacienteIndex] };
+    if (!updatedPatient.historialOdontogramas || updatedPatient.historialOdontogramas.length === 0) {
+      return; // Should not happen
+    }
+    
     if (activeTab === 'Permanente') {
+      updatedPatient.historialOdontogramas[0].odontogramaPermanente = newData;
       setPermanenteData(newData);
     } else {
+      updatedPatient.historialOdontogramas[0].odontogramaPrimaria = newData;
       setPrimariaData(newData);
     }
-  }, [activeTab]);
-
-  const handleSaveCurrentOdontogram = (): boolean => {
-    const isPermanenteEmpty = Object.keys(permanenteData).length === 0;
-    const isPrimariaEmpty = Object.keys(primariaData).length === 0;
-    
-    if (isPermanenteEmpty && isPrimariaEmpty) {
-      return false; // Nothing to save
-    }
-
-    const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
-    if (pacienteIndex === -1) return false;
-
-    const newHistoryEntry: HistorialOdontograma = {
-      id: `historial-${crypto.randomUUID()}`,
-      fechaCreacion: new Date(),
-      odontogramaPermanente: permanenteData,
-      odontogramaPrimaria: primariaData,
-    };
-    
-    const updatedPatient = { ...mockPacientesData[pacienteIndex] };
-    if (!updatedPatient.historialOdontogramas) {
-      updatedPatient.historialOdontogramas = [];
-    }
-    updatedPatient.historialOdontogramas.push(newHistoryEntry);
     
     mockPacientesData[pacienteIndex] = updatedPatient;
-    setPaciente(updatedPatient); // Update local state to re-render history table
-    
-    toast({ title: "Guardado Automático", description: "El odontograma actual ha sido guardado en el historial." });
-    return true;
-  };
+    setPaciente(updatedPatient);
+  }, [activeTab, patientId]);
   
   const handleNewOdontogram = () => setIsNewConfirmOpen(true);
   
   const confirmNewOdontogram = () => {
-    const saved = handleSaveCurrentOdontogram();
-    if (!saved) {
-      toast({ title: "Odontograma Vacío", description: "No hay hallazgos que guardar. Ya estás en un odontograma nuevo." });
-    }
+    const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
+    if (pacienteIndex === -1) return;
+
+    const newHistoryEntry: HistorialOdontograma = {
+      id: `historial-${crypto.randomUUID()}`,
+      fechaCreacion: new Date(),
+      odontogramaPermanente: {},
+      odontogramaPrimaria: {},
+    };
+    
+    const updatedPatient = { ...mockPacientesData[pacienteIndex] };
+    updatedPatient.historialOdontogramas?.unshift(newHistoryEntry);
+    
+    mockPacientesData[pacienteIndex] = updatedPatient;
+    setPaciente(updatedPatient); // Update local state to re-render history table and odontogram
+    
     setPermanenteData({});
     setPrimariaData({});
     setActiveTab('Permanente');
+    toast({ title: "Nuevo Odontograma Creado", description: "Se ha archivado el odontograma anterior y ahora estás en uno nuevo." });
     setIsNewConfirmOpen(false);
   };
   
-  const handleViewHistorical = (historial: HistorialOdontograma) => {
-    const isPermanenteEmpty = Object.keys(permanenteData).length === 0;
-    const isPrimariaEmpty = Object.keys(primariaData).length === 0;
+  const handleViewHistorical = (historialToView: HistorialOdontograma) => {
+    const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
+    if (pacienteIndex === -1) return;
 
-    if (isPermanenteEmpty && isPrimariaEmpty) {
-      loadHistoricalOdontogram(historial);
-    } else {
-      setHistoricalToLoad(historial);
-      setIsViewConfirmOpen(true);
-    }
-  };
+    const updatedPatient = { ...mockPacientesData[pacienteIndex] };
+    if (!updatedPatient.historialOdontogramas) return;
 
-  const loadHistoricalOdontogram = (historial: HistorialOdontograma) => {
-    setPermanenteData(historial.odontogramaPermanente || {});
-    setPrimariaData(historial.odontogramaPrimaria || {});
+    const viewIndex = updatedPatient.historialOdontogramas.findIndex(h => h.id === historialToView.id);
+    if (viewIndex === -1 || viewIndex === 0) return; // Already current or not found
+
+    // Move the viewed item to the front of the array to make it the "current" one
+    const [itemToView] = updatedPatient.historialOdontogramas.splice(viewIndex, 1);
+    updatedPatient.historialOdontogramas.unshift(itemToView);
+    
+    mockPacientesData[pacienteIndex] = updatedPatient;
+
+    // Update state to trigger re-render
+    setPaciente(updatedPatient);
+    setPermanenteData(itemToView.odontogramaPermanente || {});
+    setPrimariaData(itemToView.odontogramaPrimaria || {});
     setActiveTab('Permanente');
-    toast({ title: "Historial Cargado", description: "Se ha cargado el odontograma seleccionado." });
-  };
-  
-  const confirmSaveAndLoad = () => {
-    if (!historicalToLoad) return;
-    handleSaveCurrentOdontogram();
-    loadHistoricalOdontogram(historicalToLoad);
-    setIsViewConfirmOpen(false);
-    setHistoricalToLoad(null);
+    toast({ title: "Historial Cargado", description: "El odontograma seleccionado ahora es el actual." });
   };
 
   const columns: ColumnDef<HistorialOdontograma>[] = [
@@ -326,14 +321,6 @@ export default function OdontogramaPage() {
         title="Crear Nuevo Odontograma"
         description="¿Está seguro de que desea crear un nuevo odontograma? El odontograma actual con sus hallazgos se guardará en el historial del paciente."
         confirmButtonText="Sí, crear nuevo"
-      />
-      <ConfirmationDialog
-        isOpen={isViewConfirmOpen}
-        onOpenChange={setIsViewConfirmOpen}
-        onConfirm={confirmSaveAndLoad}
-        title="Guardar Odontograma Actual"
-        description="Tiene cambios sin guardar en el odontograma actual. ¿Desea guardarlos en el historial antes de ver el odontograma seleccionado?"
-        confirmButtonText="Guardar y Ver"
       />
     </>
   );

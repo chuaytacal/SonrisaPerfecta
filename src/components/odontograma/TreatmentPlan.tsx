@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import { DientesMap, Hallazgo, OdontogramDataItem } from './setting';
@@ -15,10 +16,10 @@ interface Props {
   dientesMap: DientesMap;
   odontogramType: 'Permanent' | 'Primary';
   onOdontogramDataChange: (odontogramData: OdontogramDataItem[]) => void;
-
+  onUpdateDientesMap: (newMap: DientesMap) => void;
 }
 
-const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType, onOdontogramDataChange }) => {
+const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType, onOdontogramDataChange, onUpdateDientesMap }) => {
   const [planTratamiento, setPlanTratamiento] = useState<OdontogramDataItem[]>([]);
   const [editandoIndex, setEditandoIndex] = useState<number | null>(null);
   const [inputNota, setInputNota] = useState<string>('');
@@ -43,7 +44,7 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType, onOdo
     return diente.toString();
   };
 
-  const procesarDatos = (): OdontogramDataItem[] => {
+  const procesarDatos = (currentDientesMap: DientesMap): OdontogramDataItem[] => {
     const resultados: OdontogramDataItem[] = [];
     const idsAgregados = new Set<string>();
 
@@ -53,7 +54,7 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType, onOdo
     const isPermanentTooth = (num: number) => permanentToothRanges.some(([start, end]) => num >= start && num <= end);
     const isPrimaryTooth = (num: number) => primaryToothRanges.some(([start, end]) => num >= start && num <= end);
 
-    for (const [dienteStr, hallazgos] of Object.entries(dientesMap)) {
+    for (const [dienteStr, hallazgos] of Object.entries(currentDientesMap)) {
       const numeroDiente = parseInt(dienteStr);
 
       if (odontogramType === 'Permanent' && !isPermanentTooth(numeroDiente)) continue;
@@ -67,7 +68,7 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType, onOdo
           resultados.push({
             diente: esGrupo ? hallazgo.grupo! : numeroDiente,
             hallazgo: hallazgoSinGrupo,
-            nota: '',
+            nota: '', // Nota se manejará en el estado local `planTratamiento`
             servicios: hallazgo.servicios || []
           });
           idsAgregados.add(id);
@@ -83,12 +84,24 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType, onOdo
   };
 
   useEffect(() => {
-    const nuevosDatos = procesarDatos();
-    setPlanTratamiento(prevPlan => nuevosDatos.map((item, index) => ({
-      ...item,
-      nota: prevPlan[index]?.nota || '',
-      servicios: prevPlan[index]?.servicios || item.servicios
-    })));
+    const nuevosDatos = procesarDatos(dientesMap);
+    
+    // Sincronizar el plan de tratamiento, preservando las notas existentes
+    setPlanTratamiento(prevPlan => {
+      const planActualizado = nuevosDatos.map(item => {
+        // Encontrar si este item (por diente y tipo de hallazgo) ya existía
+        const itemPrevio = prevPlan.find(p => 
+          JSON.stringify(p.diente) === JSON.stringify(item.diente) && 
+          p.hallazgo.tipo === item.hallazgo.tipo
+        );
+        return {
+          ...item,
+          nota: itemPrevio?.nota || '',
+          servicios: item.servicios || [] // Asegurarse de que los servicios se actualicen desde `dientesMap`
+        };
+      });
+      return planActualizado;
+    });
 
     onOdontogramDataChange(planTratamiento);
   }, [dientesMap, odontogramType]);
@@ -116,7 +129,7 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType, onOdo
 
   const abrirModalServicios = (index: number, item: OdontogramDataItem) => {
     setModalServicio({ index, item });
-    setServiciosEnModal(item.servicios);
+    setServiciosEnModal(item.servicios || []);
   };
 
   const guardarServicios = () => {
@@ -132,7 +145,7 @@ const TreatmentPlanTable: React.FC<Props> = ({ dientesMap, odontogramType, onOdo
       }
     });
 
-    setPlanTratamiento(prev => prev.map((item, i) => i === modalServicio.index ? { ...item, servicios: serviciosEnModal } : item));
+    onUpdateDientesMap(newDientesMap); // Propagate changes up to parent
     toast({ title: "Servicios Vinculados", description: "Los servicios han sido vinculados al hallazgo correctamente." });
     setModalServicio(null);
     setServiciosEnModal([]);
