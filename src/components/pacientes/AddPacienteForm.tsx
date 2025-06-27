@@ -315,9 +315,14 @@ export function AddPacienteForm({
         fechaIngreso: format(values.fechaIngreso, "dd/MM/yyyy"),
         estado: values.estado,
         etiquetas: (values.etiquetas as EtiquetaPaciente[]) || [],
+        idApoderado: apoderadoPersona?.id,
+        
+        // --- Explicit preservation of fields not in the form ---
+        idHistoriaClinica: initialPacienteData?.idHistoriaClinica || '',
         notas: initialPacienteData?.notas,
         antecedentesMedicos: initialPacienteData?.antecedentesMedicos,
-        idApoderado: apoderadoPersona?.id,
+        odontogramaPermanente: initialPacienteData?.odontogramaPermanente,
+        odontogramaPrimaria: initialPacienteData?.odontogramaPrimaria,
     };
 
     await new Promise(resolve => setTimeout(resolve, 500));
