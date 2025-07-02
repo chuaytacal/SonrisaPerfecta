@@ -9,6 +9,11 @@ type LoginState = {
     error?: string;
     success?: boolean;
     token?: string;
+    uuid?: string; // Add uuid to the state
+    specialist: {
+        uuid: string; // UUID of the specialist
+        name: string; // Name of the specialist
+    };
 }
  
 export async function login(prevState: LoginState | undefined, formData: FormData): Promise<LoginState> {
@@ -33,8 +38,8 @@ export async function login(prevState: LoginState | undefined, formData: FormDat
         const expires = new Date(Date.now() + 8 * 60 * 60 * 1000); // 8 hours
         cookies().set('session', sessionToken, { expires, httpOnly: true });
 
-        // Return a mock token for localStorage
-        return { success: true, token: 'master-dev-token' };
+        // Return a mock token for localStorage and the user's UUID
+        return { success: true, token: 'master-dev-token', uuid: 'e0985dab-708e-44ab-9f30-96bdfe413fd5' }; // Hardcoded specialist UUID for dev
     }
     // --- End Master Credential Check ---
  
@@ -64,8 +69,8 @@ export async function login(prevState: LoginState | undefined, formData: FormDat
             const expires = new Date(Date.now() + 8 * 60 * 60 * 1000); // 8 hours
             cookies().set('session', sessionToken, { expires, httpOnly: true });
 
-            // Return the original backend token for localStorage
-            return { success: true, token: backendToken };
+            // Return the original backend token and user uuid for localStorage
+            return { success: true, token: backendToken, uuid: backendData.uuid, specialist: backendData.specialist };
         } else {
             return { error: 'Respuesta de autenticación inválida del servidor.' };
         }

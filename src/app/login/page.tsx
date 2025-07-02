@@ -29,7 +29,11 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (state?.success && state.token) {
-      localStorage.setItem('authToken', state.token);
+        localStorage.setItem('authToken', state.token);
+      console.log("Login successful:", state);
+      if (state.specialist?.uuid) {
+        localStorage.setItem('userUuid', state.specialist?.uuid);
+      }
       router.push('/dashboard');
     }
   }, [state, router]);

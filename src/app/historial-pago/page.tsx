@@ -5,65 +5,101 @@ import * as React from "react";
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import {
-  mockPagosData,
-  mockPersonalData,
-  mockPacientesData,
-  mockPresupuestosData
-} from "@/lib/data";
 import type { Pago, Persona, Personal, Paciente, MetodoPago } from "@/types";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown, Search } from 'lucide-react';
 import { Combobox } from "@/components/ui/combobox";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-
+import api from '@/lib/api';
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 
 interface EnhancedPago extends Pago {
-  paciente?: Paciente;
+  paciente?: Paciente; // Keep optional for now
   doctor?: Personal;
 }
 
 export default function HistorialPagosPage() {
+  const { toast } = useToast();
+  const [pagos, setPagos] = React.useState<EnhancedPago[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'fechaPago', desc: true }
   ]);
-  const [pacienteFilter, setPacienteFilter] = React.useState('all');
   const [doctorFilter, setDoctorFilter] = React.useState('all');
   const [conceptoFilter, setConceptoFilter] = React.useState('');
   const [medioPagoFilter, setMedioPagoFilter] = React.useState('all');
 
+  React.useEffect(() => {
+    const fetchPagos = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/payments/payment');
+        const dataFromApi = response.data;
 
-  const enhancedPagos: EnhancedPago[] = React.useMemo(() => {
-    return mockPagosData.map(pago => {
-      const firstItem = pago.itemsPagados[0];
-      let paciente: Paciente | undefined;
-      if (firstItem) {
-          const presupuesto = mockPresupuestosData.find(p => p.id === firstItem.idPresupuesto);
-          if (presupuesto) {
-              paciente = mockPacientesData.find(p => p.idHistoriaClinica === presupuesto.idHistoriaClinica);
-          }
+        const enhancedData: EnhancedPago[] = dataFromApi.map((pago: any): EnhancedPago => ({
+          id: pago.uuid,
+          fechaPago: new Date(pago.createdAt),
+          montoTotal: parseFloat(pago.monto),
+          metodoPago: pago.metodoPago,
+          tipoComprobante: pago.comprobante,
+          descripcion: pago.concepto,
+          estado: pago.isActive ? 'activo' : 'desactivo',
+          doctorResponsableId: pago.especialista.uuid,
+          doctor: {
+            id: pago.especialista.uuid,
+            idPersona: pago.especialista.persona.uuid,
+            fechaIngreso: pago.especialista.fechaIngreso,
+            estado: pago.especialista.isActive ? 'Activo' : 'Inactivo',
+            persona: {
+              id: pago.especialista.persona.uuid,
+              tipoDocumento: pago.especialista.persona.tipoDocumento,
+              numeroDocumento: pago.especialista.persona.numeroDocumento,
+              nombre: pago.especialista.persona.nombre,
+              apellidoPaterno: pago.especialista.persona.apellidoPaterno,
+              apellidoMaterno: pago.especialista.persona.apellidoMaterno,
+              fechaNacimiento: new Date(pago.especialista.persona.fechaNacimiento),
+              sexo: pago.especialista.persona.sexo,
+              direccion: pago.especialista.persona.direccion,
+              telefono: pago.especialista.persona.telefono,
+              email: '', // Not provided
+            }
+          },
+          itemsPagados: pago.items.map((item: any) => ({
+             idPresupuesto: '', // Not available in this endpoint
+             idItem: item.uuid,
+             monto: parseFloat(item.montoAbonado),
+             concepto: '',
+          })),
+        }));
+
+        setPagos(enhancedData);
+      } catch (error) {
+        console.error("Error fetching payments:", error);
+        toast({
+          title: "Error al cargar pagos",
+          description: "No se pudo conectar con el servidor.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
-
-      return {
-        ...pago,
-        paciente: paciente,
-        doctor: mockPersonalData.find(d => d.id === pago.doctorResponsableId),
-      };
-    });
-  }, []);
+    };
+    fetchPagos();
+  }, [toast]);
   
   const filteredPagos = React.useMemo(() => {
-    return enhancedPagos.filter(pago => {
-        const pacienteMatch = pacienteFilter === 'all' || pago.paciente?.id === pacienteFilter;
+    return pagos.filter(pago => {
         const doctorMatch = doctorFilter === 'all' || pago.doctor?.id === doctorFilter;
         const medioPagoMatch = medioPagoFilter === 'all' || pago.metodoPago === medioPagoFilter;
         const conceptoMatch = !conceptoFilter || pago.descripcion.toLowerCase().includes(conceptoFilter.toLowerCase());
-        return pacienteMatch && doctorMatch && medioPagoMatch && conceptoMatch;
+        return doctorMatch && medioPagoMatch && conceptoMatch;
     });
-  }, [enhancedPagos, pacienteFilter, doctorFilter, conceptoFilter, medioPagoFilter]);
+  }, [pagos, doctorFilter, conceptoFilter, medioPagoFilter]);
 
   const columns: ColumnDef<EnhancedPago>[] = [
     {
@@ -79,12 +115,6 @@ export default function HistorialPagosPage() {
         </Button>
       ),
       cell: ({ row }) => format(new Date(row.original.fechaPago), 'dd/MM/yyyy')
-    },
-    {
-      id: 'paciente',
-      accessorKey: 'paciente.persona.nombre',
-      header: 'Paciente',
-      cell: ({ row }) => row.original.paciente ? `${row.original.paciente.persona.nombre} ${row.original.paciente.persona.apellidoPaterno}` : 'N/A'
     },
     {
       id: 'doctor',
@@ -121,15 +151,18 @@ export default function HistorialPagosPage() {
     }
   ];
 
-  const pacienteOptions = React.useMemo(() => [
-    { value: 'all', label: 'Todos los Pacientes' },
-    ...mockPacientesData.map(p => ({ value: p.id, label: `${p.persona.nombre} ${p.persona.apellidoPaterno}` }))
-  ], []);
-
-  const doctorOptions = React.useMemo(() => [
-    { value: 'all', label: 'Todos los Doctores' },
-    ...mockPersonalData.map(d => ({ value: d.id, label: `${d.persona.nombre} ${d.persona.apellidoPaterno}` }))
-  ], []);
+  const doctorOptions = React.useMemo(() => {
+    const uniqueDoctors = new Map<string, { value: string, label: string }>();
+    pagos.forEach(p => {
+      if (p.doctor) {
+        uniqueDoctors.set(p.doctor.id, {
+          value: p.doctor.id,
+          label: `${p.doctor.persona.nombre} ${p.doctor.persona.apellidoPaterno}`
+        });
+      }
+    });
+    return [{ value: 'all', label: 'Todos los Doctores' }, ...Array.from(uniqueDoctors.values())];
+  }, [pagos]);
 
   const medioPagoOptions: { value: MetodoPago | 'all', label: string }[] = [
     { value: 'all', label: 'Todos los Medios' },
@@ -138,6 +171,26 @@ export default function HistorialPagosPage() {
     { value: 'Transferencia', label: 'Transferencia' },
     { value: 'Otro', label: 'Otro' },
   ];
+
+  if (loading) {
+    return (
+        <div className="w-full space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold">Historial de Pagos</h1>
+              <p className="text-muted-foreground">
+                Consulta y filtra todos los pagos registrados en la clínica.
+              </p>
+            </div>
+            <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                    <Skeleton className="h-10 w-full sm:w-[250px]" />
+                    <Skeleton className="h-10 w-full sm:w-[200px]" />
+                </div>
+                <Skeleton className="h-[400px] w-full" />
+            </div>
+        </div>
+    );
+  }
 
   return (
     <div className="w-full space-y-6">
@@ -156,13 +209,7 @@ export default function HistorialPagosPage() {
         onSortingChange={setSorting}
       >
         <div className="flex flex-col sm:flex-row items-center gap-2">
-            <Combobox
-                options={pacienteOptions}
-                value={pacienteFilter}
-                onChange={setPacienteFilter}
-                placeholder="Filtrar por paciente..."
-                searchPlaceholder="Buscar paciente..."
-            />
+            
             <Select value={doctorFilter} onValueChange={setDoctorFilter}>
                 <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
                     <SelectValue placeholder="Filtrar por doctor..." />

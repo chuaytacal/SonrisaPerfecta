@@ -28,6 +28,7 @@ import { EditServiceSheet } from './EditServiceSheet';
 import { useToast } from '@/hooks/use-toast';
 import { ConfirmationDialog } from '../ui/confirmation-dialog';
 import { generateBudgetPDF } from '@/lib/pdfGenerator';
+import api from '@/lib/api';
 
 
 interface BudgetCardProps {
@@ -67,21 +68,14 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
   
   const CurrentStatusIcon = statusConfig[estado]?.icon || FileText; // Fallback icon
   
-  const handleStateChange = (newState: EstadoPresupuesto) => {
-    const index = mockPresupuestosData.findIndex(p => p.id === id);
-    if (index > -1) {
-      mockPresupuestosData[index].estado = newState;
-      
-      const shouldBeActive = newState === 'Creado' || newState === 'Pagado';
-      
-      mockPagosData.forEach(pago => {
-        if(pago.itemsPagados.some(ip => ip.idPresupuesto === id)) {
-          pago.estado = shouldBeActive ? 'activo' : 'desactivo';
-        }
-      });
-      
-      setPresupuesto(mockPresupuestosData[index]);
+  const handleStateChange = async (newState: EstadoPresupuesto) => {
+    try {
+      await api.patch(`/payments/budget/${id}`, { estado: newState });
       toast({ title: "Estado Actualizado", description: `El presupuesto ahora está "${newState}".`})
+      onUpdate();
+    } catch(error) {
+      console.error("Error updating budget state:", error);
+      toast({ title: "Error", description: "No se pudo actualizar el estado del presupuesto.", variant: "destructive" });
     }
   };
   
@@ -114,29 +108,21 @@ export function BudgetCard({ presupuesto: initialPresupuesto, paciente, onUpdate
     });
   };
 
-  const handleCancelBudget = () => {
-    const budgetIdToCancel = presupuesto.id;
-
-    const budgetIndex = mockPresupuestosData.findIndex(p => p.id === budgetIdToCancel);
-    if (budgetIndex > -1) {
-        mockPresupuestosData[budgetIndex].estado = 'Cancelado';
+  const handleCancelBudget = async () => {
+    try {
+      await api.patch(`/payments/budget/${presupuesto.id}`, { estado: 'Cancelado' });
+      toast({
+          title: "Presupuesto Cancelado",
+          description: `El presupuesto #${presupuesto.id.slice(-6)} ha sido marcado como cancelado.`,
+          variant: "destructive"
+      });
+      onUpdate();
+    } catch (error) {
+        console.error("Error canceling budget:", error);
+        toast({ title: "Error", description: "No se pudo cancelar el presupuesto.", variant: "destructive" });
+    } finally {
+        setIsConfirmOpen(false);
     }
-    
-    // Deactivate all associated payments
-    mockPagosData.forEach(pago => {
-        if (pago.itemsPagados.some(item => item.idPresupuesto === budgetIdToCancel)) {
-            pago.estado = 'desactivo';
-        }
-    });
-
-    toast({
-        title: "Presupuesto Cancelado",
-        description: `El presupuesto #${budgetIdToCancel.slice(-6)} y sus pagos asociados han sido desactivados.`,
-        variant: "destructive"
-    });
-    
-    onUpdate();
-    setIsConfirmOpen(false);
   };
   
   const displayName = nombre 

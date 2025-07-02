@@ -55,7 +55,78 @@ export interface AntecedentesMedicosData {
 
 export type EstadoPresupuesto = 'Creado' | 'Pagado' | 'Cancelado';
 
+// Backend API response types
+export interface BackendProcedimiento {
+  id: number;
+  isActive: boolean;
+  uuid: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  denominacion: string;
+  descripcion: string;
+  precioBase: string;
+}
 
+export interface BackendItemPresupuesto {
+  id: number;
+  isActive: boolean;
+  uuid: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  cantidad: number;
+  precioUnitario: string;
+  subtotal: string;
+  procedure: BackendProcedimiento;
+  montoPagado: number;
+}
+
+export interface BackendPersona {
+  id: number;
+  isActive: boolean;
+  uuid: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  tipoDocumento: TipoDocumento;
+  numeroDocumento: string;
+  nombre: string;
+  apellidoPaterno: string;
+  apellidoMaterno: string;
+  fechaNacimiento: string;
+  sexo: Sexo;
+  direccion: string;
+  telefono: string;
+}
+
+export interface BackendEspecialista {
+  id: number;
+  isActive: boolean;
+  uuid: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  fechaIngreso: string;
+  persona: BackendPersona;
+}
+
+export interface BackendPresupuesto {
+  id: number;
+  isActive: boolean;
+  uuid: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  nombre: string;
+  codigo: string;
+  estado: EstadoPresupuesto;
+  nota: string;
+  especialista: BackendEspecialista;
+  items: BackendItemPresupuesto[];
+}
+
+// Frontend types (existing structure)
 export interface ItemPresupuesto {
   id: string;
   procedimiento: Procedimiento;
@@ -175,4 +246,5 @@ export interface Pago {
     monto: number;
     concepto: string;
   }[];
+  uuidPaciente: string;
 }

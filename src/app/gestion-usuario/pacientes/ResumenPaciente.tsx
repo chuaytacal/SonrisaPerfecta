@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AppointmentModal } from '@/components/calendario/AppointmentModal';
 import { useToast } from '@/hooks/use-toast';
-import { mockAppointmentsData, mockMotivosCita, mockPersonalData, mockPresupuestosData, mockPagosData } from '@/lib/data';
+import { mockAppointmentsData, mockMotivosCita, mockPersonalData, mockPresupuestosData } from '@/lib/data';
 import type { Appointment, AppointmentFormData } from '@/types/calendar';
 
 
@@ -23,6 +23,8 @@ interface ResumenPacienteProps {
   paciente: PacienteType;
   persona: Persona;
   onBack?: () => void;
+  totalPagado?: number;
+  porPagar?: number;
 }
 
 // Re-define ToothIconCustom here or import if it's moved to a shared location
@@ -49,6 +51,8 @@ export default function ResumenPaciente({
   paciente,
   persona,
   onBack,
+  totalPagado: totalPagadoProp,
+  porPagar: porPagarProp,
 }: ResumenPacienteProps) {
     const router = useRouter();
     const pathname = usePathname();
@@ -57,8 +61,8 @@ export default function ResumenPaciente({
     const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
     const { toast } = useToast();
 
-    const [totalPagado, setTotalPagado] = useState(0);
-    const [porPagar, setPorPagar] = useState(0);
+    const [totalPagado, setTotalPagado] = useState(totalPagadoProp ?? 0);
+    const [porPagar, setPorPagar] = useState(porPagarProp ?? 0);
 
     useEffect(() => {
         if (persona) {
@@ -87,25 +91,27 @@ export default function ResumenPaciente({
         }, [persona, paciente]);
 
     useEffect(() => {
-        if (paciente && paciente.idHistoriaClinica) {
-             // Filter budgets that are not 'Cancelado'
-            const presupuestosActivos = mockPresupuestosData.filter(p => 
-                p.idHistoriaClinica === paciente.idHistoriaClinica && p.estado !== 'Cancelado'
-            );
-    
-            // Calculate total cost ONLY from active budgets
-            const totalGeneral = presupuestosActivos.reduce((acc, presupuesto) => {
-                const totalItems = presupuesto.items.reduce((itemAcc, item) => itemAcc + (item.procedimiento.precioBase * item.cantidad), 0);
-                return acc + totalItems;
-            }, 0);
-    
-            // Calculate total paid amount ONLY from active budgets
-            const totalAbonado = presupuestosActivos.reduce((acc, presupuesto) => acc + presupuesto.montoPagado, 0);
-            
-            setTotalPagado(totalAbonado);
-            setPorPagar(totalGeneral - totalAbonado);
+        // If props are provided, use them directly
+        if (typeof totalPagadoProp !== 'undefined' && typeof porPagarProp !== 'undefined') {
+            setTotalPagado(totalPagadoProp);
+            setPorPagar(porPagarProp);
+        } else {
+            // Otherwise, calculate from mock data for other pages
+            if (paciente && paciente.idHistoriaClinica) {
+                const presupuestosActivos = mockPresupuestosData.filter(p => 
+                    p.idHistoriaClinica === paciente.idHistoriaClinica && p.estado !== 'Cancelado'
+                );
+                const totalGeneral = presupuestosActivos.reduce((acc, presupuesto) => {
+                    const totalItems = presupuesto.items.reduce((itemAcc, item) => itemAcc + (item.procedimiento.precioBase * item.cantidad), 0);
+                    return acc + totalItems;
+                }, 0);
+                const totalAbonado = presupuestosActivos.reduce((acc, presupuesto) => acc + presupuesto.montoPagado, 0);
+                
+                setTotalPagado(totalAbonado);
+                setPorPagar(totalGeneral - totalAbonado);
+            }
         }
-    }, [paciente, mockPresupuestosData]);
+    }, [paciente, mockPresupuestosData, totalPagadoProp, porPagarProp]);
 
 
     const navItems = [

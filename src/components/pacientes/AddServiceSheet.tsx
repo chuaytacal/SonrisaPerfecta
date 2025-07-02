@@ -15,63 +15,53 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { mockProcedimientos, mockPersonalData, mockPagosData, mockUsuariosData } from '@/lib/data';
-import type { Procedimiento, Presupuesto, ItemPresupuesto } from '@/types';
+import type { Procedimiento, Presupuesto, ItemPresupuesto, Paciente as PacienteType } from '@/types';
 import { Combobox } from '@/components/ui/combobox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, PlusCircle, MinusCircle, Plus, FileText, CheckCircle2, HeartOff, Circle } from 'lucide-react';
+import { Trash2, PlusCircle, MinusCircle, Plus, FileText, CheckCircle2, HeartOff } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AddProcedimientoModal } from '@/components/catalogo/AddProcedimientoModal';
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmationDialog } from '../ui/confirmation-dialog';
+import api from '@/lib/api';
 
+interface ComboData {
+  specialists: { uuid: string; nombreCompleto: string }[];
+  procedures: { uuid: string; nombre: string; precio: string }[];
+}
 
 interface AddServiceSheetProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: {
-    id?: string;
-    items: ItemPresupuesto[],
-    nombre: string,
-    doctorResponsableId: string,
-    estado: Presupuesto['estado'],
-    nota?: string
-  }) => void;
+  onSuccess: () => void;
   editingBudget?: Presupuesto | null;
+  comboData: ComboData | null;
+  paciente: PacienteType | null;
 }
 
-export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }: AddServiceSheetProps) {
+export function AddServiceSheet({ isOpen, onOpenChange, onSuccess, editingBudget, comboData, paciente }: AddServiceSheetProps) {
   const { toast } = useToast();
   const [selectedItems, setSelectedItems] = useState<ItemPresupuesto[]>([]);
   const [nombrePresupuesto, setNombrePresupuesto] = useState('');
   const [doctorResponsableId, setDoctorResponsableId] = useState('');
   const [estado, setEstado] = useState<Presupuesto['estado']>('Creado');
   const [nota, setNota] = useState('');
-  const [isAddProcModalOpen, setIsAddProcModalOpen] = useState(false);
 
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<ItemPresupuesto | null>(null);
   
-  const [isConfirmDecreaseOpen, setIsConfirmDecreaseOpen] = useState(false);
-  const [itemToDecrease, setItemToDecrease] = useState<ItemPresupuesto | null>(null);
-  
-  const [originalItems, setOriginalItems] = useState<ItemPresupuesto[]>([]);
-
 
   useEffect(() => {
     if (isOpen) {
         if (editingBudget) {
             const budgetItemsCopy = JSON.parse(JSON.stringify(editingBudget.items));
             setSelectedItems(budgetItemsCopy);
-            setOriginalItems(budgetItemsCopy); // Store the initial state for comparison
             setNombrePresupuesto(editingBudget.nombre);
             setDoctorResponsableId(editingBudget.doctorResponsableId || '');
             setEstado(editingBudget.estado);
             setNota(editingBudget.nota || '');
         } else {
             setSelectedItems([]);
-            setOriginalItems([]);
             setNombrePresupuesto('');
             setDoctorResponsableId('');
             setEstado('Creado');
@@ -81,22 +71,21 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
   }, [isOpen, editingBudget]);
 
 
-  const procedimientoOptions = mockProcedimientos.map(p => ({
-    value: p.id,
-    label: `${p.denominacion} - S/ ${p.precioBase.toFixed(2)}`,
-  }));
+  const procedimientoOptions = useMemo(() => {
+    if (!comboData) return [];
+    return comboData.procedures.map(p => ({
+        value: p.uuid,
+        label: `${p.nombre} - S/ ${parseFloat(p.precio).toFixed(2)}`
+    }));
+  }, [comboData]);
 
   const doctorOptions = useMemo(() => {
-    const activeDoctors = mockPersonalData.filter(p => {
-      if (p.estado !== 'Activo') return false;
-      const user = mockUsuariosData.find(u => u.id === p.idUsuario);
-      return user?.rol === 'Doctor';
-    });
-    return activeDoctors.map(p => ({
-      value: p.id,
-      label: `${p.persona.nombre} ${p.persona.apellidoPaterno}`
+    if (!comboData) return [];
+    return comboData.specialists.map(s => ({
+        value: s.uuid,
+        label: s.nombreCompleto
     }));
-  }, []);
+  }, [comboData]);
 
   const estadoOptions: { label: string, value: Presupuesto['estado'], icon: React.ElementType }[] = [
     { label: 'Creado', value: 'Creado', icon: FileText },
@@ -105,10 +94,17 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
   ];
 
   const handleAddServicio = (procedimientoId: string) => {
-    const procedimiento = mockProcedimientos.find(p => p.id === procedimientoId);
-    if (procedimiento && !selectedItems.some(item => item.procedimiento.id === procedimientoId)) {
+    if (!comboData) return;
+    const procedimientoData = comboData.procedures.find(p => p.uuid === procedimientoId);
+    if (procedimientoData && !selectedItems.some(item => item.procedimiento.id === procedimientoId)) {
+        const procedimiento: Procedimiento = {
+            id: procedimientoData.uuid,
+            denominacion: procedimientoData.nombre,
+            descripcion: '', // Not provided by combo endpoint
+            precioBase: parseFloat(procedimientoData.precio)
+        };
         const newItem: ItemPresupuesto = {
-            id: `new-item-${crypto.randomUUID()}`, // Temporary ID
+            id: `new-item-${crypto.randomUUID()}`,
             procedimiento: procedimiento,
             cantidad: 1,
             montoPagado: 0
@@ -122,62 +118,58 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
         setItemToDelete(itemToRemove);
         setIsConfirmDeleteOpen(true);
     } else {
-        setSelectedItems(prev => prev.filter(item => item.id !== itemToRemove.id));
+        confirmDeleteItem(itemToRemove.id, false);
     }
   };
 
-  const confirmDeleteItem = () => {
-    if (!itemToDelete) return;
-    setSelectedItems(prev => prev.filter(i => i.id !== itemToDelete.id));
-    setIsConfirmDeleteOpen(false);
-    setItemToDelete(null);
-  };
-
-
-  const handleUpdateCantidad = (procedimientoId: string, delta: number) => {
-    const item = selectedItems.find(i => i.procedimiento.id === procedimientoId);
-    if (!item) return;
-
-    if (delta < 0) {
-        toast({
-            title: "Acción no permitida",
-            description: "No se puede disminuir la cantidad de un servicio. Elimine el servicio y vuelva a agregarlo si es necesario.",
-            variant: "destructive"
-        });
-        return;
+  const confirmDeleteItem = async (itemId: string, showToast = true) => {
+    if (editingBudget && !itemId.startsWith('new-item-')) {
+        try {
+            await api.delete(`/payments/budget-item/${itemId}`);
+            if(showToast) toast({ title: "Servicio eliminado", description: "El servicio ha sido eliminado del presupuesto.", variant: "destructive" });
+        } catch (error) {
+            console.error("Error deleting item:", error);
+            toast({ title: "Error", description: "No se pudo eliminar el servicio del presupuesto.", variant: "destructive" });
+            return; // Stop if API call fails
+        }
     }
     
-    const newQuantity = item.cantidad + delta;
-    if (newQuantity >= 1) {
-        setSelectedItems(prev =>
-          prev.map(i =>
-            i.procedimiento.id === procedimientoId
-              ? { ...i, cantidad: newQuantity }
-              : i
-          )
-        );
+    setSelectedItems(prev => prev.filter(i => i.id !== itemId));
+    setIsConfirmDeleteOpen(false);
+    setItemToDelete(null);
+    onSuccess();
+  };
+
+  const handleUpdateCantidad = async (itemId: string, newQuantity: number) => {
+    if (newQuantity < 1) return;
+
+    if (editingBudget && !itemId.startsWith('new-item-')) {
+        try {
+            await api.patch(`/payments/budget-item/${itemId}`, { cantidad: newQuantity });
+            toast({ title: "Cantidad actualizada", description: "La cantidad del servicio ha sido modificada." });
+        } catch (error) {
+            console.error("Error updating item quantity:", error);
+            toast({ title: "Error", description: "No se pudo actualizar la cantidad.", variant: "destructive" });
+            return; // Stop on error
+        }
     }
+    
+    // Update local state for immediate feedback
+    setSelectedItems(prev =>
+        prev.map(i =>
+          i.id === itemId
+            ? { ...i, cantidad: newQuantity }
+            : i
+        )
+    );
+    onSuccess();
   };
   
-  const handleSaveProcedimiento = (procedimiento: Procedimiento) => {
-    const exists = mockProcedimientos.some(p => p.id === procedimiento.id);
-    if (!exists) {
-        mockProcedimientos.push(procedimiento);
-    } else {
-        const index = mockProcedimientos.findIndex(p => p.id === procedimiento.id);
-        mockProcedimientos[index] = procedimiento;
-    }
-    toast({ title: "Procedimiento Guardado", description: "El procedimiento está listo para ser usado."});
-    handleAddServicio(procedimiento.id);
-    setIsAddProcModalOpen(false);
-  };
-
-
   const total = selectedItems.reduce((acc, item) => acc + item.procedimiento.precioBase * item.cantidad, 0);
   const totalPagado = selectedItems.reduce((acc, item) => acc + (item.montoPagado || 0), 0);
   const porPagar = total - totalPagado;
 
-  const handleSaveClick = () => {
+  const handleSaveClick = async () => {
     if (!doctorResponsableId) {
         toast({ title: "Faltan datos", description: "Por favor, seleccione un doctor responsable.", variant: "destructive" });
         return;
@@ -187,21 +179,72 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
         return;
     }
     
-    if (editingBudget?.id) {
-        // Cascade doctor change to existing payments associated with this budget
-        mockPagosData.forEach(pago => {
-            if (pago.itemsPagados.some(itemPagado => itemPagado.idPresupuesto === editingBudget.id)) {
-                pago.doctorResponsableId = doctorResponsableId;
-            }
-        });
+    if (editingBudget) {
+      const headerPayload = {
+        nombre: nombrePresupuesto,
+        nota,
+        estado,
+        idEspecialista: doctorResponsableId,
+      };
+
+      try {
+        await api.patch(`/payments/budget/${editingBudget.id}`, headerPayload);
+        toast({ title: "Presupuesto Actualizado", description: "Los cambios en la cabecera del presupuesto han sido guardados." });
+        onSuccess();
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Error updating budget:", error);
+        toast({ title: "Error al actualizar", description: "No se pudo actualizar el presupuesto.", variant: "destructive" });
+      }
+      return;
     }
 
-    onSave({ id: editingBudget?.id, items: selectedItems, nombre: nombrePresupuesto, doctorResponsableId, estado, nota });
+    try {
+        // Step 1: Create budget header
+        const budgetHeaderPayload = {
+            idPaciente: paciente?.id,
+            // idHistoriaClinica: paciente?.idHistoriaClinica, // TODO: Uncomment when backend supports this field
+            idEspecialista: doctorResponsableId,
+            nombre: nombrePresupuesto,
+            nota,
+            estado,
+        };
+        const budgetResponse = await api.post('/payments/budget', budgetHeaderPayload);
+        const newBudgetUuid = budgetResponse.data?.uuid;
+
+        if (!newBudgetUuid) {
+            throw new Error("El backend no retornó un UUID para el nuevo presupuesto.");
+        }
+
+        // Step 2: Create budget items
+        const budgetItemsPayload = {
+            items: selectedItems.map(item => ({
+                idProcedimiento: item.procedimiento.id,
+                cantidad: item.cantidad,
+                precioUnitario: item.procedimiento.precioBase,
+                idPresupuesto: newBudgetUuid
+            }))
+        };
+
+        if (budgetItemsPayload.items.length > 0) {
+            await api.post('/payments/budget-item', budgetItemsPayload);
+        }
+
+        toast({ title: "Presupuesto Creado", description: "El presupuesto ha sido guardado exitosamente." });
+        onSuccess();
+        onOpenChange(false);
+    } catch (error) {
+        console.error("Error guardando el presupuesto:", error);
+        toast({ title: "Error al guardar", description: "Ocurrió un problema al intentar guardar el presupuesto.", variant: "destructive" });
+    }
   };
   
-  const filteredProcedimientoOptions = procedimientoOptions.filter(
-    opt => !selectedItems.some(item => item.procedimiento.id === opt.value)
-  );
+  const filteredProcedimientoOptions = useMemo(() => {
+    if (!procedimientoOptions) return [];
+    return procedimientoOptions.filter(
+        opt => !selectedItems.some(item => item.procedimiento.id === opt.value)
+    );
+  }, [procedimientoOptions, selectedItems]);
 
   const title = editingBudget ? "Editar Presupuesto/Servicio" : "Añadir Presupuesto/Servicio";
 
@@ -243,7 +286,6 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
                   <div className="flex-grow">
                       <Combobox options={filteredProcedimientoOptions} onChange={handleAddServicio} placeholder="Selecciona un servicio/producto..." />
                   </div>
-                  <Button variant="outline" onClick={() => setIsAddProcModalOpen(true)}><Plus className="mr-2 h-4 w-4"/> Nuevo</Button>
               </div>
             </div>
 
@@ -265,9 +307,9 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
                         <TableCell className="font-medium">{item.procedimiento.denominacion}</TableCell>
                         <TableCell>
                             <div className="flex items-center gap-1">
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleUpdateCantidad(item.procedimiento.id, -1)}><MinusCircle className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleUpdateCantidad(item.id, item.cantidad - 1)}><MinusCircle className="h-4 w-4" /></Button>
                                 <span>{item.cantidad}</span>
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleUpdateCantidad(item.procedimiento.id, 1)}><PlusCircle className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleUpdateCantidad(item.id, item.cantidad + 1)}><PlusCircle className="h-4 w-4" /></Button>
                             </div>
                         </TableCell>
                         <TableCell className="text-right">S/ {item.procedimiento.precioBase.toFixed(2)}</TableCell>
@@ -327,7 +369,7 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
     <ConfirmationDialog
         isOpen={isConfirmDeleteOpen}
         onOpenChange={setIsConfirmDeleteOpen}
-        onConfirm={confirmDeleteItem}
+        onConfirm={() => itemToDelete && confirmDeleteItem(itemToDelete.id)}
         title="Confirmar Eliminación de Servicio"
         description={
             <>
@@ -338,11 +380,6 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSave, editingBudget }:
         }
         confirmButtonText="Sí, eliminar y desactivar pagos"
         confirmButtonVariant="destructive"
-    />
-    <AddProcedimientoModal
-      isOpen={isAddProcModalOpen}
-      onOpenChange={setIsAddProcModalOpen}
-      onSave={handleSaveProcedimiento}
     />
     </>
   );

@@ -198,7 +198,7 @@ export let mockPresupuestosData: Presupuesto[] = [
 
 export let mockPacientesData: Paciente[] = [ 
   {
-    id: "paciente-1",
+    id: "92f1eac2-6991-45e6-acc8-083ee4705c27",
     idPersona: "persona-p1",
     persona: mockPersonasData.find(p => p.id === "persona-p1")!,
     idHistoriaClinica: "hc-1",

@@ -1,11 +1,12 @@
+
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, PlusCircle, Search, ArrowUpDown, Settings2 } from 'lucide-react';
-import { mockPacientesData, mockPresupuestosData, mockPagosData, mockPersonalData, mockHistoriasClinicasData } from '@/lib/data';
-import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto, Pago, Procedimiento, HistoriaClinica, Personal, MetodoPago } from '@/types';
+import { mockPacientesData, mockPagosData, mockPersonalData, mockHistoriasClinicasData } from '@/lib/data';
+import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto, Pago, Procedimiento, HistoriaClinica, Personal, MetodoPago, ItemPresupuesto } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -20,7 +21,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import api from '@/lib/api';
 
+interface ComboData {
+  specialists: { uuid: string; nombreCompleto: string }[];
+  procedures: { uuid: string; nombre: string; precio: string }[];
+}
 
 const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
     <svg
@@ -54,18 +60,20 @@ export default function EstadoDeCuentaPage() {
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Presupuesto | null>(null);
+  const [comboData, setComboData] = useState<ComboData | null>(null);
+
+  const [totalPagado, setTotalPagado] = useState(0);
+  const [porPagar, setPorPagar] = useState(0);
 
   // State for payment history filtering and sorting
   const [doctorFilter, setDoctorFilter] = useState('all');
   const [conceptoFilter, setConceptoFilter] = useState('');
-  const [medioPagoFilter, setMedioPagoFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<{ key: keyof Pago; direction: 'asc' | 'desc' }>({ key: 'fechaPago', direction: 'desc' });
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
       id: true,
       fechaPago: true,
       doctorResponsableId: true,
       descripcion: true,
-      metodoPago: true,
       estado: true,
       montoTotal: true,
   });
@@ -86,44 +94,128 @@ export default function EstadoDeCuentaPage() {
     return antecedentes?.q5_enfermedades || [];
   };
 
-  useEffect(() => {
-    refreshData();
-  }, [patientId]);
-  
-  const refreshData = () => {
-    const foundPaciente = mockPacientesData.find(p => p.id === patientId);
-    if (foundPaciente) {
-      setPaciente(foundPaciente);
-      setPersona(foundPaciente.persona);
-      const foundHistoriaClinica = mockHistoriasClinicasData.find(hc => hc.id === foundPaciente.idHistoriaClinica);
-      setHistoriaClinica(foundHistoriaClinica || null);
-      
-      setDisplayedNotas(foundPaciente.notas || "Sin notas registradas.");
-      setDisplayedEtiquetas(foundPaciente.etiquetas || []);
-      setDisplayedAlergias(deriveAlergiasFromAntecedentes(foundPaciente.antecedentesMedicos));
-      setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(foundPaciente.antecedentesMedicos));
-      
-      if (foundHistoriaClinica) {
-        const sortedBudgets = mockPresupuestosData
-          .filter(p => p.idHistoriaClinica === foundHistoriaClinica.id)
-          .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
-        setPresupuestos(sortedBudgets);
-        
-        const presupuestoIds = sortedBudgets.map(p => p.id);
-        const filteredPagos = mockPagosData
-            .filter(p => p.itemsPagados.some(ip => presupuestoIds.includes(ip.idPresupuesto)))
-            .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());
-        setPagos(filteredPagos);
-      }
-    } else {
-      setPaciente(null);
-      setPersona(null);
-      setHistoriaClinica(null);
-      setPresupuestos([]);
-      setPagos([]);
+  const refreshBudgets = async () => {
+    try {
+        const response = await api.get('/payments/budget');
+        const budgetsFromApi = response.data;
+        const mappedBudgets = budgetsFromApi.map((budget: any): Presupuesto => {
+            const totalPagadoItems = budget.items.reduce((sum: number, item: any) => sum + (parseFloat(item.montoPagado) || 0), 0)
+
+            return {
+                id: budget.uuid,
+                idHistoriaClinica: historiaClinica?.id || '',
+                nombre: budget.nombre,
+                fechaCreacion: new Date(budget.createdAt),
+                fechaAtencion: new Date(budget.createdAt),
+                estado: budget.estado,
+                doctorResponsableId: budget.especialista.uuid,
+                nota: budget.nota,
+                items: budget.items.map((item: any): ItemPresupuesto => ({
+                  id: item.uuid,
+                  procedimiento: {
+                    id: item.procedure.uuid,
+                    denominacion: item.procedure.denominacion,
+                    descripcion: item.procedure.descripcion,
+                    precioBase: parseFloat(item.procedure.precioBase)
+                  },
+                  cantidad: item.cantidad,
+                  montoPagado: parseFloat(item.montoPagado) || 0
+                })),
+                montoPagado: totalPagadoItems
+            }
+        }).sort((a: Presupuesto, b: Presupuesto) => b.fechaCreacion.getTime() - a.fechaCreacion.getTime());
+        setPresupuestos(mappedBudgets);
+    } catch (error) {
+        console.error("Error refreshing budgets:", error);
+        toast({ title: "Error", description: "No se pudieron actualizar los presupuestos.", variant: "destructive" });
     }
-    setLoading(false);
   };
+
+
+  useEffect(() => {
+    const fetchPageData = async () => {
+        setLoading(true);
+        const foundPaciente = mockPacientesData.find(p => p.id === patientId);
+        if (foundPaciente) {
+            setPaciente(foundPaciente);
+            setPersona(foundPaciente.persona);
+            const foundHistoriaClinica = mockHistoriasClinicasData.find(hc => hc.id === foundPaciente.idHistoriaClinica);
+            setHistoriaClinica(foundHistoriaClinica || null);
+            setDisplayedNotas(foundPaciente.notas || "Sin notas registradas.");
+            setDisplayedEtiquetas(foundPaciente.etiquetas || []);
+            setDisplayedAlergias(deriveAlergiasFromAntecedentes(foundPaciente.antecedentesMedicos));
+            setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(foundPaciente.antecedentesMedicos));
+        } else {
+            setLoading(false);
+            return;
+        }
+
+        try {
+            const [budgetsRes, combosRes] = await Promise.all([
+                api.get('/payments/budget'),
+                api.get('/payments/budget/combos')
+            ]);
+            
+            setComboData(combosRes.data);
+            
+            const budgetsFromApi = budgetsRes.data;
+            const mappedBudgets = budgetsFromApi.map((budget: any): Presupuesto => {
+                const totalPagadoItems = budget.items.reduce((sum: number, item: any) => sum + (parseFloat(item.montoPagado) || 0), 0)
+
+                return {
+                    id: budget.uuid,
+                    idHistoriaClinica: historiaClinica?.id || '',
+                    nombre: budget.nombre,
+                    fechaCreacion: new Date(budget.createdAt),
+                    fechaAtencion: new Date(budget.createdAt),
+                    estado: budget.estado,
+                    doctorResponsableId: budget.especialista.uuid,
+                    nota: budget.nota,
+                    items: budget.items.map((item: any): ItemPresupuesto => ({
+                      id: item.uuid,
+                      procedimiento: {
+                        id: item.procedure.uuid,
+                        denominacion: item.procedure.denominacion,
+                        descripcion: item.procedure.descripcion,
+                        precioBase: parseFloat(item.procedure.precioBase)
+                      },
+                      cantidad: item.cantidad,
+                      montoPagado: parseFloat(item.montoPagado) || 0
+                    })),
+                    montoPagado: totalPagadoItems
+                }
+            }).sort((a: Presupuesto, b: Presupuesto) => b.fechaCreacion.getTime() - a.fechaCreacion.getTime());
+            
+            setPresupuestos(mappedBudgets);
+
+            // Calculate totals for ResumenPaciente
+            const presupuestosActivos = mappedBudgets.filter((p: Presupuesto) => p.estado !== 'Cancelado');
+            const totalGeneral = presupuestosActivos.reduce((acc: number, presupuesto: Presupuesto) => {
+                const totalItems = presupuesto.items.reduce((itemAcc, item) => itemAcc + (item.procedimiento.precioBase * item.cantidad), 0);
+                return acc + totalItems;
+            }, 0);
+            const totalAbonado = presupuestosActivos.reduce((acc: number, presupuesto: Presupuesto) => acc + presupuesto.montoPagado, 0);
+            
+            setTotalPagado(totalAbonado);
+            setPorPagar(totalGeneral - totalAbonado);
+
+
+            // This part needs an endpoint for payments too. I will leave it mocked.
+            const presupuestoIds = mappedBudgets.map(p => p.id);
+            const filteredPagos = mockPagosData
+                .filter(p => p.itemsPagados.some(ip => presupuestoIds.includes(ip.idPresupuesto)))
+                .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());
+            setPagos(filteredPagos);
+
+        } catch (error) {
+            console.error("Error fetching page data:", error);
+            toast({ title: "Error de Carga", description: "No se pudieron obtener los datos del servidor.", variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
+    };
+    fetchPageData();
+  }, [patientId, toast]);
   
   const doctorOptions = useMemo(() => {
     const uniqueDoctors = new Map<string, Personal>();
@@ -134,11 +226,6 @@ export default function EstadoDeCuentaPage() {
         }
     });
     return [{ value: 'all', label: 'Todos los Doctores' }, ...Array.from(uniqueDoctors.values()).map(d => ({ value: d.id, label: `${d.persona.nombre} ${d.persona.apellidoPaterno}` }))];
-  }, [pagos]);
-
-  const medioPagoOptions = useMemo(() => {
-    const uniqueMethods = new Set(pagos.map(p => p.metodoPago));
-    return [{ value: 'all', label: 'Todos los Medios' }, ...Array.from(uniqueMethods).map(m => ({ value: m, label: m }))];
   }, [pagos]);
 
   const requestSort = (key: keyof Pago) => {
@@ -155,9 +242,6 @@ export default function EstadoDeCuentaPage() {
       if (doctorFilter !== 'all') {
           filtered = filtered.filter(p => p.doctorResponsableId === doctorFilter);
       }
-      if (medioPagoFilter !== 'all') {
-          filtered = filtered.filter(p => p.metodoPago === medioPagoFilter);
-      }
       if (conceptoFilter) {
           filtered = filtered.filter(p =>
               p.descripcion.toLowerCase().includes(conceptoFilter.toLowerCase())
@@ -173,7 +257,7 @@ export default function EstadoDeCuentaPage() {
       });
 
       return filtered;
-  }, [pagos, doctorFilter, conceptoFilter, medioPagoFilter, sortConfig]);
+  }, [pagos, doctorFilter, conceptoFilter, sortConfig]);
 
   const handleOpenAddSheet = () => {
     setEditingBudget(null);
@@ -185,81 +269,6 @@ export default function EstadoDeCuentaPage() {
     setIsSheetOpen(true);
   };
 
-  const handleSaveBudget = (data: {
-    id?: string;
-    items: { id: string, procedimiento: Procedimiento; cantidad: number; montoPagado?: number; }[],
-    nombre: string,
-    doctorResponsableId: string,
-    estado: Presupuesto['estado'],
-    nota?: string
-  }) => {
-    if (!paciente || !historiaClinica) return;
-
-    if (data.id) { // UPDATE LOGIC
-        const budgetIndex = mockPresupuestosData.findIndex(b => b.id === data.id);
-        if (budgetIndex === -1) return;
-
-        const originalBudget = mockPresupuestosData[budgetIndex];
-        const originalItemIds = new Set(originalBudget.items.map(item => item.id));
-        const finalItemIds = new Set(data.items.map(item => item.id));
-        const deletedItemIds = [...originalItemIds].filter(id => !finalItemIds.has(id));
-
-        if (deletedItemIds.length > 0) {
-            mockPagosData.forEach(pago => {
-                const tieneItemEliminado = pago.itemsPagados.some(itemPagado => 
-                    itemPagado.idPresupuesto === data.id && deletedItemIds.includes(itemPagado.idItem)
-                );
-                if (tieneItemEliminado) {
-                    pago.estado = 'desactivo';
-                }
-            });
-        }
-
-        const updatedBudget: Presupuesto = {
-            ...originalBudget,
-            nombre: data.nombre,
-            doctorResponsableId: data.doctorResponsableId,
-            estado: data.estado,
-            nota: data.nota,
-            items: data.items,
-            montoPagado: data.items.reduce((acc, item) => acc + (item.montoPagado || 0), 0)
-        };
-        
-        mockPagosData.forEach(pago => {
-            if (pago.itemsPagados.some(itemPagado => itemPagado.idPresupuesto === updatedBudget.id)) {
-                pago.doctorResponsableId = updatedBudget.doctorResponsableId!;
-            }
-        });
-
-        mockPresupuestosData[budgetIndex] = updatedBudget;
-        toast({ title: "Presupuesto Actualizado", description: "Los cambios han sido guardados." });
-
-    } else { // CREATE LOGIC
-        const newBudget: Presupuesto = {
-          id: `presupuesto-${crypto.randomUUID()}`,
-          idHistoriaClinica: historiaClinica.id,
-          nombre: data.nombre || '',
-          fechaCreacion: new Date(),
-          fechaAtencion: new Date(),
-          estado: data.estado,
-          montoPagado: 0,
-          items: data.items.map(item => ({
-            id: `item-${crypto.randomUUID()}`,
-            procedimiento: item.procedimiento,
-            cantidad: item.cantidad,
-            montoPagado: 0,
-          })),
-          doctorResponsableId: data.doctorResponsableId,
-          nota: data.nota,
-        };
-        mockPresupuestosData.unshift(newBudget);
-        toast({ title: "Presupuesto Creado", description: "El nuevo presupuesto ha sido añadido." });
-    }
-    
-    setIsSheetOpen(false);
-    setEditingBudget(null);
-    refreshData();
-  };
 
   const handleUpdateNotes = (newNotes: string) => {
     const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
@@ -307,7 +316,6 @@ export default function EstadoDeCuentaPage() {
     fechaPago: 'Fecha',
     doctorResponsableId: 'Doctor',
     descripcion: 'Concepto',
-    metodoPago: 'Medio de Pago',
     estado: 'Estado',
     montoTotal: 'Monto',
   };
@@ -319,7 +327,8 @@ export default function EstadoDeCuentaPage() {
       <ResumenPaciente
         paciente={paciente}
         persona={persona}
-        onBack={() => router.push('/gestion-usuario/pacientes')}
+        totalPagado={totalPagado}
+        porPagar={porPagar}
       />
       <div className="flex-1">
         <EtiquetasNotasSalud
@@ -347,7 +356,7 @@ export default function EstadoDeCuentaPage() {
                 <div className="space-y-4">
                     {presupuestos.length > 0 ? (
                         presupuestos.map(presupuesto => (
-                            <BudgetCard key={presupuesto.id} presupuesto={presupuesto} paciente={paciente} onUpdate={refreshData} onEdit={handleEditBudget}/>
+                            <BudgetCard key={presupuesto.id} presupuesto={presupuesto} paciente={paciente} onUpdate={refreshBudgets} onEdit={handleEditBudget}/>
                         ))
                     ) : (
                         <Card>
@@ -379,10 +388,6 @@ export default function EstadoDeCuentaPage() {
                               <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Filtrar por doctor..." /></SelectTrigger>
                               <SelectContent>{doctorOptions.map(option => (<SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>))}</SelectContent>
                           </Select>
-                          <Select value={medioPagoFilter} onValueChange={(val) => setMedioPagoFilter(val as MetodoPago | 'all')}>
-                              <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Filtrar por medio..." /></SelectTrigger>
-                              <SelectContent>{medioPagoOptions.map(option => (<SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>))}</SelectContent>
-                          </Select>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="outline" className="w-full sm:w-auto"><Settings2 className="mr-2 h-4 w-4" /> Columnas</Button>
@@ -410,7 +415,6 @@ export default function EstadoDeCuentaPage() {
                                 )}
                                 {columnVisibility.doctorResponsableId && <TableHead>Doctor</TableHead>}
                                 {columnVisibility.descripcion && <TableHead>Concepto</TableHead>}
-                                {columnVisibility.metodoPago && <TableHead>Medio de Pago</TableHead>}
                                 {columnVisibility.estado && <TableHead>Estado</TableHead>}
                                 {columnVisibility.montoTotal && <TableHead className="text-right">Monto</TableHead>}
                               </TableRow>
@@ -425,7 +429,6 @@ export default function EstadoDeCuentaPage() {
                                       {columnVisibility.fechaPago && <TableCell>{format(new Date(pago.fechaPago), 'dd/MM/yyyy')}</TableCell>}
                                       {columnVisibility.doctorResponsableId && <TableCell>{doctor ? `${doctor.persona.nombre} ${doctor.persona.apellidoPaterno}` : 'N/A'}</TableCell>}
                                       {columnVisibility.descripcion && <TableCell>{pago.descripcion}</TableCell>}
-                                      {columnVisibility.metodoPago && <TableCell>{pago.metodoPago}</TableCell>}
                                       {columnVisibility.estado && <TableCell><Badge variant={pago.estado === 'desactivo' ? 'destructive' : 'default'} className="capitalize">{pago.estado}</Badge></TableCell>}
                                       {columnVisibility.montoTotal && <TableCell className="text-right">S/ {pago.montoTotal.toFixed(2)}</TableCell>}
                                     </TableRow>
@@ -451,8 +454,10 @@ export default function EstadoDeCuentaPage() {
             if (!open) setEditingBudget(null);
             setIsSheetOpen(open);
         }}
-        onSave={handleSaveBudget}
+        onSuccess={refreshBudgets}
         editingBudget={editingBudget}
+        comboData={comboData}
+        paciente={paciente}
       />
     </div>
   );

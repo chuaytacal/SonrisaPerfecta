@@ -2,11 +2,11 @@
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, PlusCircle, Search, ArrowUpDown, Settings2 } from 'lucide-react';
-import { mockPacientesData, mockPresupuestosData, mockPagosData, mockPersonalData, mockHistoriasClinicasData } from '@/lib/data';
-import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto, Pago, Procedimiento, HistoriaClinica, Personal, MetodoPago } from '@/types';
+import { mockPacientesData, mockPersonalData, mockHistoriasClinicasData } from '@/lib/data';
+import type { Paciente as PacienteType, Persona, EtiquetaPaciente, Presupuesto, Pago, Procedimiento, HistoriaClinica, Personal, MetodoPago, ItemPresupuesto } from '@/types';
 import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -21,7 +21,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import api from '@/lib/api';
 
+interface ComboData {
+  specialists: { uuid: string; nombreCompleto: string }[];
+  procedures: { uuid: string; nombre: string; precio: string }[];
+}
 
 const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
     <svg
@@ -49,12 +54,15 @@ export default function EstadoDeCuentaPage() {
 
   const [paciente, setPaciente] = useState<PacienteType | null>(null);
   const [persona, setPersona] = useState<Persona | null>(null);
-  const [historiaClinica, setHistoriaClinica] = useState<HistoriaClinica | null>(null);
   const [loading, setLoading] = useState(true);
   const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Presupuesto | null>(null);
+  const [comboData, setComboData] = useState<ComboData | null>(null);
+
+  const [totalPagado, setTotalPagado] = useState(0);
+  const [porPagar, setPorPagar] = useState(0);
 
   // State for payment history filtering and sorting
   const [doctorFilter, setDoctorFilter] = useState('all');
@@ -85,44 +93,106 @@ export default function EstadoDeCuentaPage() {
     return antecedentes?.q5_enfermedades || [];
   };
 
-  useEffect(() => {
-    refreshData();
-  }, [patientId]);
-  
-  const refreshData = () => {
+  const fetchPageData = useCallback(async () => {
+    if (!patientId) {
+        setLoading(false);
+        return;
+    }
+    setLoading(true);
+
+    // This part with mock data is for displaying the patient summary and notes, which are not part of the payment/budget API calls.
     const foundPaciente = mockPacientesData.find(p => p.id === patientId);
     if (foundPaciente) {
-      setPaciente(foundPaciente);
-      setPersona(foundPaciente.persona);
-      const foundHistoriaClinica = mockHistoriasClinicasData.find(hc => hc.id === foundPaciente.idHistoriaClinica);
-      setHistoriaClinica(foundHistoriaClinica || null);
-      
-      setDisplayedNotas(foundPaciente.notas || "Sin notas registradas.");
-      setDisplayedEtiquetas(foundPaciente.etiquetas || []);
-      setDisplayedAlergias(deriveAlergiasFromAntecedentes(foundPaciente.antecedentesMedicos));
-      setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(foundPaciente.antecedentesMedicos));
-      
-      if (foundHistoriaClinica) {
-        const sortedBudgets = mockPresupuestosData
-          .filter(p => p.idHistoriaClinica === foundHistoriaClinica.id)
-          .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
-        setPresupuestos(sortedBudgets);
-        
-        const presupuestoIds = sortedBudgets.map(p => p.id);
-        const filteredPagos = mockPagosData
-            .filter(p => p.itemsPagados.some(ip => presupuestoIds.includes(ip.idPresupuesto)))
-            .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());
-        setPagos(filteredPagos);
-      }
+        setPaciente(foundPaciente);
+        setPersona(foundPaciente.persona);
+        setDisplayedNotas(foundPaciente.notas || "Sin notas registradas.");
+        setDisplayedEtiquetas(foundPaciente.etiquetas || []);
+        setDisplayedAlergias(deriveAlergiasFromAntecedentes(foundPaciente.antecedentesMedicos));
+        setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(foundPaciente.antecedentesMedicos));
     } else {
-      setPaciente(null);
-      setPersona(null);
-      setHistoriaClinica(null);
-      setPresupuestos([]);
-      setPagos([]);
+        setLoading(false);
+        return; // No patient context, can't proceed
     }
-    setLoading(false);
-  };
+    
+    try {
+        const [budgetsRes, combosRes, pagosRes] = await Promise.all([
+            api.get(`/payments/budget/by-patient/${patientId}`),
+            api.get('/payments/budget/combos'),
+            api.get(`/payments/payment/by-patient/${patientId}`)
+        ]);
+        
+        setComboData(combosRes.data);
+        
+        const budgetsFromApi = budgetsRes.data;
+        const mappedBudgets = budgetsFromApi.map((budget: any): Presupuesto => {
+            const totalPagadoItems = budget.items.reduce((sum: number, item: any) => sum + (parseFloat(item.montoPagado) || 0), 0)
+
+            return {
+                id: budget.uuid,
+                idHistoriaClinica: foundPaciente.idHistoriaClinica, // Use local found patient for this
+                nombre: budget.nombre,
+                fechaCreacion: new Date(budget.createdAt),
+                fechaAtencion: new Date(budget.createdAt),
+                estado: budget.estado,
+                doctorResponsableId: budget.especialista.uuid,
+                nota: budget.nota,
+                items: budget.items.map((item: any): ItemPresupuesto => ({
+                  id: item.uuid,
+                  procedimiento: {
+                    id: item.procedure.uuid,
+                    denominacion: item.procedure.denominacion,
+                    descripcion: item.procedure.descripcion,
+                    precioBase: parseFloat(item.procedure.precioBase)
+                  },
+                  cantidad: item.cantidad,
+                  montoPagado: parseFloat(item.montoPagado) || 0
+                })),
+                montoPagado: totalPagadoItems
+            }
+        }).sort((a: Presupuesto, b: Presupuesto) => b.fechaCreacion.getTime() - a.fechaCreacion.getTime());
+        
+        setPresupuestos(mappedBudgets);
+
+        // Calculate totals for ResumenPaciente from the newly fetched budget data
+        const presupuestosActivos = mappedBudgets.filter((p: Presupuesto) => p.estado !== 'Cancelado');
+        const totalGeneral = presupuestosActivos.reduce((acc: number, presupuesto: Presupuesto) => {
+            const totalItems = presupuesto.items.reduce((itemAcc, item) => itemAcc + (item.procedimiento.precioBase * item.cantidad), 0);
+            return acc + totalItems;
+        }, 0);
+        const totalAbonado = presupuestosActivos.reduce((acc: number, presupuesto: Presupuesto) => acc + presupuesto.montoPagado, 0);
+        
+        setTotalPagado(totalAbonado);
+        setPorPagar(totalGeneral - totalAbonado);
+
+        const pagosFromApi = pagosRes.data;
+        const mappedPagos: Pago[] = pagosFromApi.map((pago: any): Pago => ({
+          id: pago.uuid,
+          fechaPago: new Date(pago.createdAt),
+          montoTotal: parseFloat(pago.monto),
+          metodoPago: pago.metodoPago,
+          tipoComprobante: pago.comprobante,
+          descripcion: pago.concepto,
+          estado: pago.isActive ? 'activo' : 'desactivo',
+          doctorResponsableId: pago.especialista.uuid,
+          uuidPaciente: pago.paciente.uuid,
+          itemsPagados: [], // Simplified for this view
+        })).sort((a: Pago, b: Pago) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());
+        
+        setPagos(mappedPagos);
+
+    } catch (error) {
+        console.error("Error fetching page data:", error);
+        toast({ title: "Error de Carga", description: "No se pudieron obtener los datos del servidor.", variant: "destructive" });
+    } finally {
+        setLoading(false);
+    }
+  }, [patientId, toast]);
+
+  useEffect(() => {
+    if (patientId) {
+        fetchPageData();
+    }
+  }, [patientId, fetchPageData]);
   
   const doctorOptions = useMemo(() => {
     const uniqueDoctors = new Map<string, Personal>();
@@ -176,81 +246,6 @@ export default function EstadoDeCuentaPage() {
     setIsSheetOpen(true);
   };
 
-  const handleSaveBudget = (data: {
-    id?: string;
-    items: { id: string, procedimiento: Procedimiento; cantidad: number; montoPagado?: number; }[],
-    nombre: string,
-    doctorResponsableId: string,
-    estado: Presupuesto['estado'],
-    nota?: string
-  }) => {
-    if (!paciente || !historiaClinica) return;
-
-    if (data.id) { // UPDATE LOGIC
-        const budgetIndex = mockPresupuestosData.findIndex(b => b.id === data.id);
-        if (budgetIndex === -1) return;
-
-        const originalBudget = mockPresupuestosData[budgetIndex];
-        const originalItemIds = new Set(originalBudget.items.map(item => item.id));
-        const finalItemIds = new Set(data.items.map(item => item.id));
-
-        // Find items that were removed
-        const deletedItemIds = new Set([...originalItemIds].filter(id => !finalItemIds.has(id)));
-
-        // Deactivate payments for removed items
-        if (deletedItemIds.size > 0) {
-            mockPagosData.forEach(pago => {
-                if (pago.itemsPagados.some(ip => ip.idPresupuesto === data.id && deletedItemIds.has(ip.idItem))) {
-                    pago.estado = 'desactivo';
-                }
-            });
-        }
-        
-        const updatedBudget: Presupuesto = {
-            ...originalBudget,
-            nombre: data.nombre,
-            doctorResponsableId: data.doctorResponsableId,
-            estado: 'Creado',
-            nota: data.nota,
-            items: data.items,
-            montoPagado: data.items.reduce((acc, item) => acc + (item.montoPagado || 0), 0)
-        };
-        
-        mockPagosData.forEach(pago => {
-            if (pago.itemsPagados.some(itemPagado => itemPagado.idPresupuesto === updatedBudget.id)) {
-                pago.doctorResponsableId = updatedBudget.doctorResponsableId!;
-            }
-        });
-
-        mockPresupuestosData[budgetIndex] = updatedBudget;
-        toast({ title: "Presupuesto Actualizado", description: "Los cambios han sido guardados." });
-
-    } else { // CREATE LOGIC
-        const newBudget: Presupuesto = {
-          id: `presupuesto-${crypto.randomUUID()}`,
-          idHistoriaClinica: historiaClinica.id,
-          nombre: data.nombre || '',
-          fechaCreacion: new Date(),
-          fechaAtencion: new Date(),
-          estado: data.estado,
-          montoPagado: 0,
-          items: data.items.map(item => ({
-            id: `item-${crypto.randomUUID()}`,
-            procedimiento: item.procedimiento,
-            cantidad: item.cantidad,
-            montoPagado: 0,
-          })),
-          doctorResponsableId: data.doctorResponsableId,
-          nota: data.nota,
-        };
-        mockPresupuestosData.unshift(newBudget);
-        toast({ title: "Presupuesto Creado", description: "El nuevo presupuesto ha sido añadido." });
-    }
-    
-    setIsSheetOpen(false);
-    setEditingBudget(null);
-    refreshData();
-  };
 
   const handleUpdateNotes = (newNotes: string) => {
     const pacienteIndex = mockPacientesData.findIndex(p => p.id === patientId);
@@ -309,6 +304,8 @@ export default function EstadoDeCuentaPage() {
       <ResumenPaciente
         paciente={paciente}
         persona={persona}
+        totalPagado={totalPagado}
+        porPagar={porPagar}
       />
       <div className="flex-1">
         <EtiquetasNotasSalud
@@ -336,7 +333,7 @@ export default function EstadoDeCuentaPage() {
                 <div className="space-y-4">
                     {presupuestos.length > 0 ? (
                         presupuestos.map(presupuesto => (
-                            <BudgetCard key={presupuesto.id} presupuesto={presupuesto} paciente={paciente} onUpdate={refreshData} onEdit={handleEditBudget}/>
+                            <BudgetCard key={presupuesto.id} presupuesto={presupuesto} paciente={paciente} onUpdate={fetchPageData} onEdit={handleEditBudget}/>
                         ))
                     ) : (
                         <Card>
@@ -434,9 +431,12 @@ export default function EstadoDeCuentaPage() {
             if (!open) setEditingBudget(null);
             setIsSheetOpen(open);
         }}
-        onSave={handleSaveBudget}
+        onSuccess={fetchPageData}
         editingBudget={editingBudget}
+        comboData={comboData}
+        paciente={paciente}
       />
     </div>
   );
 }
+

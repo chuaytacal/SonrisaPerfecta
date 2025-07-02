@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { type Presupuesto, type MetodoPago, type ItemPresupuesto, Paciente as PacienteType, TipoComprobante, Pago } from '@/types';
-import { mockPersonalData, mockPagosData, mockPresupuestosData } from '@/lib/data';
+import { mockPersonalData } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowLeft, CheckCircle, Gift, Megaphone, Wallet, ChevronRight, X } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -24,8 +24,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '../ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import api from '@/lib/api';
 
 interface PaymentSheetProps {
   isOpen: boolean;
@@ -196,7 +195,12 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
         setStep(2);
     };
 
-    const handleConfirmPayment = () => {
+    const handleConfirmPayment = async () => {
+        const loggedInUserUuid = localStorage.getItem('userUuid');
+        if (!loggedInUserUuid) {
+            toast({ title: "Error de autenticación", description: "No se pudo identificar al especialista. Por favor, inicie sesión de nuevo.", variant: "destructive"});
+            return;
+        }
         if (!metodoPago) {
             toast({ title: "Falta método de pago", description: "Por favor, seleccione un método de pago.", variant: "destructive"});
             return;
@@ -205,60 +209,50 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
             toast({ title: "Falta comprobante", description: "Por favor, seleccione un tipo de comprobante.", variant: "destructive"});
             return;
         }
-        
-        const presupuestoIndex = mockPresupuestosData.findIndex(p => p.id === presupuesto.id);
-        if (presupuestoIndex === -1) return;
 
-        let totalPagadoEnEstaTransaccion = 0;
-        const itemsPagadosParaRegistro: Pago['itemsPagados'] = [];
-        
-        for (const itemId of selectedItems) {
-            const abono = abonos[itemId];
-            if (typeof abono !== 'number' || abono <= 0) continue;
+        try {
+            // Step 1: Create Payment Header
+            const paymentHeaderPayload = {
+                uuidEspecialista: loggedInUserUuid,
+                uuidPaciente: paciente.id,
+                concepto: conceptoTexto,
+                monto: totalACobrar,
+                comprobante,
+                metodoPago,
+            };
+            const paymentResponse = await api.post('/payments/payment', paymentHeaderPayload);
+            const newPaymentUuid = paymentResponse.data?.uuid;
 
-            totalPagadoEnEstaTransaccion += abono;
-            
-            const itemIndex = mockPresupuestosData[presupuestoIndex].items.findIndex(i => i.id === itemId);
-            if (itemIndex > -1) {
-              mockPresupuestosData[presupuestoIndex].items[itemIndex].montoPagado += abono;
-              itemsPagadosParaRegistro.push({
-                idPresupuesto: presupuesto.id,
-                idItem: itemId,
-                monto: abono,
-                concepto: mockPresupuestosData[presupuestoIndex].items[itemIndex].procedimiento.denominacion,
-              });
+            if (!newPaymentUuid) {
+                throw new Error("El backend no retornó un UUID para el nuevo pago.");
             }
+
+            // Step 2: Create Payment Items
+            const paymentItems = selectedItems
+                .map(itemId => {
+                    const abono = abonos[itemId];
+                    if (typeof abono !== 'number' || abono <= 0) return null;
+                    return {
+                        uuidPago: newPaymentUuid,
+                        uuidPresupuestoItem: itemId,
+                        montoAbonado: abono,
+                    };
+                })
+                .filter((item): item is NonNullable<typeof item> => item !== null);
+
+            if (paymentItems.length > 0) {
+                await api.post('/payments/payment-item', { items: paymentItems });
+            }
+            
+            toast({ title: "Pago Registrado", description: `Se registró un pago de S/ ${totalACobrar.toFixed(2)}.` });
+            onPaymentSuccess();
+            onOpenChange(false); // Close the sheet
+            
+        } catch (error) {
+            console.error("Error registrando el pago:", error);
+            toast({ title: "Error al registrar pago", description: "Ocurrió un problema al procesar el pago.", variant: "destructive" });
         }
-        
-        mockPresupuestosData[presupuestoIndex].montoPagado += totalPagadoEnEstaTransaccion;
-
-        const totalPresupuestoCalculado = mockPresupuestosData[presupuestoIndex].items.reduce((acc, item) => acc + (item.procedimiento.precioBase * item.cantidad), 0);
-        if (mockPresupuestosData[presupuestoIndex].montoPagado >= totalPresupuestoCalculado) {
-          mockPresupuestosData[presupuestoIndex].estado = 'Pagado';
-        }
-
-        const newPago: Pago = {
-          id: `pago-${crypto.randomUUID()}`,
-          fechaPago: new Date(),
-          montoTotal: totalACobrar,
-          metodoPago,
-          tipoComprobante: comprobante,
-          doctorResponsableId: presupuesto.doctorResponsableId!,
-          descripcion: conceptoTexto,
-          estado: 'activo',
-          itemsPagados: itemsPagadosParaRegistro,
-        };
-        
-        // This is where you would send the `newPago` object to your backend API
-        // For example: await api.post('/pagos', newPago);
-        console.log('--- ESTRUCTURA DEL PAGO A ENVIAR AL BACKEND ---');
-        console.log(newPago);
-
-        mockPagosData.push(newPago);
-
-        toast({ title: "Pago Registrado", description: `Se registró un pago de S/ ${totalACobrar.toFixed(2)} con ${metodoPago}.`});
-        onPaymentSuccess();
-    }
+    };
     
     const metodoPagoOptions: { value: MetodoPago, label: string, icon: React.ElementType }[] = [
         { value: 'Efectivo', label: 'Efectivo', icon: Wallet },
