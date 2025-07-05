@@ -187,7 +187,8 @@ export interface Procedimiento {
 
 export interface MotivoCita {
   id: string;
-  nombre: string;
+  name: string;
+  description?: string; // Optional field for additional details
 }
 
 

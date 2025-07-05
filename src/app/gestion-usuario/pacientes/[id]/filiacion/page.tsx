@@ -25,7 +25,6 @@ import ResumenPaciente from '@/app/gestion-usuario/pacientes/ResumenPaciente';
 import EtiquetasNotasSalud from '@/app/gestion-usuario/pacientes/EtiquetasNotasSalud'; // Corrected path assumption
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
-// Assume these are your API types or adjusted mock data for type consistency
 interface BackendPaciente {
   id: string; // Patient ID
   idPersona: string; // UUID of the associated Persona
@@ -298,10 +297,23 @@ export default function FiliacionPage() {
         setPaciente({
             ...fetchedPaciente,
             persona: {} as Persona, // Temporarily set, will be filled by next fetch
-            antecedentesMedicos: emptyAntecedentesMedicosData, // Temporarily set
-            // Mapea BackendTag a EtiquetaPaciente
-            etiquetas: fetchedPaciente.etiquetas?.map(tag => ({ id: tag.uuid, name: tag.name })) || [], 
+            antecedentesMedicos: emptyAntecedentesMedicosData, // Temporarily set 
         });
+
+        const allTags = await getAllTags(); // [{ uuid: '...', name: '...' }]
+        setAllAvailableTags(allTags); // For Select dropdowns
+
+        const allPatientTags = await fetcher<any[]>(`${API_BASE_URL}/patient-tags`);
+
+        const thisPatientTags = allPatientTags
+          .filter(tag => tag.idPaciente === patientId)
+          .map(tagLink => {
+            const tagInfo = allTags.find(t => t.uuid === tagLink.idEtiqueta);
+            return tagInfo ? { id: tagInfo.uuid, name: tagInfo.name } : null;
+          })
+          .filter(Boolean); // Remove any nulls
+
+        setDisplayedEtiquetas(thisPatientTags as EtiquetaPaciente[]);
 
         const fetchedPersona = await getPersonByUuid(fetchedPaciente.idPersona);
         setPersona({
@@ -340,7 +352,9 @@ export default function FiliacionPage() {
 
         setDisplayedNotas(fetchedPaciente.notas || "Sin notas registradas.");
         // Mapea BackendTag a EtiquetaPaciente para el componente hijo
-        setDisplayedEtiquetas(fetchedPaciente.etiquetas?.map(tag => ({ id: tag.uuid, name: tag.name })) || []);
+        //</Record>setDisplayedEtiquetas(fetchedPaciente.etiquetas?.map(tag => ({ id: tag.uuid, name: tag.name })) || []);
+
+        setDisplayedEtiquetas(thisPatientTags as EtiquetaPaciente[]);
 
         const calculatedAge = fetchedPersona.fechaNacimiento ? differenceInYears(new Date(), new Date(fetchedPersona.fechaNacimiento)) : NaN;
         setIsMinor(!isNaN(calculatedAge) && calculatedAge < 18);
@@ -389,7 +403,7 @@ export default function FiliacionPage() {
     if (patientId) {
       fetchData();
     }
-  }, [patientId, toast]);
+  }, [patientId]);
 
 
   const handleAntecedentesChange = (field: keyof AntecedentesMedicosData, value: string | string[] | boolean) => {

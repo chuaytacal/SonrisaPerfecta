@@ -22,16 +22,58 @@ import { AddProcedimientoModal } from '@/components/catalogo/AddProcedimientoMod
 import { Skeleton } from "@/components/ui/skeleton";
 import api from '@/lib/api';
 
-import { mockMotivosCita, mockEtiquetas } from '@/lib/data';
 import type { Procedimiento, MotivoCita } from '@/types';
 import type { ColumnDef } from '@tanstack/react-table';
 
+const API_BASE_URL = "http://localhost:3001/api";
+
+interface BackendTag {
+  uuid: string;
+  name: string;
+  description?: string;
+}
+
+interface BackendMotivo {
+  uuid: string;
+  name: string;
+  description?: string;
+}
+
+const fetcher = async <T>(url: string, options?: RequestInit): Promise<T> => {
+  const token = localStorage.getItem("authToken");
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...options?.headers,
+  };
+
+  const response = await fetch(url, { ...options, headers });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Error al consultar la API");
+  }
+
+  return response.json();
+};
+
+const getAllTags = async (): Promise<BackendTag[]> => {
+  return fetcher<BackendTag[]>(`${API_BASE_URL}/catalog/tags`);
+};
+
+const getAllMotivos = async (): Promise<BackendMotivo[]> => {
+  return fetcher<BackendMotivo[]>(`${API_BASE_URL}/catalog/appointment-reasons`);
+};
+
 // Schemas for form validation
 const motivoCitaSchema = z.object({
-  nombre: z.string().min(3, "El nombre debe tener al menos 3 caracteres."),
+  name: z.string().min(3, "El nombre debe tener al menos 3 caracteres."),
+  description: z.string().optional(),
 });
+
 const etiquetaSchema = z.object({
-  nombre: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
+  name: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
+  description: z.string().optional(),
 });
 
 type ModalType = 'procedimiento' | 'motivo' | 'etiqueta';
@@ -40,8 +82,8 @@ export default function CatalogoPage() {
   const { toast } = useToast();
   const [procedimientos, setProcedimientos] = useState<Procedimiento[]>([]);
   const [loading, setLoading] = useState(true);
-  const [motivosCita, setMotivosCita] = useState(mockMotivosCita);
-  const [etiquetas, setEtiquetas] = useState(mockEtiquetas.map(e => ({ id: e, nombre: e })));
+  const [motivosCita, setMotivosCita] = useState<{ name: string; description: string }[]>([]);
+  const [etiquetas, setEtiquetas] = useState<{ name: string; description: string }[]>([]);
 
   const [isProcedimientoModalOpen, setIsProcedimientoModalOpen] = useState(false);
   const [editingProcedimiento, setEditingProcedimiento] = useState<Procedimiento | null>(null);
@@ -57,29 +99,51 @@ export default function CatalogoPage() {
   const formEtiqueta = useForm<z.infer<typeof etiquetaSchema>>({ resolver: zodResolver(etiquetaSchema) });
 
   useEffect(() => {
-    const fetchProcedimientos = async () => {
+    const fetchCatalogData = async () => {
       try {
         setLoading(true);
+
+        // ✅ Fetch procedimientos
         const response = await api.get('/procedures/');
-        const mappedData = response.data.map((item: any) => ({
+        const mappedProcedimientos = response.data.map((item: any) => ({
           id: item.uuid,
           denominacion: item.denominacion,
           descripcion: item.descripcion,
           precioBase: parseFloat(item.precioBase)
         }));
-        setProcedimientos(mappedData);
+        setProcedimientos(mappedProcedimientos);
+
+        // ✅ Fetch etiquetas
+        const tags = await getAllTags();
+        const mappedTags = tags.map(tag => ({
+          id: tag.uuid,
+          name: tag.name,
+          description: tag.description || ''
+        }));
+        setEtiquetas(mappedTags);
+
+        // ✅ Fetch motivos
+        const motivos = await getAllMotivos();
+        const mappedMotivos = motivos.map(m => ({
+          id: m.uuid,
+          name: m.name,
+          description: m.description || ''
+        }));
+        setMotivosCita(mappedMotivos);
+
       } catch (error) {
-        console.error("Error fetching procedures:", error);
+        console.error("Error fetching catalog data:", error);
         toast({
-          title: "Error al cargar procedimientos",
-          description: "No se pudo conectar con el servidor.",
+          title: "Error al cargar datos",
+          description: "No se pudo obtener procedimientos o etiquetas del servidor.",
           variant: "destructive",
         });
       } finally {
         setLoading(false);
       }
     };
-    fetchProcedimientos();
+
+    fetchCatalogData();
   }, [toast]);
 
   const handleOpenProcedimientoModal = (item: Procedimiento | null = null) => {
@@ -119,9 +183,15 @@ export default function CatalogoPage() {
     setEditingGenericItem(item);
     const form = type === 'motivo' ? formMotivo : formEtiqueta;
     if (item) {
-      form.reset(item);
+      form.reset({
+        name: item.name || '',
+        description: item.description || '',
+      });
     } else {
-      form.reset({ nombre: '' });
+      form.reset({
+        name: '',
+        description: '',
+      });
     }
     setIsGenericModalOpen(true);
   };
@@ -132,26 +202,55 @@ export default function CatalogoPage() {
     setEditingGenericItem(null);
   };
 
-  const onGenericSubmit = (data: any) => {
+  const onGenericSubmit = async (data: any) => {
     const id = editingGenericItem?.id || `item-${crypto.randomUUID()}`;
     if (genericModalType === 'motivo') {
-      const newItem = { id, ...data };
-      if (editingGenericItem) {
-        const index = mockMotivosCita.findIndex(m => m.id === editingGenericItem.id);
-        mockMotivosCita[index] = newItem;
-      } else {
-        mockMotivosCita.push(newItem);
+      try {
+        if (editingGenericItem) {
+          await api.patch(`/catalog/appointment-reasons/${editingGenericItem.id}`, data);
+        } else {
+          await api.post(`/catalog/appointment-reasons`, data);
+        }
+
+        toast({
+          title: "Motivo guardado",
+          description: "Los cambios han sido guardados exitosamente.",
+        });
+
+        // Optionally refetch data or update `motivosCita` state manually
+      } catch (error) {
+        console.error("Error saving motivo:", error);
+        toast({
+          title: "Error al guardar motivo",
+          description: "No se pudo guardar en la base de datos.",
+          variant: "destructive",
+        });
       }
-      setMotivosCita([...mockMotivosCita]);
     } else if (genericModalType === 'etiqueta') {
-      const newName = data.nombre;
-      if (editingGenericItem) {
-        const index = mockEtiquetas.findIndex(e => e === editingGenericItem.id);
-        mockEtiquetas[index] = newName;
-      } else {
-        mockEtiquetas.push(newName);
+      try {
+        if (editingGenericItem) {
+          // PATCH
+          const response = await api.patch(`/catalog/tags/${editingGenericItem.id}`, data);
+          // update state if needed
+        } else {
+          // POST
+          const response = await api.post(`/catalog/tags`, data);
+          console.log("Etiqueta creada:", response.data);
+          // update etiquetas state
+        }
+
+        toast({
+          title: "Etiqueta guardada",
+          description: "Los cambios han sido guardados exitosamente.",
+        });
+      } catch (error) {
+        console.error("Error saving etiqueta:", error);
+        toast({
+          title: "Error al guardar etiqueta",
+          description: "No se pudo guardar en la base de datos.",
+          variant: "destructive",
+        });
       }
-      setEtiquetas(mockEtiquetas.map(e => ({ id: e, nombre: e })));
     }
 
     toast({ title: editingGenericItem ? "Elemento Actualizado" : "Elemento Creado", description: `El elemento ha sido guardado correctamente.` });
@@ -159,7 +258,7 @@ export default function CatalogoPage() {
   };
   
   const openDeleteConfirm = (type: string, item: any) => {
-    const name = item.denominacion || item.nombre;
+    const name = item.name;
     setItemToDelete({ type, id: item.id, name });
     setIsConfirmOpen(true);
   };
@@ -168,33 +267,34 @@ export default function CatalogoPage() {
     if (!itemToDelete) return;
     const { type, id, name } = itemToDelete;
 
-    if (type === 'procedimiento') {
-      try {
+    try {
+      if (type === 'procedimiento') {
         await api.delete(`/procedures/${id}`);
-        setProcedimientos(procedimientos.filter(p => p.id !== id));
-        toast({ title: "Elemento Eliminado", description: `"${name}" ha sido eliminado.`, variant: 'destructive' });
-      } catch (error) {
-          console.error("Error deleting procedure:", error);
-          toast({
-            title: "Error al eliminar",
-            description: "No se pudo eliminar el procedimiento.",
-            variant: "destructive",
-          });
+        setProcedimientos(prev => prev.filter(p => p.id !== id));
+      } else if (type === 'motivo') {
+        await api.delete(`/catalog/appointment-reasons/${id}`);
+        setMotivosCita(prev => prev.filter(m => m.id !== id));
+      } else if (type === 'etiqueta') {
+        await api.delete(`/catalog/tags/${id}`);
+        setEtiquetas(prev => prev.filter(e => e.id !== id));
       }
-    } else if (type === 'motivo') {
-      const index = mockMotivosCita.findIndex(m => m.id === id);
-      if(index > -1) mockMotivosCita.splice(index, 1);
-      setMotivosCita([...mockMotivosCita]);
-      toast({ title: "Elemento Eliminado", description: `"${name}" ha sido eliminado.`, variant: 'destructive' });
-    } else if (type === 'etiqueta') {
-      const index = mockEtiquetas.findIndex(e => e === id);
-      if(index > -1) mockEtiquetas.splice(index, 1);
-      setEtiquetas(mockEtiquetas.map(e => ({ id: e, nombre: e })));
-      toast({ title: "Elemento Eliminado", description: `"${name}" ha sido eliminado.`, variant: 'destructive' });
-    }
 
-    setIsConfirmOpen(false);
-    setItemToDelete(null);
+      toast({
+        title: "Elemento Eliminado",
+        description: `"${name}" ha sido eliminado.`,
+        variant: 'destructive',
+      });
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      toast({
+        title: "Error al eliminar",
+        description: "No se pudo eliminar el elemento.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConfirmOpen(false);
+      setItemToDelete(null);
+    }
   };
 
   const columnsProcedimientos: ColumnDef<Procedimiento>[] = [
@@ -217,7 +317,7 @@ export default function CatalogoPage() {
   ];
 
   const columnsMotivos: ColumnDef<MotivoCita>[] = [
-    { accessorKey: "nombre", header: "Nombre" },
+    { accessorKey: "name", header: "Nombre" },
     {
       id: "actions",
       header: "Acciones",
@@ -233,8 +333,8 @@ export default function CatalogoPage() {
     },
   ];
   
-  const columnsEtiquetas: ColumnDef<{ id: string, nombre: string }>[] = [
-    { accessorKey: "nombre", header: "Nombre" },
+  const columnsEtiquetas: ColumnDef<{ id: string, name: string , description: string }>[] = [
+    { accessorKey: "name", header: "Nombre" },
     {
       id: "actions",
       header: "Acciones",
@@ -255,20 +355,41 @@ export default function CatalogoPage() {
     const form = genericModalType === 'motivo' ? formMotivo : formEtiqueta;
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onGenericSubmit)} className="space-y-4 px-6 pb-6 pt-2">
-                <FormField control={form.control} name="nombre" render={({ field }) => ( <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                <DialogFooter className="pt-4">
-                    <Button type="button" variant="outline" onClick={handleCloseGenericModal}>Cancelar</Button>
-                    <Button type="submit">Guardar</Button>
-                </DialogFooter>
-            </form>
+          <form onSubmit={form.handleSubmit(onGenericSubmit)} className="space-y-4 px-6 pb-6 pt-2">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nombre</FormLabel>
+                  <FormControl><Input {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descripción</FormLabel>
+                  <FormControl><Textarea {...field} rows={3} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={handleCloseGenericModal}>Cancelar</Button>
+              <Button type="submit">Guardar</Button>
+            </DialogFooter>
+          </form>
         </Form>
     );
   };
   
   const getGenericTitle = () => {
     if (!genericModalType) return '';
-    const action = editingGenericItem ? 'Editar' : 'Nuevo';
+    const action = editingGenericItem ? 'Editar' : genericModalType === 'motivo' ? 'Nuevo' : 'Nueva';
     const entity = genericModalType === 'motivo' ? 'Motivo de Cita' : 'Etiqueta';
     return `${action} ${entity}`;
   };
@@ -315,7 +436,7 @@ export default function CatalogoPage() {
               <CardDescription>Razones por las que un paciente agenda una cita.</CardDescription>
             </CardHeader>
             <CardContent>
-               <DataTable columns={columnsMotivos} data={motivosCita} onAdd={() => handleOpenGenericModal('motivo')} addButtonLabel="Añadir Motivo" searchPlaceholder="Buscar motivo..." searchColumnId="nombre" />
+               <DataTable columns={columnsMotivos} data={motivosCita} onAdd={() => handleOpenGenericModal('motivo')} addButtonLabel="Añadir Motivo" searchPlaceholder="Buscar motivo..." searchColumnId="name" />
             </CardContent>
           </Card>
         </TabsContent>
@@ -327,7 +448,7 @@ export default function CatalogoPage() {
               <CardDescription>Etiquetas para clasificar o resaltar información importante de los pacientes.</CardDescription>
             </CardHeader>
             <CardContent>
-                <DataTable columns={columnsEtiquetas} data={etiquetas} onAdd={() => handleOpenGenericModal('etiqueta')} addButtonLabel="Añadir Etiqueta" searchPlaceholder="Buscar etiqueta..." searchColumnId="nombre" />
+                <DataTable columns={columnsEtiquetas} data={etiquetas} onAdd={() => handleOpenGenericModal('etiqueta')} addButtonLabel="Añadir Etiqueta" searchPlaceholder="Buscar etiqueta..." searchColumnId="name" />
             </CardContent>
           </Card>
         </TabsContent>

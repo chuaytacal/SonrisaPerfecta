@@ -33,7 +33,35 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { mockEtiquetas } from "@/lib/data";
+
+interface BackendTag {
+  uuid: string;
+  name: string;
+}
+
+const API_BASE_URL = "http://localhost:3001/api"; // Ajusta si cambia el backend
+
+const fetcher = async <T>(url: string, options?: RequestInit): Promise<T> => {
+  const token = localStorage.getItem("authToken"); // Asume token en localStorage
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...options?.headers,
+  };
+
+  const response = await fetch(url, { ...options, headers });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Error al consultar la API");
+  }
+
+  return response.json();
+};
+
+const getAllTags = async (): Promise<BackendTag[]> => {
+  return fetcher<BackendTag[]>(`${API_BASE_URL}/catalog/tags`);
+};
 
 interface EtiquetasNotasSaludProps {
   etiquetas: EtiquetaPaciente[];
@@ -59,13 +87,31 @@ export default function EtiquetasNotasSalud({
   const [editingNotesText, setEditingNotesText] = useState<string>(notas);
   const [isEditingNotes, setIsEditingNotes] = useState<boolean>(false);
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
-  const [selectedTagToAdd, setSelectedTagToAdd] = useState<
-    EtiquetaPaciente | ""
-  >("");
+  const [selectedTagToAdd, setSelectedTagToAdd] = useState<string>("");
+
+  const [availableTags, setAvailableTags] = useState<BackendTag[]>([]);
+  const [isLoadingTags, setIsLoadingTags] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     setEditingNotesText(notas === "Sin notas registradas." ? "" : notas);
   }, [notas]);
+
+  useEffect(() => {
+    const loadTags = async () => {
+      setIsLoadingTags(true);
+      try {
+        const tags = await getAllTags();
+        setAvailableTags(tags);
+        setFetchError(null);
+      } catch (error: any) {
+        setFetchError(error.message || "Error al obtener etiquetas");
+      } finally {
+        setIsLoadingTags(false);
+      }
+    };
+    loadTags();
+  }, []);
 
   const handleInternalSaveNotes = () => {
     onSaveNotes(editingNotesText);
@@ -100,8 +146,8 @@ export default function EtiquetasNotasSalud({
           <div className="flex flex-wrap gap-1">
             {etiquetas && etiquetas.length > 0 ? (
               etiquetas.map((tag) => (
-                <Badge key={`${patientId}-tag-${tag}`} variant="secondary">
-                  {tag}
+                <Badge key={`${patientId}-tag-${tag.id}`} variant="secondary">
+                  {tag.name}
                 </Badge>
               ))
             ) : (
@@ -138,13 +184,13 @@ export default function EtiquetasNotasSalud({
                   <SelectContent>
                     <SelectGroup>
                       <SelectLabel>Etiquetas Disponibles</SelectLabel>
-                      {mockEtiquetas
-                        .filter((tag) => !(etiquetas || []).includes(tag))
+                      {availableTags
+                        .filter((tag) => !etiquetas.includes(tag.name))
                         .map((tag) => (
-                          <SelectItem key={tag} value={tag}>
-                            {tag}
+                          <SelectItem key={tag.uuid} value={tag.name}>
+                            {tag.name}
                           </SelectItem>
-                        ))}
+                      ))}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
