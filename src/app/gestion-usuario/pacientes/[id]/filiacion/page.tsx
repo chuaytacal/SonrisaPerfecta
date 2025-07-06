@@ -218,26 +218,26 @@ const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const getPatientAppointments = (allAppointments: BackendAppointment[], patientId: string | undefined): Appointment[] => {
-    if (!patientId) return [];
-    return allAppointments.filter(appt => appt.idPaciente === patientId).map(appt => ({
-        id: appt.idCita, // Assuming idCita is the appointment ID
-        idPaciente: appt.idPaciente,
-        idDoctor: appt.idDoctor,
-        start: new Date(appt.start),
-        end: new Date(appt.end),
-        title: appt.title,
-        estado: appt.estado,
-        doctor: appt.doctor ? { // Map BackendPersonal to a simpler doctor type if needed by Appointment
-            id: appt.doctor.id,
-            persona: {
-                id: appt.doctor.persona.uuid, // Using uuid as ID for persona
-                nombre: appt.doctor.persona.nombre,
-                apellidoPaterno: appt.doctor.persona.apellidoPaterno,
-                apellidoMaterno: appt.doctor.persona.apellidoMaterno,
-                // Add other persona fields if needed by Appointment['doctor']
-            }
-        } : undefined
-    }));
+  if (!patientId) return [];
+  return allAppointments.filter(appt => appt.idPaciente === patientId).map(appt => ({
+      id: appt.idCita, // Usamos el idCita directamente
+      idPaciente: appt.idPaciente,
+      idDoctor: appt.idSpecialist,  // Asegúrate de que idDoctor se derive de idSpecialist
+      start: new Date(`${appt.fechaCita}T${appt.horaInicio}`), // Concatenar fecha y horaInicio para obtener un timestamp
+      end: new Date(`${appt.fechaCita}T${appt.horaFin}`), // Concatenar fecha y horaFin para obtener un timestamp
+      title: appt.appointmentReason.name, // Título basado en el motivo de la cita
+      estado: appt.estadoCita,
+      doctor: appt.specialist ? { // Si existe especialista, lo mapeamos
+          id: appt.specialist.uuid, // Asumiendo que el uuid del especialista está en el campo uuid
+          persona: {
+              id: appt.specialist.uuid, // Usamos el uuid para el doctor
+              nombre: appt.specialist.nombre,  // Nombre del especialista
+              apellidoPaterno: appt.specialist.apellidoPaterno,
+              apellidoMaterno: appt.specialist.apellidoMaterno,
+              // Otros campos si son necesarios
+          }
+      } : undefined
+  }));
 };
 
 export default function FiliacionPage() {
@@ -293,112 +293,111 @@ export default function FiliacionPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const fetchedPaciente = await getPatientById(patientId);
-        setPaciente({
-            ...fetchedPaciente,
-            persona: {} as Persona, // Temporarily set, will be filled by next fetch
-            antecedentesMedicos: emptyAntecedentesMedicosData, // Temporarily set 
-        });
-
-        const allTags = await getAllTags(); // [{ uuid: '...', name: '...' }]
-        setAllAvailableTags(allTags); // For Select dropdowns
-
-        const allPatientTags = await fetcher<any[]>(`${API_BASE_URL}/patient-tags`);
-
-        const thisPatientTags = allPatientTags
-          .filter(tag => tag.idPaciente === patientId)
-          .map(tagLink => {
-            const tagInfo = allTags.find(t => t.uuid === tagLink.idEtiqueta);
-            return tagInfo ? { id: tagInfo.uuid, name: tagInfo.name } : null;
-          })
-          .filter(Boolean); // Remove any nulls
-
-        setDisplayedEtiquetas(thisPatientTags as EtiquetaPaciente[]);
-
-        const fetchedPersona = await getPersonByUuid(fetchedPaciente.idPersona);
-        setPersona({
-            id: fetchedPersona.uuid, // Use uuid as local id
-            ...fetchedPersona
-        });
-
-        if (fetchedPaciente.idApoderado) {
-            const fetchedApoderado = await getPersonByUuid(fetchedPaciente.idApoderado);
-            setApoderado({
-                id: fetchedApoderado.uuid,
-                ...fetchedApoderado
-            }); // CORRECTED: Added missing closing curly brace
-        } else {
-            setApoderado(null);
-        }
-
-        if (fetchedPaciente.antecedentesMedicosUuid) {
-            const fetchedAntecedents = await getAntecedentsByUuid(fetchedPaciente.antecedentesMedicosUuid);
-            setAntecedentesForm(fetchedAntecedents);
-            setAntecedentesUuid(fetchedPaciente.antecedentesMedicosUuid);
-            setDisplayedAlergias(deriveAlergiasFromAntecedentes(fetchedAntecedents));
-            setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(fetchedAntecedents));
-        } else {
-            setAntecedentesForm(emptyAntecedentesMedicosData);
-            setAntecedentesUuid(null);
-            setDisplayedAlergias([]);
-            setDisplayedEnfermedades([]);
-        }
-
-        const allAppointments = await getAllAppointments();
-        setPatientAppointments(getPatientAppointments(allAppointments, patientId));
-
-        const tags = await getAllTags();
-        setAllAvailableTags(tags);
-
-        setDisplayedNotas(fetchedPaciente.notas || "Sin notas registradas.");
-        // Mapea BackendTag a EtiquetaPaciente para el componente hijo
-        //</Record>setDisplayedEtiquetas(fetchedPaciente.etiquetas?.map(tag => ({ id: tag.uuid, name: tag.name })) || []);
-
-        setDisplayedEtiquetas(thisPatientTags as EtiquetaPaciente[]);
-
-        const calculatedAge = fetchedPersona.fechaNacimiento ? differenceInYears(new Date(), new Date(fetchedPersona.fechaNacimiento)) : NaN;
-        setIsMinor(!isNaN(calculatedAge) && calculatedAge < 18);
-        setAge(calculatedAge);
-
-        // MEJORA: Lógica de parsing de fecha de ingreso
-        try {
-            const fetchedDateString = fetchedPaciente.fechaIngreso;
-            let parsedDate = new Date(fetchedDateString); // Intenta parsear directamente como ISO 8601
-            
-            // Fallback si el parseo directo da una fecha inválida (ej. formato yyyy-MM-dd sin hora)
-            if (isNaN(parsedDate.getTime()) && fetchedDateString) {
-                parsedDate = parseDate(fetchedDateString, 'yyyy-MM-dd', new Date());
-            }
-
-            if (!isNaN(parsedDate.getTime())) {
-                setCreatedDate(format(parsedDate, 'dd MMM yyyy', { locale: es }));
-            } else {
-                setCreatedDate('Fecha no disponible'); // Más amigable para el usuario
-            }
-        } catch (error) {
-            console.error("Error parsing fechaIngreso:", error);
-            setCreatedDate('Fecha no disponible');
-        }
-
+          const fetchedPaciente = await getPatientById(patientId);
+          setPaciente({
+              ...fetchedPaciente,
+              persona: {} as Persona, // Temporarily set, will be filled by next fetch
+              antecedentesMedicos: emptyAntecedentesMedicosData, // Temporarily set 
+          });
+  
+          const allTags = await getAllTags(); // [{ uuid: '...', name: '...' }]
+          setAllAvailableTags(allTags); // For Select dropdowns
+  
+          const allPatientTags = await fetcher<any[]>(`${API_BASE_URL}/patient-tags`);
+  
+          const thisPatientTags = allPatientTags
+            .filter(tag => tag.idPaciente === patientId)
+            .map(tagLink => {
+              const tagInfo = allTags.find(t => t.uuid === tagLink.idEtiqueta);
+              return tagInfo ? { id: tagInfo.uuid, name: tagInfo.name } : null;
+            })
+            .filter(Boolean); // Remove any nulls
+  
+          setDisplayedEtiquetas(thisPatientTags as EtiquetaPaciente[]);
+  
+          const fetchedPersona = await getPersonByUuid(fetchedPaciente.idPersona);
+          setPersona({
+              id: fetchedPersona.uuid, // Use uuid as local id
+              ...fetchedPersona
+          });
+  
+          if (fetchedPaciente.idApoderado) {
+              const fetchedApoderado = await getPersonByUuid(fetchedPaciente.idApoderado);
+              setApoderado({
+                  id: fetchedApoderado.uuid,
+                  ...fetchedApoderado
+              });
+          } else {
+              setApoderado(null);
+          }
+  
+          if (fetchedPaciente.antecedentesMedicosUuid) {
+              const fetchedAntecedents = await getAntecedentsByUuid(fetchedPaciente.antecedentesMedicosUuid);
+              setAntecedentesForm(fetchedAntecedents);
+              setAntecedentesUuid(fetchedPaciente.antecedentesMedicosUuid);
+              setDisplayedAlergias(deriveAlergiasFromAntecedentes(fetchedAntecedents));
+              setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(fetchedAntecedents));
+          } else {
+              setAntecedentesForm(emptyAntecedentesMedicosData);
+              setAntecedentesUuid(null);
+              setDisplayedAlergias([]);
+              setDisplayedEnfermedades([]);
+          }
+  
+          // Modificado para manejar las citas correctamente con el nuevo formato
+          const allAppointments = await getAllAppointments();
+          setPatientAppointments(getPatientAppointments(allAppointments, patientId));
+  
+          const tags = await getAllTags();
+          setAllAvailableTags(tags);
+  
+          setDisplayedNotas(fetchedPaciente.notas || "Sin notas registradas.");
+          setDisplayedEtiquetas(thisPatientTags as EtiquetaPaciente[]);
+  
+          const calculatedAge = fetchedPersona.fechaNacimiento ? differenceInYears(new Date(), new Date(fetchedPersona.fechaNacimiento)) : NaN;
+          setIsMinor(!isNaN(calculatedAge) && calculatedAge < 18);
+          setAge(calculatedAge);
+  
+          // Mejora en la lógica de parsing de la fecha de ingreso
+          try {
+              const fetchedDateString = fetchedPaciente.fechaIngreso;
+              let parsedDate = new Date(fetchedDateString); // Intenta parsear directamente como ISO 8601
+              
+              // Fallback si el parseo directo da una fecha inválida (ej. formato yyyy-MM-dd sin hora)
+              if (isNaN(parsedDate.getTime()) && fetchedDateString) {
+                  parsedDate = parseDate(fetchedDateString, 'yyyy-MM-dd', new Date());
+              }
+  
+              if (!isNaN(parsedDate.getTime())) {
+                  setCreatedDate(format(parsedDate, 'dd MMM yyyy', { locale: es }));
+              } else {
+                  setCreatedDate('Fecha no disponible');
+              }
+          } catch (error) {
+              console.error("Error parsing fechaIngreso:", error);
+              setCreatedDate('Fecha no disponible');
+          }
+  
       } catch (error) {
-        console.error("Failed to fetch patient data:", error);
-        toast({
-          title: "Error",
-          description: `No se pudieron cargar los datos del paciente: ${error instanceof Error ? error.message : String(error)}`,
-          variant: "destructive"
-        });
-        setPaciente(null);
-        setPersona(null);
-        setApoderado(null);
-        setDisplayedNotas("Sin notas registradas.");
-        setDisplayedEtiquetas([]);
-        setDisplayedAlergias([]);
-        setDisplayedEnfermedades([]);
-        setAntecedentesForm(emptyAntecedentesMedicosData);
+          console.error("Failed to fetch patient data:", error);
+          toast({
+            title: "Error",
+            description: `No se pudieron cargar los datos del paciente: ${error instanceof Error ? error.message : String(error)}`,
+            variant: "destructive"
+          });
+          setPaciente(null);
+          setPersona(null);
+          setApoderado(null);
+          setDisplayedNotas("Sin notas registradas.");
+          setDisplayedEtiquetas([]);
+          setDisplayedAlergias([]);
+          setDisplayedEnfermedades([]);
+          setAntecedentesForm(emptyAntecedentesMedicosData);
       } finally {
-        setLoading(false);
+          setLoading(false);
       }
-    };
+  };
+  
 
     if (patientId) {
       fetchData();
