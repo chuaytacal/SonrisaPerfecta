@@ -331,6 +331,7 @@ export default function PacientesPage() {
       },
     },
     {
+      id: "persona.nombre",
       accessorKey: "persona.nombre",
       header: ({ column }) => (
         <Button
@@ -393,6 +394,7 @@ export default function PacientesPage() {
       },
     },
     {
+      id: "persona.createdAt",
       accessorKey: "persona.createdAt",
       header: ({ column }) => (
         <Button
@@ -494,9 +496,8 @@ export default function PacientesPage() {
       <DataTable
         columns={columns}
         data={pacienteList}
-        isLoading={isLoading}
         searchPlaceholder="Buscar por nombre o DNI..."
-        searchColumnId="p.persona.nombre"
+        searchColumnId="persona.nombre"
         statusColumnId="estado"
         statusOptions={statusOptions}
         onAdd={handleOpenAddPacienteFlow}
