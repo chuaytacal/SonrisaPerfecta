@@ -49,7 +49,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format } from "date-fns";
+import { format, set } from "date-fns";
 import { es } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import {
@@ -167,23 +167,33 @@ export default function EstadoDeCuentaPage() {
     }
     setLoading(true);
 
+    const pacienteRes = await api.get(`/patients/${patientId}`);
+    const foundPaciente = pacienteRes.data;
+
+    setPaciente(foundPaciente);
+    setPersona(foundPaciente.persona);
+    // !!! IMPLEMENTAR CORRECTAMENTE ESTA PARTE PARA TENER TODOS LOS DATOS QUE ANTES 
+    // SE MANEJABAN DE MANERA ESTATICA 
+
+
+    
     // This part with mock data is for displaying the patient summary and notes, which are not part of the payment/budget API calls.
-    const foundPaciente = mockPacientesData.find((p) => p.id === patientId);
-    if (foundPaciente) {
-      setPaciente(foundPaciente);
-      setPersona(foundPaciente.persona);
-      setDisplayedNotas(foundPaciente.notas || "Sin notas registradas.");
-      setDisplayedEtiquetas(foundPaciente.etiquetas || []);
-      setDisplayedAlergias(
-        deriveAlergiasFromAntecedentes(foundPaciente.antecedentesMedicos)
-      );
-      setDisplayedEnfermedades(
-        deriveEnfermedadesFromAntecedentes(foundPaciente.antecedentesMedicos)
-      );
-    } else {
-      setLoading(false);
-      return; // No patient context, can't proceed
-    }
+    // const foundPaciente = mockPacientesData.find((p) => p.id === patientId);
+    // if (foundPaciente) {
+    //   setPaciente(foundPaciente);
+    //   setPersona(foundPaciente.persona);
+    //   setDisplayedNotas(foundPaciente.notas || "Sin notas registradas.");
+    //   setDisplayedEtiquetas(foundPaciente.etiquetas || []);
+    //   setDisplayedAlergias(
+    //     deriveAlergiasFromAntecedentes(foundPaciente.antecedentesMedicos)
+    //   );
+    //   setDisplayedEnfermedades(
+    //     deriveEnfermedadesFromAntecedentes(foundPaciente.antecedentesMedicos)
+    //   );
+    // } else {
+    //   setLoading(false);
+    //   return; // No patient context, can't proceed
+    // }
 
     try {
       const [budgetsRes, combosRes, pagosRes] = await Promise.all([
@@ -205,7 +215,7 @@ export default function EstadoDeCuentaPage() {
 
           return {
             id: budget.uuid,
-            idHistoriaClinica: foundPaciente.idHistoriaClinica, // Use local found patient for this
+            idHistoriaClinica: foundPaciente?.idHistoriaClinica||"", // Use local found patient for this
             nombre: budget.nombre,
             fechaCreacion: new Date(budget.createdAt),
             fechaAtencion: new Date(budget.createdAt),

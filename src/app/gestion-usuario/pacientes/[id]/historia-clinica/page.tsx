@@ -231,7 +231,7 @@ export default function HistoriaClinicaPage() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 bg-background min-h-screen">
-      <ResumenPaciente paciente={paciente} persona={persona} onBack={() => router.push('/gestion-usuario/pacientes')} />
+      <ResumenPaciente paciente={patientId} persona={persona} onBack={() => router.push('/gestion-usuario/pacientes')} />
       <div className="flex-1">
         <EtiquetasNotasSalud
           etiquetas={displayedEtiquetas}
