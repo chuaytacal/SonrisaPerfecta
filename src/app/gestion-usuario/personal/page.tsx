@@ -33,7 +33,7 @@ import { parsePhoneNumberFromString } from "libphonenumber-js";
 // Función para obtener los datos de personal del backend
 const fetchPersonalData = async () => {
   try {
-    const response = await fetch("http://localhost:3001/api/personal");
+    const response = await fetch("http://localhost:3001/api/staff/specialist");
     const data = await response.json();
     return data;  // Asegúrate de que los datos estén en el formato correcto
   } catch (error) {
@@ -45,7 +45,7 @@ const fetchPersonalData = async () => {
 // Función para manejar la actualización de un personal
 const savePersonalData = async (personalData: Personal, usuarioData: Usuario) => {
   try {
-    const response = await fetch("http://localhost:3001/api/personal", {
+    const response = await fetch("http://localhost:3001/api/staff/specialist", {
       method: "POST", // o 'PUT' si deseas actualizar
       headers: {
         "Content-Type": "application/json",
@@ -136,10 +136,10 @@ export default function PersonalPage() {
   };
 
   const handleToggleStatus = (personal: Personal) => {
-    const newStatus = personal.estado === "Activo" ? "Inactivo" : "Activo";
+    const newStatus = personal.persona.isActive ? "Inactivo" : "Activo"; // Acceso a `isActive` dentro de `persona`
     setPersonalList((prevList) =>
       prevList.map((p) =>
-        p.id === personal.id ? { ...p, estado: newStatus } : p
+        p.id === personal.id ? { ...p, persona: { ...p.persona, isActive: !p.persona.isActive } } : p
       )
     );
     toast({
@@ -207,8 +207,20 @@ export default function PersonalPage() {
       accessorKey: "persona.telefono",
       header: "Teléfono",
       cell: ({ row }) => {
-        const phone = row.original.persona.telefono;
-        return phone ? parsePhoneNumberFromString(phone)?.formatInternational() : "N/A";
+        const phone = row.original.persona.telefono; // Asegúrate de acceder correctamente al teléfono
+        if (!phone) return <span>N/A</span>;
+
+        try {
+          const phoneNumber = parsePhoneNumberFromString(phone, 'PE'); // Asegurarte de que el código de país sea correcto
+          if (phoneNumber) {
+            return <span>{phoneNumber.formatInternational()}</span>;
+          } else {
+            return <span>{phone}</span>;
+          }
+        } catch (error) {
+          console.error("Error al parsear el teléfono:", error);
+          return <span>{phone}</span>;
+        }
       }
     },
     {
@@ -232,10 +244,10 @@ export default function PersonalPage() {
       accessorKey: "estado",
       header: "Estado",
       cell: ({ row }) => {
-        const isActive = row.original.estado === "Activo";
+        const isActive = row.original.persona.isActive; // Acceso correcto a `isActive`
         return (
           <Badge variant={isActive ? "default" : "destructive"}>
-            {row.original.estado}
+            {isActive ? "Activo" : "Inactivo"}
           </Badge>
         );
       }
