@@ -155,8 +155,8 @@ const updateAntecedents = async (id: string, data: Partial<BackendAntecedentesMe
   });
 };
 
-const getAllAppointments = async (): Promise<BackendAppointment[]> => {
-  return fetcher<BackendAppointment[]>(`${API_BASE_URL}/appointments`);
+const getAllAppointments = async (uuid: string): Promise<BackendAppointment[]> => {
+  return fetcher<BackendAppointment[]>(`${API_BASE_URL}/appointments/by-patient/${uuid}`);
 };
 
 const getAllTags = async (): Promise<BackendTag[]> => {
@@ -230,10 +230,10 @@ const getPatientAppointments = (allAppointments: BackendAppointment[], patientId
       doctor: appt.specialist ? { // Si existe especialista, lo mapeamos
           id: appt.specialist.uuid, // Asumiendo que el uuid del especialista está en el campo uuid
           persona: {
-              id: appt.specialist.uuid, // Usamos el uuid para el doctor
-              nombre: appt.specialist.nombre,  // Nombre del especialista
-              apellidoPaterno: appt.specialist.apellidoPaterno,
-              apellidoMaterno: appt.specialist.apellidoMaterno,
+              id: appt.specialist.persona.uuid, // Usamos el uuid para el doctor
+              nombre: appt.specialist.persona.nombre,  // Nombre del especialista
+              apellidoPaterno: appt.specialist.persona.apellidoPaterno,
+              apellidoMaterno: appt.specialist.persona.apellidoMaterno,
               // Otros campos si son necesarios
           }
       } : undefined
@@ -345,7 +345,7 @@ export default function FiliacionPage() {
           }
   
           // Modificado para manejar las citas correctamente con el nuevo formato
-          const allAppointments = await getAllAppointments();
+          const allAppointments = await getAllAppointments(patientId);
           setPatientAppointments(getPatientAppointments(allAppointments, patientId));
   
           const tags = await getAllTags();
