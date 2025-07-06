@@ -116,10 +116,10 @@ export default function ResumenPaciente({
 
     const navItems = [
         { label: "Filiación", href: `/gestion-usuario/pacientes/${paciente.idPaciente}/filiacion`, icon: Users },
-        { label: "Historia clínica", href: `/gestion-usuario/pacientes/${paciente.id}/historia-clinica`, icon: CalendarIconLucide },
+        { label: "Historia clínica", href: `/gestion-usuario/pacientes/${paciente.idPaciente}/historia-clinica`, icon: CalendarIconLucide },
         { label: "Odontograma", href: `/gestion-usuario/pacientes/${paciente.idPaciente}/odontograma`, icon: ToothIconCustom },
-        { label: "Ortodoncia", href: `/gestion-usuario/pacientes/${paciente.id}/ortodoncia`, icon: Smile },
-        { label: "Estado de cuenta", href: `/gestion-usuario/pacientes/${paciente.id}/estado-de-cuenta`, icon: CircleDollarSign },
+        { label: "Ortodoncia", href: `/gestion-usuario/pacientes/${paciente.idPaciente}/ortodoncia`, icon: Smile },
+        { label: "Estado de cuenta", href: `/gestion-usuario/pacientes/${paciente.idPaciente}/estado-de-cuenta`, icon: CircleDollarSign },
     ];
     
     const handleSaveAppointment = (formData: AppointmentFormData) => {
