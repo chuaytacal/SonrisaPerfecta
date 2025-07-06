@@ -82,6 +82,18 @@ const ResumenOdontogramaCell = ({ row }: { row: { original: HistorialOdontograma
   );
 };
 
+const fetchOdontogramDetails = async (patientId: string) => {
+  const token = localStorage.getItem("authToken"); // or however you handle tokens
+  const res = await fetch(`/api/odontogram-view/patient/${patientId}/detailed`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+  if (!res.ok) throw new Error("No se pudo cargar el odontograma.");
+  return res.json();
+};
+
 
 type OdontogramType = 'Permanente' | 'Primaria' | 'Historial';
 
@@ -127,28 +139,29 @@ export default function OdontogramaPage() {
   };
 
   useEffect(() => {
-    const foundPaciente = mockPacientesData.find(p => p.id === patientId);
-    if (foundPaciente) {
-      setPaciente(foundPaciente);
-      setPersona(foundPaciente.persona);
-      const latestHistory = foundPaciente.historialOdontogramas?.[0];
-      if (latestHistory) {
-        setPermanenteData(latestHistory.odontogramaPermanente || {});
-        setPrimariaData(latestHistory.odontogramaPrimaria || {});
-      } else {
-        setPermanenteData({});
-        setPrimariaData({});
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const fetchedOdontogram = await fetchOdontogramDetails(patientId);
+        setOdontogramData(fetchedOdontogram);  //
+
+        // Optional: Set tabs if needed
+        setActiveTab('Permanente');
+
+      } catch (error: any) {
+        console.error(error);
+        toast({
+          title: "Error",
+          description: "No se pudo cargar el odontograma del paciente.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
-      setDisplayedNotas(foundPaciente.notas || "Sin notas registradas.");
-      setDisplayedEtiquetas(foundPaciente.etiquetas || []);
-      setDisplayedAlergias(deriveAlergiasFromAntecedentes(foundPaciente.antecedentesMedicos));
-      setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(foundPaciente.antecedentesMedicos));
-    } else {
-      setPaciente(null);
-      setPersona(null);
-    }
-    setLoading(false);
-  }, [patientId]);
+    };
+
+    if (patientId) loadData();
+  }, [patientId, toast]);
   
   // This "autosave" function directly modifies the latest historical record.
   const handleOdontogramaChange = useCallback((newData: DientesMap) => {
@@ -321,7 +334,7 @@ export default function OdontogramaPage() {
                 </TabsList>
                 <TabsContent value="Permanente">
                   <OdontogramComponent 
-                      dientesData={permanenteData} 
+                      dientesData={odontogramData} 
                       onDientesChange={handleOdontogramaChange}
                       onOdontogramDataChange={handleOdontogramaDataChange} 
                       odontogramType="Permanent"

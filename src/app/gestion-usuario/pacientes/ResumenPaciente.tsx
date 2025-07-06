@@ -115,9 +115,9 @@ export default function ResumenPaciente({
 
 
     const navItems = [
-        { label: "Filiación", href: `/gestion-usuario/pacientes/${paciente.id}/filiacion`, icon: Users },
+        { label: "Filiación", href: `/gestion-usuario/pacientes/${paciente.idPaciente}/filiacion`, icon: Users },
         { label: "Historia clínica", href: `/gestion-usuario/pacientes/${paciente.id}/historia-clinica`, icon: CalendarIconLucide },
-        { label: "Odontograma", href: `/gestion-usuario/pacientes/${paciente.id}/odontograma`, icon: ToothIconCustom },
+        { label: "Odontograma", href: `/gestion-usuario/pacientes/${paciente.idPaciente}/odontograma`, icon: ToothIconCustom },
         { label: "Ortodoncia", href: `/gestion-usuario/pacientes/${paciente.id}/ortodoncia`, icon: Smile },
         { label: "Estado de cuenta", href: `/gestion-usuario/pacientes/${paciente.id}/estado-de-cuenta`, icon: CircleDollarSign },
     ];
@@ -199,7 +199,7 @@ export default function ResumenPaciente({
           </Avatar>
           <h2 className="text-xl font-semibold">{`${persona.nombre} ${persona.apellidoPaterno} ${persona.apellidoMaterno}`}</h2>
           <p className="text-sm text-muted-foreground">{age} años</p>
-          <p className="text-xs text-muted-foreground mt-1">Paciente desde: {createdDate}</p>
+          <p className="text-xs text-muted-foreground mt-1">Paciente desde: {format(new Date(persona.createdAt), 'dd-MM-yy')}</p>
           <TooltipProvider>
               <div className="flex space-x-2 mt-4">
                 <Tooltip>

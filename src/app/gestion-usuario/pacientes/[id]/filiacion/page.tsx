@@ -163,10 +163,10 @@ const getAllTags = async (): Promise<BackendTag[]> => {
   return fetcher<BackendTag[]>(`${API_BASE_URL}/catalog/tags`);
 };
 
-const createPatientTag = async (idPaciente: string, idTag: string): Promise<any> => {
+const createPatientTag = async (idPaciente: string, idEtiqueta: string): Promise<any> => {
   return fetcher<any>(`${API_BASE_URL}/patient-tags`, {
     method: 'POST',
-    body: JSON.stringify({ idPaciente, idTag }),
+    body: JSON.stringify({ idPaciente, idEtiqueta }),
   });
 };
 
@@ -474,7 +474,7 @@ export default function FiliacionPage() {
     }
 
     try {
-        await createPatientTag(paciente.id, tagId); 
+        await createPatientTag(patientId, tagId); 
         // Añade el objeto completo de la etiqueta (con id y name) a displayedEtiquetas
         const updatedTags = [...displayedEtiquetas, { id: tagId, name: newTagText }];
         setDisplayedEtiquetas(updatedTags);
@@ -843,7 +843,7 @@ export default function FiliacionPage() {
                     </p>
                   </div>
                   <div><Label className="text-xs text-muted-foreground">Dirección</Label><p className="font-medium">{persona.direccion}</p></div>
-                  <div><Label className="text-xs text-muted-foreground">Fecha de Ingreso (Paciente)</Label><p className="font-medium">{createdDate}</p></div>
+                  <div><Label className="text-xs text-muted-foreground">Fecha de Ingreso (Paciente)</Label><p className="font-medium">{format(new Date(persona.createdAt), 'dd-MM-yy')}</p></div>
                   <div><Label className="text-xs text-muted-foreground">N° Historia Clínica</Label><p className="font-medium">{paciente?.id ? paciente.id.substring(paciente.id.length-6).toUpperCase() : 'N/A'}</p></div>
                   <div><Label className="text-xs text-muted-foreground">Estado (Paciente)</Label><div className="font-medium"><Badge variant={paciente.estado === 'Activo' ? 'default' : 'destructive'}>{paciente.estado}</Badge></div></div>
                 </div>
