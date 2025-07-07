@@ -34,8 +34,24 @@ import { parsePhoneNumberFromString } from "libphonenumber-js";
 const fetchPersonalData = async () => {
   try {
     const response = await fetch("http://localhost:3001/api/staff/specialist");
+    if (!response.ok) {
+      throw new Error('Error al obtener los datos del personal');
+    }
     const data = await response.json();
-    return data;  // Asegúrate de que los datos estén en el formato correcto
+    
+    // Asegura que cada elemento tenga la estructura correcta
+    return data.map((item: any) => ({
+      ...item,
+      persona: item.persona || {
+        nombre: '',
+        apellidoPaterno: '',
+        apellidoMaterno: '',
+        tipoDocumento: '',
+        numeroDocumento: '',
+        telefono: '',
+        isActive: true
+      }
+    }));
   } catch (error) {
     console.error("Error al obtener los datos del personal:", error);
     return [];
@@ -45,16 +61,39 @@ const fetchPersonalData = async () => {
 // Función para manejar la actualización de un personal
 const savePersonalData = async (personalData: Personal, usuarioData: Usuario) => {
   try {
+    // Verifica que personalData.persona exista
+    if (!personalData.persona) {
+      throw new Error('Datos de persona incompletos');
+    }
+
     const response = await fetch("http://localhost:3001/api/staff/specialist", {
-      method: "POST", // o 'PUT' si deseas actualizar
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ personal: personalData, usuario: usuarioData }),
+      body: JSON.stringify({ 
+        personal: personalData,
+        usuario: usuarioData 
+      }),
     });
-    return response.json();
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Error al guardar los datos');
+    }
+
+    const responseData = await response.json();
+    
+    // Asegura que la respuesta tenga la estructura correcta
+    return {
+      ...responseData,
+      persona: responseData.persona || personalData.persona,
+      id: responseData.id || `personal-${Date.now()}`,
+      idUsuario: responseData.idUsuario || usuarioData.id
+    };
   } catch (error) {
     console.error("Error al guardar los datos del personal:", error);
+    throw error;
   }
 };
 
@@ -88,19 +127,33 @@ export default function PersonalPage() {
     }
   }, [sortBy]);
 
-  const handleSavePersonal = async (savedPersonal: Personal, savedUser: Usuario) => {
-    const savedData = await savePersonalData(savedPersonal, savedUser);
+  const handleSavePersonal = (savedPersonal: Personal, savedUser: Usuario) => {
+    try {
+      // Validación de seguridad
+      if (!savedPersonal.persona) {
+        throw new Error('Datos de personal incompletos');
+      }
 
-    setPersonalList((prevList) => [...prevList, savedData]);
-    toast({
-      title: editingPersonal ? "Personal Actualizado" : "Personal Registrado",
-      description: `${savedPersonal.persona.nombre} ${savedPersonal.persona.apellidoPaterno} ha sido ${editingPersonal ? "actualizado" : "registrado"}.`,
-    });
-    setIsAddPersonalFormOpen(false);
-    setEditingPersonal(null);
-    setEditingUsuario(null);
-    setSelectedPersonaToPreload(null);
-    setIsCreatingNewPersonaFlow(false);
+      setPersonalList(prev => [...prev, savedPersonal]);
+      
+      toast({
+        title: "Personal Registrado",
+        description: `${savedPersonal.persona.nombre} ${savedPersonal.persona.apellidoPaterno} ha sido registrado exitosamente.`,
+      });
+      
+      setIsAddPersonalFormOpen(false);
+      setEditingPersonal(null);
+      setEditingUsuario(null);
+      setSelectedPersonaToPreload(null);
+      setIsCreatingNewPersonaFlow(false);
+    } catch (error) {
+      console.error("Error al actualizar lista:", error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error al actualizar la lista de personal",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleOpenAddPersonalFlow = () => {
@@ -188,20 +241,36 @@ export default function PersonalPage() {
       ),
       cell: ({ row }) => {
         const personal = row.original;
+        // Verifica que persona exista
+        if (!personal.persona) {
+          return <div className="text-muted-foreground">Datos no disponibles</div>;
+        }
         const nombreCompleto = `${personal.persona.nombre} ${personal.persona.apellidoPaterno} ${personal.persona.apellidoMaterno}`;
+        
         return (
           <div className="flex items-center space-x-3">
             <Avatar>
               <AvatarImage src={personal.avatarUrl} alt={nombreCompleto} />
-              <AvatarFallback>{personal.persona.nombre[0]}{personal.persona.apellidoPaterno[0]}</AvatarFallback>
+              <AvatarFallback>
+                {(personal.persona.nombre?.[0] || '') + (personal.persona.apellidoPaterno?.[0] || '')}
+              </AvatarFallback>
             </Avatar>
             <div>
               <div className="font-medium">{nombreCompleto}</div>
-              <div className="text-xs text-muted-foreground">{personal.persona.tipoDocumento}: {personal.persona.numeroDocumento}</div>
+              <div className="text-xs text-muted-foreground">
+                {personal.persona.tipoDocumento}:{" "}
+                {personal.persona.numeroDocumento}
+              </div>
             </div>
           </div>
         );
-      }
+      },
+      filterFn: (row, id, value) => {
+        const personal = row.original;
+        const search =
+          `${personal.persona.nombre} ${personal.persona.apellidoPaterno} ${personal.persona.apellidoMaterno} ${personal.persona.numeroDocumento}`.toLowerCase();
+        return search.includes(String(value).toLowerCase());
+      },
     },
     {
       accessorKey: "persona.telefono",
