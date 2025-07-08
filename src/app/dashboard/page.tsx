@@ -81,9 +81,42 @@ const renderCustomizedLabel = ({
 
 export default function DashboardPage() {
   const [isClient, setIsClient] = useState(false);
+  const [actividadReciente, setActividadReciente] = useState<any[]>([]);
+  const [kpi, setKpi] = useState({
+    conteoCita: 0,
+    conteoPaciente: 0,
+    conteoIngresos: 0,
+    conteoPresupuestos: 0,
+  });
+  const [citasMes, setCitasMes] = useState<any[]>([]);
 
   useEffect(() => {
     setIsClient(true);
+
+    // Fetch KPIs
+    fetch("http://localhost:3001/api/dashboard/specialist")
+      .then((res) => res.json())
+      .then((data) => {
+        setKpi({
+          conteoCita: data.conteoCita || 23,
+          conteoPaciente: data.conteoPaciente || 0,
+          conteoIngresos: data.conteoIngresos || 0,
+          conteoPresupuestos: data.conteoPresupuestos || 0,
+        });
+      })
+      .catch((err) => console.error("Error al obtener KPIs:", err));
+
+    // Fetch Citas del Mes
+    fetch("http://localhost:3001/api/appointments")
+      .then((res) => res.json())
+      .then((data) => {
+        // Filtramos por mes actual
+        const citasFiltradas = data.filter((cita: any) =>
+          isThisMonth(new Date(cita.fechaCita))
+        );
+        setCitasMes(citasFiltradas);
+      })
+      .catch((err) => console.error("Error al obtener citas:", err));
   }, []);
 
   // KPI Calculations
@@ -92,8 +125,8 @@ export default function DashboardPage() {
   const lastMonth = subMonths(today, 1);
 
   // 1. Citas Hoy
-  const citasHoy = mockAppointmentsData.filter(
-    (c) => isToday(c.start) && c.estado !== "Cancelada"
+  const citasHoy = citasMes.filter(
+    (c) => isToday(new Date(c.fechaCita)) && c.estadoCita !== "cancelada"
   ).length;
   const citasAyer = mockAppointmentsData.filter(
     (c) =>
@@ -107,17 +140,13 @@ export default function DashboardPage() {
   })();
 
   // 2. Pacientes Activos
-  const pacientesActivos = mockPacientesData.filter(
-    (p) => p.estado === "Activo"
-  ).length;
+  const pacientesActivos = kpi.conteoPaciente;
   const nuevosPacientesEsteMes = mockPacientesData.filter((p) =>
     isThisMonth(parse(p.fechaIngreso, "dd/MM/yyyy", new Date()))
   ).length;
 
   // 3. Ingresos del Mes
-  const ingresosEsteMes = mockPagosData
-    .filter((p) => isThisMonth(p.fechaPago) && p.estado === "activo")
-    .reduce((sum, pago) => sum + pago.montoTotal, 0);
+  const ingresosEsteMes = kpi.conteoIngresos;
   const ingresosMesPasado = mockPagosData
     .filter((p) => isSameMonth(p.fechaPago, lastMonth) && p.estado === "activo")
     .reduce((sum, pago) => sum + pago.montoTotal, 0);
@@ -129,59 +158,39 @@ export default function DashboardPage() {
   })();
 
   // 4. Presupuestos Pendientes
-  const presupuestosPendientes = mockPresupuestosData.filter(
-    (p) => p.estado === "Creado"
-  ).length;
-
-  // 5. Actividad Reciente
-  const sortedAppointments = [...mockAppointmentsData].sort(
-    (a, b) => b.start.getTime() - a.start.getTime()
-  );
-  const sortedPagos = [...mockPagosData]
-    .filter((p) => p.estado === "activo")
-    .sort((a, b) => b.fechaPago.getTime() - a.fechaPago.getTime());
-  const sortedPacientes = [...mockPacientesData].sort(
-    (a, b) =>
-      parse(b.fechaIngreso, "dd/MM/yyyy", new Date()).getTime() -
-      parse(a.fechaIngreso, "dd/MM/yyyy", new Date()).getTime()
-  );
-  const sortedPresupuestos = [...mockPresupuestosData].sort(
-    (a, b) => b.fechaCreacion.getTime() - a.fechaCreacion.getTime()
-  );
-
-  const actividadReciente = [
-    ...sortedAppointments
-      .slice(0, 5)
-      .map((a) => ({ type: "cita", data: a, date: a.start })),
-    ...sortedPagos
-      .slice(0, 5)
-      .map((p) => ({ type: "pago", data: p, date: p.fechaPago })),
-    ...sortedPacientes
-      .slice(0, 5)
-      .map((p) => ({
-        type: "paciente",
-        data: p,
-        date: parse(p.fechaIngreso, "dd/MM/yyyy", new Date()),
-      })),
-    ...sortedPresupuestos
-      .slice(0, 5)
-      .map((p) => ({ type: "presupuesto", data: p, date: p.fechaCreacion })),
-  ]
-    .sort((a, b) => b.date.getTime() - a.date.getTime())
-    .slice(0, 10);
+  const presupuestosPendientes = kpi.conteoPresupuestos;
 
   // 6. Citas por Estado (Este Mes)
-  const appointmentsThisMonth = mockAppointmentsData.filter((a) =>
-    isThisMonth(a.start)
-  );
+  const appointmentsThisMonth = citasMes;
   const appointmentStatusData = appointmentsThisMonth.reduce((acc, curr) => {
-    acc[curr.estado] = (acc[curr.estado] || 0) + 1;
+    acc[curr.estadoCita] = (acc[curr.estadoCita] || 0) + 1;
     return acc;
   }, {} as Record<AppointmentState, number>);
 
   const appointmentStatusChartData = Object.entries(appointmentStatusData).map(
     ([name, value]) => ({ name, value })
   );
+
+  // Fetch Actividad Reciente (solo citas)
+  fetch("http://localhost:3001/api/appointments")
+    .then((res) => res.json())
+    .then((data) => {
+      const citasOrdenadas = data
+        .sort(
+          (a: any, b: any) =>
+            new Date(b.fechaCita + "T" + b.horaInicio).getTime() -
+            new Date(a.fechaCita + "T" + a.horaInicio).getTime()
+        )
+        .slice(0, 10)
+        .map((cita: any) => ({
+          type: "cita",
+          data: cita,
+          date: new Date(`${cita.fechaCita}T${cita.horaInicio}`),
+        }));
+      setActividadReciente(citasOrdenadas);
+    })
+    .catch((err) => console.error("Error al obtener actividad reciente:", err));
+
 
   const STATUS_COLORS: Record<AppointmentState, string> = {
     pendiente: "#f59e0b", // amber-500
@@ -221,12 +230,6 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{citasHoy}</div>
-            <p className="text-xs text-muted-foreground">
-              {citasHoyChange >= 0
-                ? `+${citasHoyChange}%`
-                : `${citasHoyChange}%`}{" "}
-              desde ayer
-            </p>
           </CardContent>
         </Card>
         <Card>
@@ -238,9 +241,6 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pacientesActivos}</div>
-            <p className="text-xs text-muted-foreground">
-              +{nuevosPacientesEsteMes} nuevos este mes
-            </p>
           </CardContent>
         </Card>
         <Card>
@@ -258,12 +258,6 @@ export default function DashboardPage() {
                 maximumFractionDigits: 2,
               })}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {ingresosChange >= 0
-                ? `+${ingresosChange}%`
-                : `${ingresosChange}%`}{" "}
-              vs mes anterior
-            </p>
           </CardContent>
         </Card>
         <Card>
@@ -275,7 +269,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{presupuestosPendientes}</div>
-            <p className="text-xs text-muted-foreground">En estado "Creado"</p>
+            <p className="text-xs text-muted-foreground">En estado "Pendiente" o "Creado"</p>
           </CardContent>
         </Card>
       </div>
@@ -285,7 +279,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>Actividad Reciente</CardTitle>
             <CardDescription>
-              Últimas acciones registradas en el sistema.
+              Últimas citas registradas en el sistema.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -293,82 +287,19 @@ export default function DashboardPage() {
               {isClient && actividadReciente.length > 0 ? (
                 actividadReciente.map((act, index) => (
                   <li key={index} className="flex items-start gap-3">
-                    {act.type === "cita" ? (
-                      <FileClock className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
-                    ) : act.type === "pago" ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
-                    ) : act.type === "paciente" ? (
-                      <Users className="h-5 w-5 text-blue-500 mt-0.5 shrink-0" />
-                    ) : (
-                      <FilePlus className="h-5 w-5 text-purple-500 mt-0.5 shrink-0" />
-                    )}
+                    <FileClock className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
                     <div>
-                      {act.type === "cita" ? (
-                        <>
-                          Cita{" "}
-                          <span className="font-semibold">
-                            {act.data.estado}
-                          </span>{" "}
-                          para{" "}
-                          <span className="font-semibold">
-                            {act.data.paciente?.persona.nombre}
-                          </span>
-                          <p className="text-xs text-muted-foreground">
-                            {format(act.date, "dd MMM yyyy, HH:mm", {
-                              locale: es,
-                            })}
-                          </p>
-                        </>
-                      ) : act.type === "pago" ? (
-                        <>
-                          Pago de{" "}
-                          <span className="font-semibold">
-                            S/ {act.data.montoTotal.toFixed(2)}
-                          </span>{" "}
-                          recibido.
-                          <p className="text-xs text-muted-foreground">
-                            {mockPacientesData.find(
-                              (p) =>
-                                p.idHistoriaClinica ===
-                                mockPresupuestosData.find(
-                                  (pr) =>
-                                    pr.id ===
-                                    act.data.itemsPagados[0]?.idPresupuesto
-                                )?.idHistoriaClinica
-                            )?.persona.nombre || "Paciente no encontrado"}{" "}
-                            - {format(act.date, "dd MMM yyyy", { locale: es })}
-                          </p>
-                        </>
-                      ) : act.type === "paciente" ? (
-                        <>
-                          Nuevo paciente:{" "}
-                          <span className="font-semibold">
-                            {act.data.persona.nombre}{" "}
-                            {act.data.persona.apellidoPaterno}
-                          </span>
-                          <p className="text-xs text-muted-foreground">
-                            Registrado el{" "}
-                            {format(act.date, "dd MMM yyyy", { locale: es })}
-                          </p>
-                        </>
-                      ) : (
-                        // presupuesto
-                        <>
-                          Presupuesto creado para{" "}
-                          <span className="font-semibold">
-                            {
-                              mockPacientesData.find(
-                                (p) =>
-                                  p.idHistoriaClinica ===
-                                  act.data.idHistoriaClinica
-                              )?.persona.nombre
-                            }
-                          </span>
-                          <p className="text-xs text-muted-foreground">
-                            {format(act.date, "dd MMM yyyy", { locale: es })}
-                          </p>
-                        </>
-                      )}
+                      Cita{" "}
+                      <span className="font-semibold">
+                        {act.data.estadoCita}
+                      </span>{" "}
+                      para{" "}
+                      <span className="font-semibold">
+                        {act.data.paciente?.persona?.nombre || "Paciente"}
+                      </span>
+                      <p className="text-xs text-muted-foreground">
+                        {format(act.date, "dd MMM yyyy, HH:mm", { locale: es })}
+                      </p>
                     </div>
                   </li>
                 ))
