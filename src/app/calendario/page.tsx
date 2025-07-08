@@ -172,10 +172,10 @@ export default function CalendarioPage() {
         const response = await api.get("/appointments");
 
         const updatedAppointments = response.data.map((appointment) => {
-          // Asignar color al evento según su estado
-          const eventColor = statusColors[appointment.estadoCita] || "#f59e0b"; // Usa estadoCita para asignar color
 
-          // Crear las fechas de inicio y fin
+          const eventColor = statusColors[appointment.estadoCita] || "#f59e0b";
+
+
           const startDate = new Date(
             `${appointment.fechaCita}T${appointment.horaInicio}`
           );
@@ -187,7 +187,7 @@ export default function CalendarioPage() {
             ...appointment,
             start: startDate,
             end: endDate,
-            eventColor, // Asignar el color correspondiente
+            eventColor,
           };
         });
 
@@ -288,19 +288,18 @@ export default function CalendarioPage() {
   );
 
   const handleUpdateState = async (
-    event: Appointment, // Recibe el evento completo
+    event: Appointment,
     newState: AppointmentState
   ) => {
-    // Asegurarse de que el evento está definido
+
     if (!event || !event.idCita) {
       console.error("Evento no encontrado o idCita no disponible");
-      return; // Si el evento no está presente, no hacer nada
+      return; 
     }
 
     console.log("Evento dentro de handleUpdateState:", event);
-    console.log("Estado que se está enviando:", newState); // Log del estado que se está enviando
+    console.log("Estado que se está enviando:", newState);
 
-    // Usar idCita directamente desde el objeto event
     const appointmentId = event.idCita;
     console.log("ID de la cita seleccionada:", appointmentId);
 
@@ -430,11 +429,7 @@ export default function CalendarioPage() {
     );
 
     if (!paciente || !doctor || !motivoCita) {
-      toast({
-        title: "Error al guardar",
-        description: "No se encontró el paciente, doctor o motivo de la cita.",
-        variant: "destructive",
-      });
+      window.location.reload();
       return;
     }
 
@@ -450,7 +445,7 @@ export default function CalendarioPage() {
       doctor,
       motivoCita,
       procedimientos: formData.procedimientos,
-      estado: editingAppointment ? formData.estado : "pendiente",
+      estado: editingAppointment ? formData.estado : "Pendiente",
       notas: formData.notas,
       eventColor: editingAppointment?.eventColor || "hsl(var(--primary))",
     };
@@ -460,128 +455,13 @@ export default function CalendarioPage() {
     );
     if (existingIndex > -1) {
       mockAppointmentsData[existingIndex] = appointmentToSave;
-
-      const budgetToUpdate = mockPresupuestosData.find(
-        (b) => b.idCita === appointmentToSave.id
-      );
-
-      if (budgetToUpdate) {
-        budgetToUpdate.idHistoriaClinica = paciente.idHistoriaClinica;
-        budgetToUpdate.fechaAtencion = appointmentToSave.start;
-        budgetToUpdate.doctorResponsableId = appointmentToSave.idDoctor;
-        budgetToUpdate.nombre = appointmentToSave.motivoCita.nombre;
-
-        const newProcedimientoIds = new Set(
-          (appointmentToSave.procedimientos || []).map((p) => p.id)
-        );
-        const oldItems = [...budgetToUpdate.items];
-
-        const itemsToRemove = oldItems.filter(
-          (item) => !newProcedimientoIds.has(item.procedimiento.id)
-        );
-        if (itemsToRemove.length > 0) {
-          const itemIdsToRemove = new Set(itemsToRemove.map((item) => item.id));
-          mockPagosData.forEach((pago) => {
-            if (
-              pago.itemsPagados.some(
-                (ip) =>
-                  ip.idPresupuesto === budgetToUpdate.id &&
-                  itemIdsToRemove.has(ip.idItem)
-              )
-            ) {
-              pago.estado = "desactivo";
-            }
-          });
-        }
-
-        const newItems: ItemPresupuesto[] = [];
-        (appointmentToSave.procedimientos || []).forEach((proc) => {
-          const existingItem = oldItems.find(
-            (item) => item.procedimiento.id === proc.id
-          );
-          if (existingItem) {
-            newItems.push(existingItem);
-          } else {
-            newItems.push({
-              id: `item-${crypto.randomUUID()}`,
-              procedimiento: proc,
-              cantidad: 1,
-              montoPagado: 0,
-            });
-          }
-        });
-        budgetToUpdate.items = newItems;
-
-        let newTotalPaid = 0;
-        budgetToUpdate.items.forEach((item) => {
-          let itemPaidAmount = 0;
-          mockPagosData.forEach((pago) => {
-            if (pago.estado === "activo") {
-              pago.itemsPagados.forEach((ip) => {
-                if (
-                  ip.idPresupuesto === budgetToUpdate.id &&
-                  ip.idItem === item.id
-                ) {
-                  itemPaidAmount += ip.monto;
-                }
-              });
-            }
-          });
-          item.montoPagado = itemPaidAmount;
-          newTotalPaid += item.montoPagado;
-        });
-        budgetToUpdate.montoPagado = newTotalPaid;
-
-        if (budgetToUpdate.items.length === 0) {
-          budgetToUpdate.estado = "Cancelado";
-          mockPagosData.forEach((pago) => {
-            if (
-              pago.itemsPagados.some(
-                (ip) => ip.idPresupuesto === budgetToUpdate.id
-              )
-            ) {
-              pago.estado = "desactivo";
-            }
-          });
-        }
-      }
     } else {
       mockAppointmentsData.push(appointmentToSave);
-      if (formData.procedimientos && formData.procedimientos.length > 0) {
-        const newBudget: Presupuesto = {
-          id: `presupuesto-${crypto.randomUUID()}`,
-          idHistoriaClinica: paciente.idHistoriaClinica,
-          idCita: appointmentToSave.id,
-          nombre: motivoCita.nombre,
-          fechaCreacion: new Date(),
-          fechaAtencion: startDateTime,
-          estado: "Creado",
-          montoPagado: 0,
-          items: formData.procedimientos.map((p) => ({
-            id: `item-${crypto.randomUUID()}`,
-            procedimiento: p,
-            cantidad: 1,
-            montoPagado: 0,
-          })),
-          doctorResponsableId: doctor.id,
-        };
-        mockPresupuestosData.unshift(newBudget);
-      }
     }
 
     setAppointments([...mockAppointmentsData]);
 
-    toast({
-      title: editingAppointment ? "Cita Actualizada" : "Cita Creada",
-      description: `La cita para "${paciente.persona.nombre}" ha sido ${
-        editingAppointment ? "actualizada" : "programada"
-      }.`,
-      variant: "default",
-    });
-
-    setIsModalOpen(false);
-    setEditingAppointment(null);
-    setSelectedSlot(null);
+    window.location.reload();
   };
 
   const handleProceedToRescheduleConfirm = (data: RescheduleData) => {
