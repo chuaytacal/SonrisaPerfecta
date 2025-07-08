@@ -69,7 +69,7 @@ const appointmentFormSchema = z.object({
     "confirmada",
     "pendiente",
     "cancelada",
-    "atendido",
+    "completada",
     "reprogramada",
   ]),
   notas: z.string().optional(),
@@ -473,7 +473,9 @@ export function AppointmentModal({
                               <SelectItem value="confirmada">
                                 Confirmada
                               </SelectItem>
-                              <SelectItem value="atendido">Atendido</SelectItem>
+                              <SelectItem value="completada">
+                                Atendido
+                              </SelectItem>
                               <SelectItem value="cancelada">
                                 Cancelada
                               </SelectItem>

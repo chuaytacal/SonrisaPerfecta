@@ -112,6 +112,14 @@ const messages = {
   showMore: (total: number) => `+ Ver más (${total})`,
 };
 
+const statusColors = {
+  pendiente: "#f59e0b",
+  confirmada: "#5625b3",
+  completada: "#16a34a",
+  cancelada: "#dc2626",
+  reprogramada: "#6b7280",
+};
+
 export default function CalendarioPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const { toast } = useToast();
@@ -162,9 +170,12 @@ export default function CalendarioPage() {
     const fetchAppointments = async () => {
       try {
         const response = await api.get("/appointments");
-        console.log(response.data); // Check if the data is being fetched correctly
 
         const updatedAppointments = response.data.map((appointment) => {
+          // Asignar color al evento según su estado
+          const eventColor = statusColors[appointment.estadoCita] || "#f59e0b"; // Usa estadoCita para asignar color
+
+          // Crear las fechas de inicio y fin
           const startDate = new Date(
             `${appointment.fechaCita}T${appointment.horaInicio}`
           );
@@ -174,8 +185,9 @@ export default function CalendarioPage() {
 
           return {
             ...appointment,
-            start: startDate, // Set the start date as a Date object
-            end: endDate, // Set the end date as a Date object
+            start: startDate,
+            end: endDate,
+            eventColor, // Asignar el color correspondiente
           };
         });
 
@@ -208,11 +220,11 @@ export default function CalendarioPage() {
 
   const statusOptions: { value: AppointmentState | "all"; label: string }[] = [
     { value: "all", label: "Todos los estados" },
-    { value: "Pendiente", label: "Pendiente" },
-    { value: "Confirmada", label: "Confirmada" },
-    { value: "Atendido", label: "Atendido" },
-    { value: "Cancelada", label: "Cancelada" },
-    { value: "Reprogramada", label: "Reprogramada" },
+    { value: "pendiente", label: "pendiente" },
+    { value: "confirmada", label: "confirmada" },
+    { value: "completada", label: "completada" },
+    { value: "cancelada", label: "cancelada" },
+    { value: "reprogramada", label: "reprogramada" },
   ];
 
   const motivoOptions = useMemo(
@@ -275,42 +287,78 @@ export default function CalendarioPage() {
     []
   );
 
-  const handleUpdateState = (
-    appointmentId: string,
+  const handleUpdateState = async (
+    event: Appointment, // Recibe el evento completo
     newState: AppointmentState
   ) => {
-    const appointmentIndex = mockAppointmentsData.findIndex(
-      (app) => app.id === appointmentId
-    );
-    if (appointmentIndex > -1) {
-      mockAppointmentsData[appointmentIndex].estado = newState;
-
-      // Cascade state change to budget if appointment is cancelled
-      if (newState === "Cancelada") {
-        const budgetToCancel = mockPresupuestosData.find(
-          (b) => b.idCita === appointmentId
-        );
-        if (budgetToCancel) {
-          budgetToCancel.estado = "Cancelado";
-          // Deactivate associated payments
-          mockPagosData.forEach((pago) => {
-            if (
-              pago.itemsPagados.some(
-                (ip) => ip.idPresupuesto === budgetToCancel.id
-              )
-            ) {
-              pago.estado = "desactivo";
-            }
-          });
-        }
-      }
+    // Asegurarse de que el evento está definido
+    if (!event || !event.idCita) {
+      console.error("Evento no encontrado o idCita no disponible");
+      return; // Si el evento no está presente, no hacer nada
     }
-    setAppointments([...mockAppointmentsData]);
-    toast({
-      title: "Estado Actualizado",
-      description: `La cita ha sido marcada como "${newState}".`,
+
+    console.log("Evento dentro de handleUpdateState:", event);
+    console.log("Estado que se está enviando:", newState); // Log del estado que se está enviando
+
+    // Usar idCita directamente desde el objeto event
+    const appointmentId = event.idCita;
+    console.log("ID de la cita seleccionada:", appointmentId);
+
+    const updatedAppointments = appointments.map((app) => {
+      if (app.idCita === appointmentId) {
+        return {
+          ...app,
+          estadoCita: newState,
+          eventColor: statusColors[newState] || "#f59e0b",
+        };
+      }
+      return app;
     });
-    setPopoverOpen(false);
+
+    setAppointments(updatedAppointments);
+
+    try {
+      console.log(
+        `Enviando solicitud PATCH a la API para la cita ${appointmentId}...`
+      );
+      const response = await fetch(
+        `http://localhost:3001/api/appointments/${appointmentId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            estadoCita: newState,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Error en la respuesta del servidor:", errorData);
+        throw new Error(
+          `Error al actualizar la cita: ${response.status} ${
+            errorData.message || "sin mensaje"
+          }`
+        );
+      }
+
+      toast({
+        title: "Cita actualizada",
+        description: `La cita ha sido marcada como ${newState}`,
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Error al actualizar la cita:", error);
+      setAppointments(appointments);
+
+      toast({
+        title: "Error al actualizar la cita",
+        description: "Hubo un problema al actualizar el estado de la cita.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleOpenEditModalFromPopover = () => {
@@ -320,7 +368,7 @@ export default function CalendarioPage() {
   };
 
   const handleOpenRescheduleModalFromPopover = () => {
-    setShouldDeleteOnReschedule(false); // Reset switch state
+    setShouldDeleteOnReschedule(false);
     setIsRescheduleModalOpen(true);
     setPopoverOpen(false);
   };
@@ -334,23 +382,19 @@ export default function CalendarioPage() {
   const confirmCancelAppointment = () => {
     if (!appointmentToAction) return;
 
-    // 1. Mark appointment as Cancelada
-    const appIndex = mockAppointmentsData.findIndex(
+    const appIndex = appointments.findIndex(
       (app) => app.id === appointmentToAction.id
     );
     if (appIndex > -1) {
-      mockAppointmentsData[appIndex].estado = "Cancelada";
+      appointments[appIndex].estado = "Cancelada";
     }
-    setAppointments([...mockAppointmentsData]);
+    setAppointments([...appointments]);
 
-    // 2. Find associated budget and mark as Cancelado
     const budgetToCancel = mockPresupuestosData.find(
       (b) => b.idCita === appointmentToAction.id
     );
     if (budgetToCancel) {
       budgetToCancel.estado = "Cancelado";
-
-      // 3. Deactivate all associated payments
       mockPagosData.forEach((pago) => {
         if (
           pago.itemsPagados.some((ip) => ip.idPresupuesto === budgetToCancel.id)
@@ -369,7 +413,7 @@ export default function CalendarioPage() {
     setAppointmentToAction(null);
   };
 
-  const handleSaveAppointment = (formData: AppointmentFormData) => {
+  const handleSaveAppointment = async (formData: AppointmentFormData) => {
     const startDateTime = new Date(formData.fecha);
     const [startHours, startMinutes] = formData.horaInicio
       .split(":")
@@ -406,7 +450,7 @@ export default function CalendarioPage() {
       doctor,
       motivoCita,
       procedimientos: formData.procedimientos,
-      estado: editingAppointment ? formData.estado : "Pendiente",
+      estado: editingAppointment ? formData.estado : "pendiente",
       notas: formData.notas,
       eventColor: editingAppointment?.eventColor || "hsl(var(--primary))",
     };
@@ -422,7 +466,6 @@ export default function CalendarioPage() {
       );
 
       if (budgetToUpdate) {
-        // Sync basic budget info
         budgetToUpdate.idHistoriaClinica = paciente.idHistoriaClinica;
         budgetToUpdate.fechaAtencion = appointmentToSave.start;
         budgetToUpdate.doctorResponsableId = appointmentToSave.idDoctor;
@@ -433,7 +476,6 @@ export default function CalendarioPage() {
         );
         const oldItems = [...budgetToUpdate.items];
 
-        // Deactivate payments for removed items
         const itemsToRemove = oldItems.filter(
           (item) => !newProcedimientoIds.has(item.procedimiento.id)
         );
@@ -452,7 +494,6 @@ export default function CalendarioPage() {
           });
         }
 
-        // Rebuild the items list for the budget
         const newItems: ItemPresupuesto[] = [];
         (appointmentToSave.procedimientos || []).forEach((proc) => {
           const existingItem = oldItems.find(
@@ -471,7 +512,6 @@ export default function CalendarioPage() {
         });
         budgetToUpdate.items = newItems;
 
-        // Recalculate total paid amount for the budget based ONLY on its current items
         let newTotalPaid = 0;
         budgetToUpdate.items.forEach((item) => {
           let itemPaidAmount = 0;
@@ -487,12 +527,11 @@ export default function CalendarioPage() {
               });
             }
           });
-          item.montoPagado = itemPaidAmount; // Sync item's paid amount
+          item.montoPagado = itemPaidAmount;
           newTotalPaid += item.montoPagado;
         });
         budgetToUpdate.montoPagado = newTotalPaid;
 
-        // If all procedures are removed, cancel the budget and associated payments
         if (budgetToUpdate.items.length === 0) {
           budgetToUpdate.estado = "Cancelado";
           mockPagosData.forEach((pago) => {
@@ -505,33 +544,9 @@ export default function CalendarioPage() {
             }
           });
         }
-      } else if (
-        formData.procedimientos &&
-        formData.procedimientos.length > 0
-      ) {
-        // No budget existed, but now there are procedures, so create one
-        const newBudget: Presupuesto = {
-          id: `presupuesto-${crypto.randomUUID()}`,
-          idHistoriaClinica: paciente.idHistoriaClinica,
-          idCita: appointmentToSave.id,
-          nombre: motivoCita.nombre,
-          fechaCreacion: new Date(),
-          fechaAtencion: startDateTime,
-          estado: "Creado",
-          montoPagado: 0,
-          items: formData.procedimientos.map((p) => ({
-            id: `item-${crypto.randomUUID()}`,
-            procedimiento: p,
-            cantidad: 1,
-            montoPagado: 0,
-          })),
-          doctorResponsableId: doctor.id,
-        };
-        mockPresupuestosData.unshift(newBudget);
       }
     } else {
       mockAppointmentsData.push(appointmentToSave);
-      // Auto-create a budget if there are procedures on creation
       if (formData.procedimientos && formData.procedimientos.length > 0) {
         const newBudget: Presupuesto = {
           id: `presupuesto-${crypto.randomUUID()}`,
@@ -578,7 +593,6 @@ export default function CalendarioPage() {
   const handleConfirmReschedule = () => {
     if (!selectedEventForPopover || !rescheduleData) return;
 
-    // 1. Create the new appointment. This happens in both cases.
     const { newDate, newTime, newDoctorId } = rescheduleData;
     const [hours, minutes] = newTime.split(":").map(Number);
     const newStart = new Date(newDate);
@@ -591,15 +605,14 @@ export default function CalendarioPage() {
 
     const newAppointment: Appointment = {
       ...selectedEventForPopover,
-      id: crypto.randomUUID(), // New unique ID
+      id: crypto.randomUUID(),
       start: newStart,
       end: newEnd,
       idDoctor: newDoctorId,
       doctor: mockPersonalData.find((d) => d.id === newDoctorId),
-      estado: "Pendiente", // The new appointment is always 'Pendiente'
+      estado: "pendiente",
     };
 
-    // 2. Handle the original appointment based on the switch.
     if (shouldDeleteOnReschedule) {
       const appIndex = mockAppointmentsData.findIndex(
         (app) => app.id === selectedEventForPopover.id
@@ -624,7 +637,6 @@ export default function CalendarioPage() {
         description: "La cita original ha sido cancelada y la nueva agendada.",
       });
     } else {
-      // Mark the original appointment as 'Reprogramada'
       const appointmentIndex = mockAppointmentsData.findIndex(
         (app) => app.id === selectedEventForPopover.id
       );
@@ -638,10 +650,8 @@ export default function CalendarioPage() {
       });
     }
 
-    // Add the new appointment to the list
     mockAppointmentsData.push(newAppointment);
 
-    // Sync budget to new appointment
     const originalBudget = mockPresupuestosData.find(
       (b) => b.idCita === selectedEventForPopover.id
     );
@@ -651,7 +661,6 @@ export default function CalendarioPage() {
       originalBudget.doctorResponsableId = newAppointment.idDoctor;
     }
 
-    // 3. Update state and close modals
     setAppointments([...mockAppointmentsData]);
     setIsRescheduleConfirmOpen(false);
     setRescheduleData(null);
@@ -666,28 +675,28 @@ export default function CalendarioPage() {
         borderRadius: "4px",
         border: "none",
       };
-      let backgroundColor = event.eventColor || "hsl(var(--primary))";
+
+      let backgroundColor =
+        event.eventColor || statusColors[event.estado] || "#f59e0b";
       let color = "hsl(var(--primary-foreground))";
 
-      // Display a quick summary of the appointment
       const eventSummary = `${event.paciente?.persona.nombre} - ${event.motivoCita?.nombre}`;
 
-      // Customize background colors based on appointment status
       switch (event.estado) {
-        case "Cancelada":
-          backgroundColor = "hsl(var(--destructive))";
+        case "cancelada":
+          backgroundColor = statusColors["cancelada"];
           break;
-        case "Pendiente":
-          backgroundColor = "#f59e0b"; // Amber-500
+        case "pendiente":
+          backgroundColor = statusColors["pendiente"];
           break;
-        case "Atendido":
-          backgroundColor = "#16a34a"; // Green-600
+        case "completada":
+          backgroundColor = statusColors["completada"];
           break;
-        case "Confirmada":
-          backgroundColor = "#5625b3"; // Purple
+        case "confirmada":
+          backgroundColor = statusColors["confirmada"];
           break;
-        case "Reprogramada":
-          backgroundColor = "hsl(var(--muted))";
+        case "reprogramada":
+          backgroundColor = statusColors["reprogramada"];
           color = "hsl(var(--muted-foreground))";
           style.textDecoration = "line-through";
           break;
@@ -705,7 +714,7 @@ export default function CalendarioPage() {
       return {
         style,
         className: "cursor-pointer",
-        title: eventSummary, // Adding title that can be shown on hover
+        title: eventSummary,
       };
     },
     [currentView]
@@ -1008,7 +1017,7 @@ export default function CalendarioPage() {
             <AppointmentPopoverContent
               appointment={selectedEventForPopover}
               onUpdateState={(newState) =>
-                handleUpdateState(selectedEventForPopover.id, newState)
+                handleUpdateState(selectedEventForPopover, newState)
               }
               onEdit={handleOpenEditModalFromPopover}
               onReschedule={handleOpenRescheduleModalFromPopover}
