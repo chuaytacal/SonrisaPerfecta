@@ -380,8 +380,10 @@ export default function FiliacionPage() {
           try{
             const fetchedAppointments = await getAllAppointments(patientId);
             console.log("Fetched appointments:", fetchedAppointments);
+            setPatientAppointments(getPatientAppointments(fetchedAppointments, patientId));
           }catch (error) {
             const emptyAppointments: BackendAppointment[] = [];
+            console.log("Error fetching appointments:", error);
             setPatientAppointments([]); // Set empty appointments if fetch fails
           }
           // const allAppointments = await getAllAppointments(patientId);
