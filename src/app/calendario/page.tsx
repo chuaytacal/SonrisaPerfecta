@@ -172,9 +172,7 @@ export default function CalendarioPage() {
         const response = await api.get("/appointments");
 
         const updatedAppointments = response.data.map((appointment) => {
-
           const eventColor = statusColors[appointment.estadoCita] || "#f59e0b";
-
 
           const startDate = new Date(
             `${appointment.fechaCita}T${appointment.horaInicio}`
@@ -291,10 +289,9 @@ export default function CalendarioPage() {
     event: Appointment,
     newState: AppointmentState
   ) => {
-
     if (!event || !event.idCita) {
       console.error("Evento no encontrado o idCita no disponible");
-      return; 
+      return;
     }
 
     console.log("Evento dentro de handleUpdateState:", event);
@@ -378,36 +375,60 @@ export default function CalendarioPage() {
     setPopoverOpen(false);
   };
 
-  const confirmCancelAppointment = () => {
-    if (!appointmentToAction) return;
-
-    const appIndex = appointments.findIndex(
-      (app) => app.id === appointmentToAction.id
-    );
-    if (appIndex > -1) {
-      appointments[appIndex].estado = "Cancelada";
+  const confirmCancelAppointment = async () => {
+    if (!appointmentToAction || !appointmentToAction.idCita) {
+      console.error("Cita no encontrada o idCita no disponible");
+      return;
     }
-    setAppointments([...appointments]);
 
-    const budgetToCancel = mockPresupuestosData.find(
-      (b) => b.idCita === appointmentToAction.id
+    const appointmentId = appointmentToAction.idCita;
+    console.log("ID de la cita seleccionada para cancelar:", appointmentId);
+
+    const updatedAppointments = appointments.filter(
+      (app) => app.idCita !== appointmentId
     );
-    if (budgetToCancel) {
-      budgetToCancel.estado = "Cancelado";
-      mockPagosData.forEach((pago) => {
-        if (
-          pago.itemsPagados.some((ip) => ip.idPresupuesto === budgetToCancel.id)
-        ) {
-          pago.estado = "desactivo";
+    setAppointments(updatedAppointments);
+
+    try {
+      console.log(
+        `Enviando solicitud DELETE a la API para la cita ${appointmentId}...`
+      );
+      const response = await fetch(
+        `http://localhost:3001/api/appointments/${appointmentId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
         }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Error en la respuesta del servidor:", errorData);
+        throw new Error(
+          `Error al cancelar la cita: ${response.status} ${
+            errorData.message || "sin mensaje"
+          }`
+        );
+      }
+
+      toast({
+        title: "Cita Cancelada",
+        description: `La cita ha sido cancelada correctamente.`,
+        variant: "destructive",
+      });
+    } catch (error) {
+      console.error("Error al cancelar la cita:", error);
+      setAppointments([...appointments]);
+
+      toast({
+        title: "Error al cancelar la cita",
+        description: "Hubo un problema al cancelar la cita.",
+        variant: "destructive",
       });
     }
 
-    toast({
-      title: "Cita Cancelada",
-      description: `La cita para "${appointmentToAction.paciente?.persona.nombre}" ha sido marcada como cancelada. No se eliminó ningún registro.`,
-      variant: "destructive",
-    });
     setIsConfirmDeleteDialogOpen(false);
     setAppointmentToAction(null);
   };
