@@ -16,17 +16,20 @@ export interface Persona {
   sexo: Sexo;
   direccion: string;
   telefono: string;
-  email: string;
+  email?: string;
+  uuid?: string;
+  isActive?: boolean;
 }
 
 export type Rol = 'Administrador' | 'Doctor' | 'Secretaria';
 
 export interface Usuario {
-  id: string;
-  usuario: string;
-  contrasena: string;
-  rol: Rol;
-  idPersonal: string;
+  id?: string;
+  usuario?: string;
+  contrasena?: string;
+  rol?: Rol;
+  idPersonal?: string;
+  email?: string;
 }
 
 export type EtiquetaPaciente = string;
@@ -227,6 +230,7 @@ export type Personal = {
   especialidad?: string;
   idUsuario?: string;
   usuario?: Usuario;
+  rol?: string;
 };
 
 export type MetodoPago = 'Efectivo' | 'Tarjeta' | 'Transferencia' | 'Otro';

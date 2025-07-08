@@ -2,7 +2,7 @@
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Search, ArrowUpDown, Settings2 } from 'lucide-react';
 import { mockPacientesData, mockPersonalData, mockPresupuestosData } from '@/lib/data';
@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import api from '@/lib/api';
 
 const ToothIconCustom = (props: React.SVGProps<SVGSVGElement>) => (
     <svg
@@ -80,22 +81,31 @@ export default function OrtodonciaPage() {
     return antecedentes?.q5_enfermedades || [];
   };
 
-  useEffect(() => {
-    const foundPaciente = mockPacientesData.find(p => p.id === patientId);
-    if (foundPaciente) {
-      setPaciente(foundPaciente);
-      setPersona(foundPaciente.persona);
-      setDisplayedNotas(foundPaciente.notas || "Sin notas registradas.");
-      setDisplayedEtiquetas(foundPaciente.etiquetas || []);
-      setDisplayedAlergias(deriveAlergiasFromAntecedentes(foundPaciente.antecedentesMedicos));
-      setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(foundPaciente.antecedentesMedicos));
-    } else {
-      setPaciente(null);
-      setPersona(null);
+ const fetchPageData = useCallback(async () => {
+    if (!patientId) {
+      setLoading(false);
+      return;
     }
+    setLoading(true);
+
+    const pacienteRes = await api.get(`/patients/${patientId}`);
+    const foundPaciente = pacienteRes.data;
+
+    setPaciente(foundPaciente);
+    setPersona(foundPaciente.persona);
     setLoading(false);
+
+    // !!! ADICIONAL A ESTE GET, DEBERÍAN HACER UN GET A LA API PARA OBTENER LOS PRESUPUESTOS DEL PACIENTE !!!
+    // LAS NOTAS,ETIQUETAS,ALERGIAS Y ENFERMEDADES DEBEN SER OBTENIDAS DESDE LA API TAMBIÉN DE SER NECESARIO
+
   }, [patientId]);
-  
+
+  useEffect(() => {
+      if (patientId) {
+        fetchPageData();
+      }
+    }, [patientId, fetchPageData]);
+
   useEffect(() => {
     if (paciente) {
         const historiaClinicaId = paciente.idHistoriaClinica;

@@ -74,7 +74,7 @@ const fetchPaciente = async (id: string) => {
 const fetchOdontogramHistory = async (patientId: string) => {
   const token = localStorage.getItem("authToken");
   const res = await fetch(
-    `/api/odontogram-view/patient/${patientId}/detailed`,
+    `/api/odontogram-view2/patient/${patientId}/detailed`,
     {
       headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     }
@@ -85,7 +85,7 @@ const fetchOdontogramHistory = async (patientId: string) => {
 
 const createOdontogram = async (patientId: string) => {
   const token = localStorage.getItem("authToken");
-  const res = await fetch(`/api/odontogram-view`, {
+  const res = await fetch(`/api/odontogram-view2`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -148,6 +148,10 @@ export default function OdontogramaPage() {
 
         setDisplayedEtiquetas(relevantTags);
 
+        const historialData = await fetchOdontogramHistory(patientId as string);
+        console.log(historialData);
+
+        setHistorial(historialData);
       } catch {
         toast({
           title: "Error",

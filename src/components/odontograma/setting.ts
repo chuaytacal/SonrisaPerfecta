@@ -1,13 +1,7 @@
 import type { Procedimiento } from "@/types";
 
 export type DientesMap = {
-  [diente: string]: {
-    [superficie: string]: {
-      nombre: string;
-      color?: string;
-      servicios?: any[];
-    };
-  };
+  [idDiente: number]: HallazgosPorDiente;
 };
 
 export type OdontogramDataItem = {
