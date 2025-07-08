@@ -24,7 +24,7 @@ import type {
 } from "@/components/odontograma/setting";
 import type { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, tr } from "date-fns/locale";
 
 import type {
   Persona,
@@ -32,26 +32,8 @@ import type {
   EtiquetaPaciente,
   HistorialOdontograma,
 } from "@/types";
-import { get } from "http";
 
-
-const fetcher = async <T>(url: string, options?: RequestInit): Promise<T> => {
-  const token = localStorage.getItem('authToken'); // Assuming you store your auth token in localStorage
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
-    ...options?.headers,
-  };
-
-  const response = await fetch(url, { ...options, headers });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || 'Something went wrong');
-  }
-
-  return response.json();
-};
+const API_BASE_URL = 'http://localhost:3001/api';
 
 const OdontogramComponent = dynamic(
   () =>
@@ -61,7 +43,7 @@ const OdontogramComponent = dynamic(
 
 const fetchPaciente = async (id: string) => {
   const token = localStorage.getItem("authToken");
-  const res = await fetch(`http://localhost:3001/api/patients/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/patients/${id}`, {
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -74,7 +56,7 @@ const fetchPaciente = async (id: string) => {
 const fetchOdontogramHistory = async (patientId: string) => {
   const token = localStorage.getItem("authToken");
   const res = await fetch(
-    `/api/odontogram-view2/patient/${patientId}/detailed`,
+    `${API_BASE_URL}/odontogram-view2/patient/${patientId}/all`,
     {
       headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     }
@@ -83,9 +65,22 @@ const fetchOdontogramHistory = async (patientId: string) => {
   return res.json();
 };
 
+const latestOdontogram = async (patientId: string) => {
+  const token = localStorage.getItem("authToken");
+  const res = await fetch(
+    `${API_BASE_URL}/odontogram-view2/patient/${patientId}/latest`,
+    {
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    }
+  );
+  if (!res.ok) throw new Error("Error al obtener el último odontograma");
+  return res.json();
+}
+
+
 const createOdontogram = async (patientId: string) => {
   const token = localStorage.getItem("authToken");
-  const res = await fetch(`/api/odontogram-view2`, {
+  const res = await fetch(`${API_BASE_URL}/odontogram-view2`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -107,17 +102,11 @@ export default function OdontogramaPage() {
   const [paciente, setPaciente] = useState<PacienteType | null>(null);
   const [persona, setPersona] = useState<Persona | null>(null);
   const [historial, setHistorial] = useState<HistorialOdontograma[]>([]);
+  const [dientes, setDientes] = useState<DientesMap>({});
+  const [dientesPrimaria, setDientesPrimaria] = useState<DientesMap>({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<OdontogramType>("Permanente");
   const [isNewConfirmOpen, setIsNewConfirmOpen] = useState(false);
-  const [displayedEtiquetas, setDisplayedEtiquetas] = useState<EtiquetaPaciente[]>([]);
-  const [allAvailableTags, setAllAvailableTags] = useState<EtiquetaPaciente[]>([]);
-
-  const API_BASE_URL = "http://localhost:3001/api";
-
-  const getAllTags = async (): Promise<EtiquetaPaciente[]> => {
-    return fetcher<EtiquetaPaciente[]>(`${API_BASE_URL}/catalog/tags`);
-  };
 
   useEffect(() => {
     const load = async () => {
@@ -126,33 +115,27 @@ export default function OdontogramaPage() {
         const pacienteData = await fetchPaciente(patientId as string);
         setPaciente(pacienteData);
         setPersona(pacienteData.persona); // persona viene dentro del mismo objeto
-        console.log("Fetched paciente:", pacienteData);
-
-        // const historialData = await fetchOdontogramHistory(patientId as string);
-        // setHistorial(historialData);
-
-        const tagsCatalog = await getAllTags();
-        setAllAvailableTags(tagsCatalog);
-        console.log("Fetched all tags:", tagsCatalog);
-
-        const patientTagsRes = await fetch(`${API_BASE_URL}/patient-tags`);
-        const patientTagLinks = await patientTagsRes.json();
-
-        const relevantTags = patientTagLinks
-          .filter((tag: any) => tag.idPaciente === patientId)
-          .map((tag: any) => {
-            const tagInfo = tagsCatalog.find((t) => t.uuid === tag.idEtiqueta);
-            return tagInfo ? { id: tagInfo.uuid, name: tagInfo.name } : null;
-          })
-          .filter(Boolean) as EtiquetaPaciente[];
-
-        setDisplayedEtiquetas(relevantTags);
-
-        const historialData = await fetchOdontogramHistory(patientId as string);
-        console.log(historialData);
-
-        setHistorial(historialData);
+        console.log("Paciente cargado:", pacienteData);
+        try {
+          const historialData = await fetchOdontogramHistory(patientId as string);
+          setHistorial(historialData);
+          console.log("Historial de odontogramas:", historialData);
+          // Cargar el último odontograma si existe
+          const latest = await latestOdontogram(patientId as string);
+          if (latest.type === "Permanente") {
+            setDientes(latest.data[0]);
+            setActiveTab("Permanente");
+          }else if (latest.type === "Primaria") {
+            setDientesPrimaria(latest.data[0]);
+            setActiveTab("Primaria");
+          }
+            
+        } catch (error) {
+          console.error("Error al cargar historial de odontogramas:", error);
+          setHistorial([]);
+        }
       } catch {
+        console.log("Error al cargar los datos del paciente u odontograma 🦷");
         toast({
           title: "Error",
           description: "No se pudo cargar los datos",
@@ -165,52 +148,6 @@ export default function OdontogramaPage() {
     if (patientId) load();
   }, [patientId, toast]);
 
-  const handleAddTag = async (tagName: string): Promise<boolean> => {
-    if (!paciente) return false;
-
-    if (displayedEtiquetas.some(tag => tag.name === tagName)) {
-      toast({ title: "Etiqueta duplicada", variant: "destructive" });
-      return false;
-    }
-
-    const found = allAvailableTags.find(tag => tag.name === tagName);
-    if (!found) {
-      console.log("Etiquetas: ", allAvailableTags);
-      toast({
-        title: "Etiqueta no encontrada",
-        description: `"${tagName}" no está en el catálogo`,
-        variant: "destructive",
-      });
-      return false;
-    }
-
-    try {
-      const res = await fetch(`http://localhost:3001/api/patient-tags`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-        body: JSON.stringify({
-          idPaciente: paciente.id,
-          idEtiqueta: found.uuid,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Error al agregar etiqueta");
-
-      setDisplayedEtiquetas((prev) => [...prev, { id: found.uuid, name: found.name }]);
-      toast({ title: "Etiqueta agregada" });
-      return true;
-    } catch (error) {
-      toast({
-        title: "Error al agregar etiqueta",
-        description: (error as Error).message,
-        variant: "destructive",
-      });
-      return false;
-    }
-  };
   const handleNewOdontogram = async () => {
     try {
       await createOdontogram(patientId as string);
@@ -228,6 +165,108 @@ export default function OdontogramaPage() {
     }
   };
 
+  const SaveOdontogram = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (activeTab === "Primaria") {
+        const response = await fetch(`${API_BASE_URL}/odontogram-view2`, {
+          method: "POST", // Or PUT if you're updating — adjust based on backend behavior
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            patientId: patientId,
+            data: [dientesPrimaria], 
+            type: "Primaria", 
+          }),
+        });
+        console.log("Saving odontogram with data:", {
+          patientId: patientId,
+          data: [dientesPrimaria],
+        });
+        if (!response.ok) {
+          throw new Error("Error al guardar el odontograma");
+        }
+
+        toast({
+          title: "Guardado exitosamente",
+          description: "El odontograma fue actualizado",
+        });
+
+        // Optional: refetch historial if needed
+        const updated = await fetchOdontogramHistory(patientId as string);
+        setHistorial(updated);
+      } else if (activeTab === "Permanente") {
+        const response = await fetch(`${API_BASE_URL}/odontogram-view2`, {
+          method: "POST", // Or PUT if you're updating — adjust based on backend behavior
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            patientId: patientId,
+            data: [dientes], 
+            type: "Permanente", 
+          }),
+        });
+        console.log("Saving odontogram with data:", {
+          patientId: patientId,
+          data: [dientes],
+        });
+        if (!response.ok) {
+          throw new Error("Error al guardar el odontograma");
+        }
+
+        toast({
+          title: "Guardado exitosamente",
+          description: "El odontograma fue actualizado",
+        });
+
+        // Optional: refetch historial if needed
+        const updated = await fetchOdontogramHistory(patientId as string);
+        setHistorial(updated);
+      }
+    } catch (error) {
+      console.error("Error guardando odontograma:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo guardar el odontograma",
+        variant: "destructive",
+      });
+    }
+  };
+
+  //make a petition to get odontogram data
+  const getOdontogramData = async (odontogramId) => {
+    const token = localStorage.getItem("authToken");
+    const res = await fetch(`${API_BASE_URL}/odontogram-view2/${odontogramId}`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    if (!res.ok) throw new Error("No se pudo cargar el odontograma.");
+    //setdientes as res
+    const data = await res.json();
+    setDientes(data.data[0]);
+    setActiveTab("Permanente");
+  }
+
+  const getOdontogramPrimariaData = async (odontogramId) => {
+    const token = localStorage.getItem("authToken");
+    const res = await fetch(`${API_BASE_URL}/odontogram-view2/${odontogramId}`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    if (!res.ok) throw new Error("No se pudo cargar el odontograma.");
+    const data = await res.json();
+    setDientesPrimaria(data.data[0]);
+    setActiveTab("Primaria");
+  }
+
   const columns: ColumnDef<HistorialOdontograma>[] = [
     {
       accessorKey: "createdAt",
@@ -244,7 +283,12 @@ export default function OdontogramaPage() {
         <Button
           size="sm"
           variant="outline"
-          onClick={() => setActiveTab("Historial")}
+          // if row.original.type is "Permanente" then call getOdontogramData else call getOdontogramPrimariaData
+          onClick={() =>
+            row.original.type === "Permanente"
+              ? getOdontogramData(row.original.id)
+              : getOdontogramPrimariaData(row.original.id)
+          }
         >
           Ver Detalle
         </Button>
@@ -284,12 +328,12 @@ export default function OdontogramaPage() {
         />
         <div className="flex-1 space-y-6">
           <EtiquetasNotasSalud
-            etiquetas={displayedEtiquetas || []}
+            etiquetas={paciente.etiquetas || []}
             notas={paciente.notas || "Sin notas"}
             alergias={paciente.alergias || []}
             enfermedades={paciente.enfermedades || []}
             onSaveNotes={() => {}}
-            onAddTag={handleAddTag}
+            onAddTag={() => true}
             patientId={patientId as string}
           />
           <Card>
@@ -301,9 +345,16 @@ export default function OdontogramaPage() {
                     Gestione los hallazgos dentales del paciente.
                   </CardDescription>
                 </div>
-                <Button onClick={() => setIsNewConfirmOpen(true)}>
-                  Nuevo Odontograma
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button onClick={() => setIsNewConfirmOpen(true)}>
+                    Nuevo Odontograma
+                  </Button>
+                  <div className="inline-block bg-emerald-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-emerald-700 transition duration-200 cursor-pointer select-none"
+                  onClick={() => SaveOdontogram()}
+                  >
+                    + Guardar
+                  </div>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -319,13 +370,10 @@ export default function OdontogramaPage() {
                 </TabsList>
                 <TabsContent value="Permanente">
                   <OdontogramComponent
-                    dientesData={historial[0]?.odontogramaPermanente || {}}
+                    dientesData={dientes}
                     odontogramType="Permanent"
-                    onDientesChange={(newData) => {
-                      const updated = [...historial];
-                      if (updated[0])
-                        updated[0].odontogramaPermanente = newData;
-                      setHistorial(updated);
+                    onDientesChange={(newData) => { // aqui un ejemplo de como se guardar correctamente los cambios ya que no sabia como manejarlo de la otra forma     
+                      setDientes(newData);
                     }}
                     onOdontogramDataChange={() => {}}
                   />
@@ -333,12 +381,10 @@ export default function OdontogramaPage() {
 
                 <TabsContent value="Primaria">
                   <OdontogramComponent
-                    dientesData={historial[0]?.odontogramaPrimaria || {}}
+                    dientesData={dientesPrimaria}
                     odontogramType="Primary"
                     onDientesChange={(newData) => {
-                      const updated = [...historial];
-                      if (updated[0]) updated[0].odontogramaPrimaria = newData;
-                      setHistorial(updated);
+                      setDientesPrimaria(newData);
                     }}
                     onOdontogramDataChange={() => {}}
                   />

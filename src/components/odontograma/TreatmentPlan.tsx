@@ -148,16 +148,6 @@ const TreatmentPlanTable: React.FC<Props> = ({
     onOdontogramDataChange(planTratamiento);
   }, [dientesMap, odontogramType]);
 
-  const abrirModalNotas = (index: number) => {
-    const ref = botonRefs.current[index];
-    if (ref) {
-      const rect = ref.getBoundingClientRect();
-      setModalPos({ top: rect.bottom + 8, left: rect.left });
-      setEditandoIndex(index);
-      setInputNota(planTratamiento[index]?.nota || "");
-    }
-  };
-
   const guardarNota = (index: number) => {
     setPlanTratamiento((prev) =>
       prev.map((item, i) => (i === index ? { ...item, nota: inputNota } : item))
@@ -376,13 +366,6 @@ const TreatmentPlanTable: React.FC<Props> = ({
                           {item.nota}
                         </span>
                       )}
-                      <button
-                        ref={(el) => (botonRefs.current[index] = el)}
-                        onClick={() => abrirModalNotas(index)}
-                        className="inline-flex items-center px-2 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                      >
-                        + Agregar
-                      </button>
                     </div>
                   </td>
                 </tr>

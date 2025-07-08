@@ -94,21 +94,22 @@ export function ToothA({
                 scaleY={rotated ? -1 : 1}
               />
           )}
+
+          {otherFindingsCount > 0 && (
+            <Text
+              x={175}
+              y={-335}
+              text={`+${otherFindingsCount}`}
+              fontSize={40}
+              fill="hsl(var(--primary))"
+              fontStyle="bold"
+              scaleY={rotated ? -1 : 1}
+              listening={false}
+              align="right"
+            />
+        )}
       </KonvaGroup>
-      
-      {otherFindingsCount > 0 && (
-        <Text
-          x={175}
-          y={-335}
-          text={`+${otherFindingsCount}`}
-          fontSize={40}
-          fill="hsl(var(--primary))"
-          fontStyle="bold"
-          scaleY={rotated ? -1 : 1}
-          listening={false}
-          align="right"
-        />
-      )}
+    
       
       {/* Tooth Shapes */}
       <KonvaGroup key={`clickable-tooth-shape-${numTooth}`} onClick={onClick} onTap={onClick} >
