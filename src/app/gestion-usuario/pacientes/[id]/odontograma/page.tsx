@@ -32,6 +32,26 @@ import type {
   EtiquetaPaciente,
   HistorialOdontograma,
 } from "@/types";
+import { get } from "http";
+
+
+const fetcher = async <T>(url: string, options?: RequestInit): Promise<T> => {
+  const token = localStorage.getItem('authToken'); // Assuming you store your auth token in localStorage
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...options?.headers,
+  };
+
+  const response = await fetch(url, { ...options, headers });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Something went wrong');
+  }
+
+  return response.json();
+};
 
 const OdontogramComponent = dynamic(
   () =>
@@ -90,6 +110,14 @@ export default function OdontogramaPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<OdontogramType>("Permanente");
   const [isNewConfirmOpen, setIsNewConfirmOpen] = useState(false);
+  const [displayedEtiquetas, setDisplayedEtiquetas] = useState<EtiquetaPaciente[]>([]);
+  const [allAvailableTags, setAllAvailableTags] = useState<EtiquetaPaciente[]>([]);
+
+  const API_BASE_URL = "http://localhost:3001/api";
+
+  const getAllTags = async (): Promise<EtiquetaPaciente[]> => {
+    return fetcher<EtiquetaPaciente[]>(`${API_BASE_URL}/catalog/tags`);
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -98,9 +126,28 @@ export default function OdontogramaPage() {
         const pacienteData = await fetchPaciente(patientId as string);
         setPaciente(pacienteData);
         setPersona(pacienteData.persona); // persona viene dentro del mismo objeto
+        console.log("Fetched paciente:", pacienteData);
 
-        const historialData = await fetchOdontogramHistory(patientId as string);
-        setHistorial(historialData);
+        // const historialData = await fetchOdontogramHistory(patientId as string);
+        // setHistorial(historialData);
+
+        const tagsCatalog = await getAllTags();
+        setAllAvailableTags(tagsCatalog);
+        console.log("Fetched all tags:", tagsCatalog);
+
+        const patientTagsRes = await fetch(`${API_BASE_URL}/patient-tags`);
+        const patientTagLinks = await patientTagsRes.json();
+
+        const relevantTags = patientTagLinks
+          .filter((tag: any) => tag.idPaciente === patientId)
+          .map((tag: any) => {
+            const tagInfo = tagsCatalog.find((t) => t.uuid === tag.idEtiqueta);
+            return tagInfo ? { id: tagInfo.uuid, name: tagInfo.name } : null;
+          })
+          .filter(Boolean) as EtiquetaPaciente[];
+
+        setDisplayedEtiquetas(relevantTags);
+
       } catch {
         toast({
           title: "Error",
@@ -114,6 +161,52 @@ export default function OdontogramaPage() {
     if (patientId) load();
   }, [patientId, toast]);
 
+  const handleAddTag = async (tagName: string): Promise<boolean> => {
+    if (!paciente) return false;
+
+    if (displayedEtiquetas.some(tag => tag.name === tagName)) {
+      toast({ title: "Etiqueta duplicada", variant: "destructive" });
+      return false;
+    }
+
+    const found = allAvailableTags.find(tag => tag.name === tagName);
+    if (!found) {
+      console.log("Etiquetas: ", allAvailableTags);
+      toast({
+        title: "Etiqueta no encontrada",
+        description: `"${tagName}" no está en el catálogo`,
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:3001/api/patient-tags`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+        body: JSON.stringify({
+          idPaciente: paciente.id,
+          idEtiqueta: found.uuid,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Error al agregar etiqueta");
+
+      setDisplayedEtiquetas((prev) => [...prev, { id: found.uuid, name: found.name }]);
+      toast({ title: "Etiqueta agregada" });
+      return true;
+    } catch (error) {
+      toast({
+        title: "Error al agregar etiqueta",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
   const handleNewOdontogram = async () => {
     try {
       await createOdontogram(patientId as string);
@@ -187,12 +280,12 @@ export default function OdontogramaPage() {
         />
         <div className="flex-1 space-y-6">
           <EtiquetasNotasSalud
-            etiquetas={paciente.etiquetas || []}
+            etiquetas={displayedEtiquetas || []}
             notas={paciente.notas || "Sin notas"}
             alergias={paciente.alergias || []}
             enfermedades={paciente.enfermedades || []}
             onSaveNotes={() => {}}
-            onAddTag={() => true}
+            onAddTag={handleAddTag}
             patientId={patientId as string}
           />
           <Card>

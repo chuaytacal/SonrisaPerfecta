@@ -138,19 +138,26 @@ const updatePerson = async (uuid: string, data: Partial<BackendPersona>): Promis
 };
 
 const createPerson = async (data: Omit<BackendPersona, 'uuid'>): Promise<BackendPersona> => {
-    return fetcher<BackendPersona>(`${API_BASE_URL}/staff/person`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-    });
+  return fetcher<BackendPersona>(`${API_BASE_URL}/staff/person`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 };
 
 const getAntecedentsByUuid = async (uuid: string): Promise<BackendAntecedentesMedicos> => {
-  return fetcher<BackendAntecedentesMedicos>(`${API_BASE_URL}/antecedent-details/${uuid}`);
+  return fetcher<BackendAntecedentesMedicos>(`${API_BASE_URL}/antecedent-patients/by-patient/${uuid}`);
 };
 
 const updateAntecedents = async (id: string, data: Partial<BackendAntecedentesMedicos>): Promise<BackendAntecedentesMedicos> => {
-  return fetcher<BackendAntecedentesMedicos>(`${API_BASE_URL}/antecedent-details/${id}`, {
+  return fetcher<BackendAntecedentesMedicos>(`${API_BASE_URL}/antecedent-patients/${id}`, {
     method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+};
+
+const createAntecedents = async (data: BackendAntecedentesMedicos): Promise<BackendAntecedentesMedicos> => {
+  return fetcher<BackendAntecedentesMedicos>(`${API_BASE_URL}/antecedent-patients`, {
+    method: 'POST',
     body: JSON.stringify(data),
   });
 };
@@ -330,17 +337,27 @@ export default function FiliacionPage() {
               setApoderado(null);
           }
   
-          if (fetchedPaciente.antecedentesMedicosUuid) {
-              const fetchedAntecedents = await getAntecedentsByUuid(fetchedPaciente.antecedentesMedicosUuid);
-              setAntecedentesForm(fetchedAntecedents);
-              setAntecedentesUuid(fetchedPaciente.antecedentesMedicosUuid);
-              setDisplayedAlergias(deriveAlergiasFromAntecedentes(fetchedAntecedents));
-              setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(fetchedAntecedents));
+          if (fetchedPaciente) {
+            console.log("✅ Entering antecedentes fetch block...", fetchedPaciente);
+            const data = await getAntecedentsByUuid(fetchedPaciente.idPaciente);
+            const {
+              patient,
+              createdAt,
+              updatedAt,
+              idAntecedentePaciente,
+              ...cleanedForm
+            } = data;
+            setAntecedentesForm(cleanedForm);
+            setAntecedentesUuid(data.idAntecedentePaciente);
+            setDisplayedAlergias(deriveAlergiasFromAntecedentes(data));
+            setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(data));
           } else {
-              setAntecedentesForm(emptyAntecedentesMedicosData);
-              setAntecedentesUuid(null);
-              setDisplayedAlergias([]);
-              setDisplayedEnfermedades([]);
+            console.log("No data bro...");
+            console.log("Setting empty antecedentes form...:", fetchedPaciente);
+            setAntecedentesForm(emptyAntecedentesMedicosData);
+            setAntecedentesUuid(null);
+            setDisplayedAlergias([]);
+            setDisplayedEnfermedades([]);
           }
   
           // Modificado para manejar las citas correctamente con el nuevo formato
@@ -410,27 +427,78 @@ export default function FiliacionPage() {
   };
 
   const handleSaveAntecedentes = async () => {
-    if (!antecedentesUuid) {
-      toast({ title: "Error", description: "UUID de antecedentes médicos no encontrado para guardar.", variant: "destructive" });
+    const patientUuid = paciente?.idPaciente;
+
+    if (!patientUuid) {
+      toast({
+        title: "Error",
+        description: "ID del paciente no disponible.",
+        variant: "destructive",
+      });
       return;
     }
-    try {
-      const updatedAntecedents = await updateAntecedents(antecedentesUuid, antecedentesForm);
-      setAntecedentesForm(updatedAntecedents);
-      setDisplayedAlergias(deriveAlergiasFromAntecedentes(updatedAntecedents));
-      setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(updatedAntecedents));
-      toast({
-        title: "Antecedentes Actualizados",
-        description: "Los antecedentes médicos del paciente han sido guardados.",
-        variant: "default"
-      });
-    } catch (error) {
-      console.error("Failed to save antecedents:", error);
-      toast({
-        title: "Error al guardar",
-        description: `No se pudieron guardar los antecedentes médicos: ${error instanceof Error ? error.message : String(error)}`,
-        variant: "destructive"
-      });
+
+    if (!antecedentesUuid) {
+      try {
+        const createdAntecedents = await createAntecedents({
+          idPaciente: patientUuid,
+          ...antecedentesForm,
+        });
+
+        console.log("Creating antecedentes with uuid:", createdAntecedents.uuid);
+        // Save UUID locally so future updates work
+        setAntecedentesUuid(createdAntecedents.uuid);
+
+        // Update local state
+        setAntecedentesForm(createdAntecedents);
+        setDisplayedAlergias(deriveAlergiasFromAntecedentes(createdAntecedents));
+        setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(createdAntecedents));
+
+        toast({
+          title: "Antecedentes creados",
+          description: "Los antecedentes médicos del paciente han sido guardados.",
+        });
+      } catch (error) {
+        console.error("Error al crear antecedentes:", error);
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : String(error),
+          variant: "destructive",
+        });
+      }
+      return;
+    }else {
+      try {
+        console.log("🧪 Payload before PATCH:", antecedentesForm);
+        const {
+          patient,
+          createdAt,
+          updatedAt,
+          idAntecedentePaciente,
+          idPaciente,
+          ...cleanedForm
+        } = antecedentesForm;
+        console.log("🧪 Payload after cleaning:", cleanedForm);
+        console.log("Updating antecedentes with uuid:", antecedentesUuid);
+        const updatedAntecedents = await updateAntecedents(antecedentesUuid, cleanedForm);
+        console.log("Id antecedentes updated:", antecedentesUuid);
+        setAntecedentesForm(updatedAntecedents);
+        setDisplayedAlergias(deriveAlergiasFromAntecedentes(updatedAntecedents));
+        setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(updatedAntecedents));
+        toast({
+          title: "Antecedentes Actualizados",
+          description: "Los antecedentes médicos del paciente han sido guardados.",
+          variant: "default"
+        });
+      } catch (error) {
+        console.log("Error al actualizar antecedentes:", antecedentesUuid);
+        console.error("Failed to save antecedents:", error);
+        toast({
+          title: "Error al guardar",
+          description: `No se pudieron guardar los antecedentes médicos: ${error instanceof Error ? error.message : String(error)}`,
+          variant: "destructive"
+        });
+      }
     }
   };
   
