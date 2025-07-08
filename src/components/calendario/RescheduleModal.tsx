@@ -1,71 +1,140 @@
-
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calendar } from '@/components/ui/calendar';
-import type { Appointment, RescheduleData } from '@/types/calendar';
-import { es } from 'date-fns/locale';
-import { startOfDay } from 'date-fns';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Combobox } from '@/components/ui/combobox';
-import { mockPersonalData, mockUsuariosData } from '@/lib/data';
-import { Globe } from 'lucide-react';
+import React, { useEffect, useState, useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
+import { es } from "date-fns/locale";
+import { startOfDay } from "date-fns";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Combobox } from "@/components/ui/combobox";
+import { Globe } from "lucide-react";
+import api from "@/lib/api";
+import { format } from "date-fns";
 
 interface RescheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onNext: (data: RescheduleData) => void;
-  appointment: Appointment;
+  onNext: (data: any) => void;
+  appointmentId: string;
 }
 
-export function RescheduleModal({ isOpen, onClose, onNext, appointment }: RescheduleModalProps) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(appointment.start);
+export function RescheduleModal({
+  isOpen,
+  onClose,
+  onNext,
+  appointmentId,
+}: RescheduleModalProps) {
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [selectedDoctorId, setSelectedDoctorId] = useState<string>(appointment.idDoctor);
+  const [selectedEndTime, setSelectedEndTime] = useState<string | null>(null);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
+  const [doctorOptions, setDoctorOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
+  const [appointmentDetails, setAppointmentDetails] = useState<any>(null);
 
-  const doctorOptions = useMemo(() => {
-    const activeDoctors = mockPersonalData.filter(p => {
-      if (p.estado !== 'Activo') return false;
-      const user = mockUsuariosData.find(u => u.id === p.idUsuario);
-      return user?.rol === 'Doctor';
-    });
-    return activeDoctors.map(p => ({
-      value: p.id,
-      label: `${p.persona.nombre} ${p.persona.apellidoPaterno} (${p.especialidad})`
-    }));
-  }, []);
-
-  const availableTimes = useMemo(() => {
-    // In a real app, this would check doctor's availability
+  const allTimes = useMemo(() => {
     const times = [];
     for (let i = 8; i < 20; i++) {
-      times.push(`${String(i).padStart(2, '0')}:00`);
-      times.push(`${String(i).padStart(2, '0')}:30`);
+      times.push(`${String(i).padStart(2, "0")}:00`);
+      times.push(`${String(i).padStart(2, "0")}:30`);
     }
     return times;
-  }, [selectedDate]);
+  }, []);
 
-  const handleNext = () => {
-    if (selectedDate && selectedTime && selectedDoctorId) {
-      onNext({
-        newDate: selectedDate,
-        newTime: selectedTime,
-        newDoctorId: selectedDoctorId,
-      });
+  const endTimeOptions = useMemo(() => {
+    if (!selectedTime) return [];
+    const [startHour, startMinute] = selectedTime.split(":").map(Number);
+    const startTotal = startHour * 60 + startMinute;
+    return allTimes.filter((time) => {
+      const [h, m] = time.split(":").map(Number);
+      return h * 60 + m > startTotal;
+    });
+  }, [selectedTime, allTimes]);
+
+  useEffect(() => {
+    if (appointmentId) {
+      const fetchAppointmentDetails = async () => {
+        try {
+          const response = await api.get(`/appointments/${appointmentId}`);
+          setAppointmentDetails(response.data);
+          const { fechaCita, horaInicio, horaFin, idSpecialist } =
+            response.data;
+          setSelectedDate(new Date(fechaCita));
+          setSelectedTime(horaInicio);
+          setSelectedEndTime(horaFin);
+          setSelectedDoctorId(idSpecialist);
+        } catch (error) {
+          console.error("Error fetching appointment details:", error);
+        }
+      };
+
+      fetchAppointmentDetails();
+    }
+  }, [isOpen, appointmentId]);
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const response = await api.get("/appointments/combos");
+        const { specialists } = response.data;
+        const activeDoctors = specialists.map((doctor: any) => ({
+          value: doctor.id,
+          label: `${doctor.name}`,
+        }));
+        setDoctorOptions(activeDoctors);
+      } catch (error) {
+        console.error("Error fetching doctors:", error);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
+
+  const handleNext = async () => {
+    if (selectedDate && selectedTime && selectedEndTime && selectedDoctorId) {
+      try {
+        const url = `http://localhost:3001/api/appointments/${appointmentId}`;
+
+        const response = await fetch(url, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fechaCita: format(selectedDate, "yyyy-MM-dd"),
+            horaInicio: selectedTime,
+            horaFin: selectedEndTime,
+            idSpecialist: selectedDoctorId,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("Error response data:", errorData);
+          throw new Error("Error al actualizar la cita.");
+        }
+
+        const data = await response.json();
+        onNext(data);
+        onClose();
+        window.location.reload();
+      } catch (error) {
+        console.error("Error al reprogramar la cita:", error);
+      }
     }
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedDate(appointment.start);
-      setSelectedTime(null);
-      setSelectedDoctorId(appointment.idDoctor);
-    }
-  }, [isOpen, appointment]);
-
-  const isNextDisabled = !selectedDate || !selectedTime || !selectedDoctorId;
+  const isNextDisabled =
+    !selectedDate || !selectedTime || !selectedEndTime || !selectedDoctorId;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -78,58 +147,76 @@ export function RescheduleModal({ isOpen, onClose, onNext, appointment }: Resche
         </DialogHeader>
         <ScrollArea className="max-h-[70vh]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 px-6 py-4">
-              {/* Left side: Calendar and Timezone */}
-              <div className='flex flex-col space-y-4'>
-                  <div className="flex justify-center rounded-md border">
-                      <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={setSelectedDate}
-                          initialFocus
-                          locale={es}
-                          disabled={(date) => date < startOfDay(new Date())}
-                      />
-                  </div>
-                   <div className='flex items-center justify-center text-sm text-muted-foreground p-2 bg-muted/50 rounded-md'>
-                      <Globe className='h-4 w-4 mr-2'/>
-                      <span className='font-medium'>Zona Horaria:</span>
-                      <span className='ml-1'>GMT-05:00 America/Lima</span>
-                   </div>
+            <div className="flex flex-col space-y-4">
+              <div className="flex justify-center rounded-md border">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  initialFocus
+                  locale={es}
+                  disabled={(date) => date < startOfDay(new Date())}
+                />
               </div>
+              <div className="flex items-center justify-center text-sm text-muted-foreground p-2 bg-muted/50 rounded-md">
+                <Globe className="h-4 w-4 mr-2" />
+                <span className="font-medium">Zona Horaria:</span>
+                <span className="ml-1">GMT-05:00 America/Lima</span>
+              </div>
+            </div>
 
-              {/* Right side: Doctor and Time slots */}
-              <div className='flex flex-col space-y-4'>
-                   <div>
-                      <label className="text-sm font-medium">Doctor</label>
-                      <Combobox
-                          options={doctorOptions}
-                          value={selectedDoctorId}
-                          onChange={setSelectedDoctorId}
-                          placeholder="Buscar doctor..."
-                      />
-                  </div>
-                   <div>
-                      <p className='text-sm text-center font-medium mb-2'>Seleccione una hora</p>
-                      <ScrollArea className="h-72 pr-3">
-                          <div className="grid grid-cols-3 gap-2">
-                              {availableTimes.map((time) => (
-                                  <Button
-                                  key={time}
-                                  variant={selectedTime === time ? 'default' : 'outline'}
-                                  onClick={() => setSelectedTime(time)}
-                                  >
-                                  {time}
-                                  </Button>
-                              ))}
-                          </div>
-                      </ScrollArea>
-                   </div>
+            <div className="flex flex-col space-y-4">
+              <div>
+                <label className="text-sm font-medium">Doctor</label>
+                <Combobox
+                  options={doctorOptions}
+                  value={selectedDoctorId}
+                  onChange={setSelectedDoctorId}
+                  placeholder="Buscar doctor..."
+                />
               </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Hora de Inicio
+                </label>
+                <input
+                  type="time"
+                  className="w-full border rounded px-3 py-2 text-sm"
+                  value={selectedTime || ""}
+                  onChange={(e) => {
+                    setSelectedTime(e.target.value);
+                    setSelectedEndTime(null);
+                  }}
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Hora de Fin
+                </label>
+                <select
+                  className="w-full border rounded px-3 py-2 text-sm"
+                  value={selectedEndTime || ""}
+                  onChange={(e) => setSelectedEndTime(e.target.value)}
+                  disabled={!selectedTime}
+                  required
+                >
+                  <option value="">Seleccione una hora</option>
+                  {endTimeOptions.map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
           <DialogFooter className="p-6 pt-4 border-t justify-center">
-            <Button variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
             <Button onClick={handleNext} disabled={isNextDisabled}>
-                Siguiente
+              Siguiente
             </Button>
           </DialogFooter>
         </ScrollArea>

@@ -364,7 +364,6 @@ export default function CalendarioPage() {
   };
 
   const handleOpenRescheduleModalFromPopover = () => {
-    setShouldDeleteOnReschedule(false);
     setIsRescheduleModalOpen(true);
     setPopoverOpen(false);
   };
@@ -936,7 +935,7 @@ export default function CalendarioPage() {
           isOpen={isRescheduleModalOpen}
           onClose={() => setIsRescheduleModalOpen(false)}
           onNext={handleProceedToRescheduleConfirm}
-          appointment={selectedEventForPopover}
+          appointmentId={selectedEventForPopover.idCita}
         />
       )}
 

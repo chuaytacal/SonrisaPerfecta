@@ -27,7 +27,7 @@ interface AppointmentPopoverContentProps {
   appointment: Appointment;
   onUpdateState: (newState: AppointmentState) => void;
   onEdit: () => void;
-  onReschedule: () => void;
+  onReschedule: (idCita: string) => void; 
   onDelete: () => void;
   onViewPatient: (patientId: string) => void;
 }
@@ -151,7 +151,7 @@ export function AppointmentPopoverContent({
         <Button
           variant="ghost"
           className="justify-start px-2 text-foreground hover:bg-muted hover:text-foreground"
-          onClick={onReschedule}
+          onClick={() => onReschedule(appointment.idCita)}
         >
           <Calendar className="mr-2 h-4 w-4" /> Reprogramar cita
         </Button>
