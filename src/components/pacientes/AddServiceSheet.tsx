@@ -50,7 +50,8 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSuccess, editingBudget
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<ItemPresupuesto | null>(null);
   
-  console.log("received",paciente)
+  console.log("receivsed",paciente)  
+  console.log("combos", comboData)
   useEffect(() => {
     if (isOpen) {
         if (editingBudget) {
@@ -232,7 +233,7 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSuccess, editingBudget
         }
 
         toast({ title: "Presupuesto Creado", description: "El presupuesto ha sido guardado exitosamente." });
-        onSuccess();
+        onSuccess?.();
         onOpenChange(false);
     } catch (error) {
         console.error("Error guardando el presupuesto:", error);

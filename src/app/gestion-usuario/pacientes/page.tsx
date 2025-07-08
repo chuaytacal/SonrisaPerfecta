@@ -598,8 +598,8 @@ export default function PacientesPage() {
         isOpen={isAddServiceSheetOpen}
         onOpenChange={setIsAddServiceSheetOpen}
         onSave={handleSaveService}
-        specialists={combos.specialists}
-        procedures={combos.procedures}
+        paciente={selectedPatientForService}
+        comboData={combos}
       />
 
       {pacienteToAction && confirmAction && (
