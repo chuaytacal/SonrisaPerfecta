@@ -50,7 +50,7 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSuccess, editingBudget
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<ItemPresupuesto | null>(null);
   
-
+  console.log("received",paciente)
   useEffect(() => {
     if (isOpen) {
         if (editingBudget) {
@@ -201,8 +201,9 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSuccess, editingBudget
 
     try {
         // Step 1: Create budget header
+        console.log(paciente?.id)
         const budgetHeaderPayload = {
-            idPaciente: paciente?.id,
+            idPaciente: paciente?.idPaciente,
             // idHistoriaClinica: paciente?.idHistoriaClinica, // TODO: Uncomment when backend supports this field
             idEspecialista: doctorResponsableId,
             nombre: nombrePresupuesto,
