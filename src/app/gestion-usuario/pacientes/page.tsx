@@ -289,9 +289,41 @@ export default function PacientesPage() {
     setIsAddPacienteFormOpen(true);
   };
 
-  const handleToggleStatus = (paciente: Paciente) => {
-    console.log("Toggling status for", paciente.id);
-  };
+  const handleToggleStatus = async (paciente: Paciente) => {
+  const newEstado = paciente.estado === "Activo" ? "Inactivo" : "Activo";
+
+  try {
+    const response = await fetch(
+      `http://localhost:3001/api/patients/${paciente.idPaciente}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          estado: newEstado,
+          nota: paciente.nota ?? "", // mantener la nota original
+        }),
+      }
+    );
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || "No se pudo actualizar el estado del paciente.");
+    }
+
+    await fetchData(); // Recargar lista actualizada
+
+    toast({
+      title: "Estado actualizado",
+      description: `El paciente ha sido ${newEstado === "Activo" ? "activado" : "desactivado"}.`,
+    });
+  } catch (error: any) {
+    toast({
+      title: "Error",
+      description: error.message || "No se pudo actualizar el estado.",
+      variant: "destructive",
+    });
+  }
+};
 
   const handleViewDetails = (pacienteId: string) => {
     router.push(`/gestion-usuario/pacientes/${pacienteId}/filiacion`);
@@ -377,7 +409,7 @@ export default function PacientesPage() {
       cell: ({ row }) => {
         const phone = row.original.persona.telefono;
         if (!phone) return <span>N/A</span>;
-        const phoneNumber = parsePhoneNumberFromString(phone, "PE");
+        const phoneNumber = parsePhoneNumberFromString('+' + phone);
         return (
           <span>{phoneNumber ? phoneNumber.formatInternational() : phone}</span>
         );
@@ -406,22 +438,28 @@ export default function PacientesPage() {
       id: "persona.createdAt",
       accessorKey: "persona.createdAt",
       header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Fecha de Ingreso
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
+        <div className="text-center">
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Fecha de Ingreso
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
       ),
       cell: ({ row }) => {
         const date = new Date(row.original.persona.createdAt);
-        return date.toLocaleDateString("es-ES", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          timeZone: "America/Lima", // Cambio clave aquí
-        });
+        return (
+          <div className="text-center">
+            {date.toLocaleDateString("es-ES", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              timeZone: "America/Lima",
+            })}
+          </div>
+        );
       },
     },
     {
@@ -443,37 +481,39 @@ export default function PacientesPage() {
       cell: ({ row }) => {
         const paciente = row.original;
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Abrir menú</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-              <DropdownMenuItem onSelect={() => handleViewDetails(paciente.id)}>
-                <Eye className="mr-2 h-4 w-4" /> Ver Detalles
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => handleOpenAddServiceSheet(paciente)}
-              >
-                <PlusCircle className="mr-2 h-4 w-4" /> Añadir Servicio
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => openEditModal(paciente)}>
-                <Edit className="mr-2 h-4 w-4" /> Editar
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => handleToggleStatus(paciente)}>
-                {paciente.estado === "Activo" ? (
-                  <ToggleLeft className="mr-2 h-4 w-4" />
-                ) : (
-                  <ToggleRight className="mr-2 h-4 w-4" />
-                )}
-                {paciente.estado === "Activo" ? "Desactivar" : "Activar"}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="text-center">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Abrir menú</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                <DropdownMenuItem onSelect={() => handleViewDetails(paciente.id)}>
+                  <Eye className="mr-2 h-4 w-4" /> Ver Detalles
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => handleOpenAddServiceSheet(paciente)}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" /> Añadir Servicio
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => openEditModal(paciente)}>
+                  <Edit className="mr-2 h-4 w-4" /> Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => handleToggleStatus(paciente)}>
+                  {paciente.estado === "Activo" ? (
+                    <ToggleLeft className="mr-2 h-4 w-4" />
+                  ) : (
+                    <ToggleRight className="mr-2 h-4 w-4" />
+                  )}
+                  {paciente.estado === "Activo" ? "Desactivar" : "Activar"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         );
       },
     },
