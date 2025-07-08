@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -346,11 +347,19 @@ export default function PacientesPage() {
         const paciente = row.original;
         const nombreCompleto = `${paciente.persona.nombre} ${paciente.persona.apellidoPaterno} ${paciente.persona.apellidoMaterno}`;
         return (
-          <div>
-            <div className="font-medium">{nombreCompleto}</div>
-            <div className="text-xs text-muted-foreground">
-              {paciente.persona.tipoDocumento}:{" "}
-              {paciente.persona.numeroDocumento}
+          <div className="flex items-center space-x-3">
+              <Avatar>
+                <AvatarImage src={paciente.avatarUrl} alt={nombreCompleto} />
+                  <AvatarFallback>
+                    {(paciente.persona.nombre?.[0] || '') + (paciente.persona.apellidoPaterno?.[0] || '')}
+                  </AvatarFallback>
+              </Avatar>
+            <div>
+              <div className="font-medium">{nombreCompleto}</div>
+              <div className="text-xs text-muted-foreground">
+                {paciente.persona.tipoDocumento}:{" "}
+                {paciente.persona.numeroDocumento}
+              </div>
             </div>
           </div>
         );

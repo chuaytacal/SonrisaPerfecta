@@ -90,7 +90,7 @@ export function SelectPersonaModal({
               </TableHeader><TableBody>
                 {filteredPersonas.length > 0 ? (
                   filteredPersonas.map((persona) => (
-                    <TableRow key={persona.id}>
+                    <TableRow key={`${persona.id}-${persona.numeroDocumento}`}>
                       <TableCell className="whitespace-nowrap">{persona.tipoDocumento}: {persona.numeroDocumento}</TableCell>
                       <TableCell className="whitespace-nowrap">{`${persona.nombre} ${persona.apellidoPaterno} ${persona.apellidoMaterno}`}</TableCell>
                       <TableCell className="whitespace-nowrap">

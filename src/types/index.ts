@@ -19,6 +19,7 @@ export interface Persona {
   email?: string;
   uuid?: string;
   isActive?: boolean;
+  createdAt?: any;
 }
 
 export type Rol = 'Administrador' | 'Doctor' | 'Secretaria';
@@ -173,6 +174,7 @@ export interface Paciente {
   fechaIngreso: string; // "DD/MM/YYYY"
   estado: "Activo" | "Inactivo";
   etiquetas: EtiquetaPaciente[];
+  avatarUrl?: string;
   notas?: string;
   antecedentesMedicos?: AntecedentesMedicosData;
   idApoderado?: string;
@@ -225,7 +227,10 @@ export type Personal = {
   idPersona: string; // FK a la tabla Persona
   persona: Persona; // Datos de la persona anidados
   fechaIngreso: string; // "DD/MM/YYYY" - Fecha de ingreso como personal
-  estado: "Activo" | "Inactivo";
+  isActive?: boolean;
+  estado?: "Activo" | "Inactivo";
+  uuidUser?: string;
+  email?: string;
   avatarUrl?: string; // Específico del rol de personal
   especialidad?: string;
   idUsuario?: string;

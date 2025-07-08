@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
@@ -28,7 +30,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import type { Personal, Persona, TipoDocumento, Sexo, Rol, Usuario } from "@/types";
+import type { Personal, Persona, TipoDocumento, Sexo, Rol } from "@/types";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -42,25 +44,13 @@ import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
-import { DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { parsePhoneNumber, E164Number } from 'libphonenumber-js';
+
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{5,30}$/;
 
-type PersonalFormValues = z.infer<ReturnType<typeof createPersonalFormSchema>>;
-
-interface AddPersonalFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onStaffSaved: (personalOutput: Personal, usuarioOutput: Usuario) => void;
-  initialPersonalData?: Personal | null;
-  initialUsuarioData?: Usuario | null;
-  selectedPersonaToPreload?: Persona | null;
-  isCreatingNewPersonaFlow?: boolean;
-  personalList: Personal[];
-}
-
-const createPersonalFormSchema = (initialUsuarioData?: Usuario | null) => z.object({
+const createPersonalFormSchema = (isEditMode: boolean) => z.object({
   // Persona fields
   tipoDocumento: z.enum(["DNI", "EXTRANJERIA", "PASAPORTE"], { required_error: "Seleccione un tipo de documento." }),
   numeroDocumento: z.string().min(1, { message: "El número de documento es requerido." }),
@@ -70,7 +60,7 @@ const createPersonalFormSchema = (initialUsuarioData?: Usuario | null) => z.obje
   fechaNacimiento: z.date({ required_error: "La fecha de nacimiento es requerida."}),
   sexo: z.enum(["M", "F"], { required_error: "Seleccione un sexo." }),
   direccion: z.string().min(1, {message: "La dirección es requerida."}),
-  telefono: z.string().refine(isValidPhoneNumber, { message: "Número de teléfono inválido." }),
+  telefono: z.string().refine(value => value ? isValidPhoneNumber(value) : false, { message: "Número de teléfono inválido." }),
   
   // Personal specific fields
   fechaIngreso: z.date({ required_error: "La fecha de ingreso es requerida."}), 
@@ -91,7 +81,7 @@ const createPersonalFormSchema = (initialUsuarioData?: Usuario | null) => z.obje
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Debe tener entre 8 y 12 caracteres.", path: ["numeroDocumento"] });
     }
     
-    if (!initialUsuarioData && (!data.contrasena || !data.confirmarContrasena)) {
+    if (!isEditMode && (!data.contrasena || !data.confirmarContrasena)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "La contraseña es requerida para nuevos usuarios.", path: ["contrasena"] });
     }
 
@@ -105,12 +95,23 @@ const createPersonalFormSchema = (initialUsuarioData?: Usuario | null) => z.obje
     }
 });
 
+type PersonalFormValues = z.infer<ReturnType<typeof createPersonalFormSchema>>;
+
+interface AddPersonalFormProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onStaffSaved: (personalOutput: Personal) => void;
+  initialPersonalData?: Personal | null;
+  selectedPersonaToPreload?: Persona | null;
+  isCreatingNewPersonaFlow?: boolean;
+  personalList: Personal[];
+}
+
 export function AddPersonalForm({
     open,
     onOpenChange,
     onStaffSaved,
     initialPersonalData,
-    initialUsuarioData,
     selectedPersonaToPreload,
     isCreatingNewPersonaFlow,
     personalList
@@ -121,7 +122,7 @@ export function AddPersonalForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const personalFormSchema = useMemo(() => createPersonalFormSchema(initialUsuarioData), [initialUsuarioData]);
+  const personalFormSchema = useMemo(() => createPersonalFormSchema(isEditMode), [isEditMode]);
 
   const form = useForm<PersonalFormValues>({
     resolver: zodResolver(personalFormSchema),
@@ -168,7 +169,6 @@ export function AddPersonalForm({
         estado: "Activo", 
         rol: "Doctor",
         fechaIngreso: new Date(), 
-        fechaNacimiento: new Date(),
         numeroDocumento: "", 
         nombre: "", 
         apellidoPaterno: "", 
@@ -183,33 +183,37 @@ export function AddPersonalForm({
 
       if (isEditMode && initialPersonalData) { 
         const persona = initialPersonalData.persona;
+        const phoneFromBackend = persona.telefono;
+        const e164Phone = phoneFromBackend ? `+${phoneFromBackend.replace(/\s+/g, '')}` : "";
+
         defaultVals = {
-            ...persona, 
-            fechaNacimiento: new Date(persona.fechaNacimiento), 
-            fechaIngreso: initialPersonalData.fechaIngreso ? new Date(initialPersonalData.fechaIngreso) : new Date(),
+            ...persona,
+            fechaNacimiento: new Date(persona.fechaNacimiento + 'T00:00:00'), 
+            fechaIngreso: initialPersonalData.fechaIngreso ? new Date(initialPersonalData.fechaIngreso + 'T00:00:00') : new Date(),
             estado: initialPersonalData.estado,
-            usuario: initialUsuarioData?.usuario || "",
-            rol: initialUsuarioData?.rol || "Doctor",
-            email: persona.email || "",
-            contrasena: "", // Dejamos vacío intencionalmente para no exponer la contraseña
+            rol: initialPersonalData.rol,
+            usuario: initialPersonalData.usuario,
+            email: initialPersonalData.email,
+            telefono: e164Phone,
+            contrasena: "",
             confirmarContrasena: ""
         };
       } else if (selectedPersonaToPreload && !isCreatingNewPersonaFlow) { 
         defaultVals = {
             ...selectedPersonaToPreload,
-            fechaNacimiento: new Date(selectedPersonaToPreload.fechaNacimiento),
+            fechaNacimiento: new Date(selectedPersonaToPreload.fechaNacimiento + 'T00:00:00'),
             fechaIngreso: new Date(),
             estado: "Activo",
-            email: selectedPersonaToPreload.email || "",
             rol: "Doctor",
             usuario: "",
+            email: "",
             contrasena: "",
             confirmarContrasena: ""
         };
       }
       form.reset(defaultVals);
     }
-  }, [initialPersonalData, initialUsuarioData, selectedPersonaToPreload, isCreatingNewPersonaFlow, isEditMode, open, form]);
+  }, [initialPersonalData, selectedPersonaToPreload, isCreatingNewPersonaFlow, isEditMode, open, form]);
 
   const handleDocumentBlur = async () => {
     if (isEditMode || !isCreatingNewPersonaFlow) return;
@@ -228,92 +232,105 @@ export function AddPersonalForm({
     setIsSubmitting(true);
     
     try {
-      // 1. Crear/Actualizar persona en el backend
-      const personaMethod = isEditMode ? 'PATCH' : 'POST';
-      const personaUrl = isEditMode 
-        ? `http://localhost:3001/api/staff/person/${initialPersonalData?.idPersona}`
-        : 'http://localhost:3001/api/staff/person';
-
-      const personaResponse = await fetch(personaUrl, {
-        method: personaMethod,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tipoDocumento: values.tipoDocumento,
-          numeroDocumento: values.numeroDocumento,
-          nombre: values.nombre,
-          apellidoPaterno: values.apellidoPaterno,
-          apellidoMaterno: values.apellidoMaterno,
-          fechaNacimiento: format(values.fechaNacimiento, 'yyyy-MM-dd'),
-          sexo: values.sexo,
-          direccion: values.direccion,
-          telefono: values.telefono.replace(/\D/g, ''),
-          isActive: values.estado === "Activo" // Asegúrate que el backend espera este campo
-        })
-      });
-
-      if (!personaResponse.ok) {
-        const errorData = await personaResponse.json();
-        throw new Error(errorData.message || 'Error al crear/actualizar la persona');
+      let formattedPhoneForBackend = '';
+      if (values.telefono) {
+        const phoneNumber = parsePhoneNumber(values.telefono as E164Number);
+        if (phoneNumber) {
+          formattedPhoneForBackend = `${phoneNumber.countryCallingCode}${phoneNumber.nationalNumber}`;
+        }
       }
-
-      const personaData = await personaResponse.json();
-
-      // 2. Crear/Actualizar especialista en el backend
-      const specialistMethod = isEditMode ? 'PATCH' : 'POST';
-      const specialistUrl = isEditMode 
-        ? `http://localhost:3001/api/staff/specialist/${initialPersonalData?.id}`
-        : 'http://localhost:3001/api/staff/specialist';
-
-      const specialistResponse = await fetch(specialistUrl, {
-        method: specialistMethod,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          uuidPersona: personaData.uuid,
-          fechaIngreso: format(values.fechaIngreso, 'yyyy-MM-dd'),
-          estado: values.estado // Asegúrate que el backend recibe este campo
-        })
-      });
-
-      if (!specialistResponse.ok) {
-        const errorData = await specialistResponse.json();
-        throw new Error(errorData.message || 'Error al crear/actualizar el especialista');
-      }
-
-      const specialistData = await specialistResponse.json();
-
-      // 3. Manejo del usuario
+      
+      let personaData;
+      let specialistData;
       let userData;
-      if (isEditMode && initialUsuarioData) {
-        // Actualizar usuario existente
-        const userUpdateResponse = await fetch(`http://localhost:3001/api/auth/user/${initialUsuarioData.id}`, {
+
+      if (isEditMode && initialPersonalData) {
+        // --- EDIT MODE ---
+
+        // 1. Update Person
+        const personaResponse = await fetch(`http://localhost:3001/api/staff/person/${initialPersonalData.persona.uuid}`, {
           method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipoDocumento: values.tipoDocumento,
+            numeroDocumento: values.numeroDocumento,
+            nombre: values.nombre,
+            apellidoPaterno: values.apellidoPaterno,
+            apellidoMaterno: values.apellidoMaterno,
+            fechaNacimiento: format(values.fechaNacimiento, 'yyyy-MM-dd'),
+            sexo: values.sexo,
+            direccion: values.direccion,
+            telefono: formattedPhoneForBackend
+          })
+        });
+        if (!personaResponse.ok) throw new Error('Error al actualizar la persona');
+        personaData = await personaResponse.json();
+
+        // 2. Update Specialist
+        const specialistResponse = await fetch(`http://localhost:3001/api/staff/specialist/${initialPersonalData.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fechaIngreso: format(values.fechaIngreso, "yyyy-MM-dd"),
+            isActive: values.estado === 'Activo',
+          })
+        });
+        if (!specialistResponse.ok) throw new Error('Error al actualizar el especialista');
+        specialistData = await specialistResponse.json();
+
+        // 3. Update User
+        const userUpdateResponse = await fetch(`http://localhost:3001/api/auth/update-user/${initialPersonalData.uuidUser}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: values.email,
             username: values.usuario,
-            password: values.contrasena || undefined, // Solo enviar si hay cambio
-            rol: values.rol
+            password: values.contrasena || undefined,
+            rol: values.rol,
+            uuidEspecialista: initialPersonalData.id
           })
         });
-
-        if (!userUpdateResponse.ok) {
-          const errorData = await userUpdateResponse.json();
-          throw new Error(errorData.message || 'Error al actualizar el usuario');
-        }
+        if (!userUpdateResponse.ok) throw new Error('Error al actualizar el usuario');
         userData = await userUpdateResponse.json();
+
       } else {
-        // Crear nuevo usuario
+        // --- CREATE MODE ---
+
+        // 1. Create Person
+        const personaResponse = await fetch('http://localhost:3001/api/staff/person', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipoDocumento: values.tipoDocumento,
+            numeroDocumento: values.numeroDocumento,
+            nombre: values.nombre,
+            apellidoPaterno: values.apellidoPaterno,
+            apellidoMaterno: values.apellidoMaterno,
+            fechaNacimiento: format(values.fechaNacimiento, 'yyyy-MM-dd'),
+            sexo: values.sexo,
+            direccion: values.direccion,
+            telefono: formattedPhoneForBackend
+          })
+        });
+        if (!personaResponse.ok) throw new Error('Error al crear la persona');
+        personaData = await personaResponse.json();
+
+        // 2. Create Specialist
+        const specialistResponse = await fetch('http://localhost:3001/api/staff/specialist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uuidPersona: personaData.uuid,
+            fechaIngreso: format(values.fechaIngreso, "yyyy-MM-dd"),
+          })
+        });
+        if (!specialistResponse.ok) throw new Error('Error al crear el especialista');
+        specialistData = await specialistResponse.json();
+
+        // 3. Register User
         const registerResponse = await fetch('http://localhost:3001/api/auth/register', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: values.email,
             username: values.usuario,
@@ -322,40 +339,27 @@ export function AddPersonalForm({
             uuidEspecialista: specialistData.uuid
           })
         });
-
-        if (!registerResponse.ok) {
-          const errorData = await registerResponse.json();
-          throw new Error(errorData.message || 'Error al registrar el usuario');
-        }
+        if (!registerResponse.ok) throw new Error('Error al registrar el usuario');
         userData = await registerResponse.json();
       }
-
-      // Construir objeto personal completo para la lista
-      const personalOutput: Personal = {
+      
+      const finalPersonalData: Personal = {
         id: specialistData.uuid,
-        idPersona: personaData.id,
-        persona: {
-          ...personaData,
-          isActive: values.estado === "Activo"
-        },
+        persona: { ...personaData, telefono: formattedPhoneForBackend },
         fechaIngreso: format(values.fechaIngreso, 'yyyy-MM-dd'),
         estado: values.estado,
+        isActive: values.estado === 'Activo',
         rol: values.rol,
-        idUsuario: userData.id
-      };
-
-      const usuarioOutput: Usuario = {
-        id: userData.id,
+        email: values.email,
         usuario: values.usuario,
-        rol: values.rol
+        uuidUser: userData.uuid || initialPersonalData?.uuidUser,
       };
 
-      onStaffSaved(personalOutput, usuarioOutput);
+      onStaffSaved(finalPersonalData);
 
       toast({
         title: "Éxito",
         description: `Personal ${isEditMode ? 'actualizado' : 'registrado'} correctamente`,
-        variant: "default",
       });
 
       onOpenChange(false);
@@ -404,7 +408,7 @@ export function AddPersonalForm({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tipo de Documento</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isTipoDocNumDisabled}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isTipoDocNumDisabled}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccione..." />
@@ -592,12 +596,15 @@ export function AddPersonalForm({
                   <FormItem>
                     <FormLabel>Teléfono</FormLabel>
                     <FormControl>
-                      <PhoneInput 
-                        international 
-                        defaultCountry="PE" 
-                        placeholder="987 654 321" 
-                        {...field} 
+                      <PhoneInput
+                        international
+                        countryCallingCodeEditable={false}
+                        defaultCountry="PE"
+                        placeholder="987 654 321"
+                        value={field.value}
+                        onChange={field.onChange}
                         disabled={isOtherPersonaFieldsDisabled}
+                        className="input"
                       />
                     </FormControl>
                     <FormMessage />
