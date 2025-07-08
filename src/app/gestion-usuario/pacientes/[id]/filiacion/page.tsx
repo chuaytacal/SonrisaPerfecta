@@ -163,7 +163,14 @@ const createAntecedents = async (data: BackendAntecedentesMedicos): Promise<Back
 };
 
 const getAllAppointments = async (uuid: string): Promise<BackendAppointment[]> => {
-  return fetcher<BackendAppointment[]>(`${API_BASE_URL}/appointments/by-patient/${uuid}`);
+  try {
+    return await fetcher<BackendAppointment[]>(`${API_BASE_URL}/appointments/by-patient/${uuid}`);
+  } catch (error: any) {
+    if (error.message?.includes('404')) {
+      return []; // gracefully handle "no appointments"
+    }
+    throw error; // rethrow other errors
+  }
 };
 
 const getAllTags = async (): Promise<BackendTag[]> => {
@@ -339,18 +346,27 @@ export default function FiliacionPage() {
   
           if (fetchedPaciente) {
             console.log("✅ Entering antecedentes fetch block...", fetchedPaciente);
-            const data = await getAntecedentsByUuid(fetchedPaciente.idPaciente);
-            const {
-              patient,
-              createdAt,
-              updatedAt,
-              idAntecedentePaciente,
-              ...cleanedForm
-            } = data;
-            setAntecedentesForm(cleanedForm);
-            setAntecedentesUuid(data.idAntecedentePaciente);
-            setDisplayedAlergias(deriveAlergiasFromAntecedentes(data));
-            setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(data));
+            try{
+              const data = await getAntecedentsByUuid(fetchedPaciente.idPaciente);
+              const {
+                patient,
+                createdAt,
+                updatedAt,
+                idAntecedentePaciente,
+                ...cleanedForm
+              } = data;
+              setAntecedentesForm(cleanedForm);
+              setAntecedentesUuid(data.idAntecedentePaciente);
+              setDisplayedAlergias(deriveAlergiasFromAntecedentes(data));
+              setDisplayedEnfermedades(deriveEnfermedadesFromAntecedentes(data));
+            } catch (error) {
+              console.log("No data bro...");
+              console.log("Setting empty antecedentes form...:", fetchedPaciente);
+              setAntecedentesForm(emptyAntecedentesMedicosData);
+              setAntecedentesUuid(null);
+              setDisplayedAlergias([]);
+              setDisplayedEnfermedades([]);
+            }
           } else {
             console.log("No data bro...");
             console.log("Setting empty antecedentes form...:", fetchedPaciente);
@@ -361,8 +377,16 @@ export default function FiliacionPage() {
           }
   
           // Modificado para manejar las citas correctamente con el nuevo formato
-          const allAppointments = await getAllAppointments(patientId);
-          setPatientAppointments(getPatientAppointments(allAppointments, patientId));
+          try{
+            const fetchedAppointments = await getAllAppointments(patientId);
+            console.log("Fetched appointments:", fetchedAppointments);
+          }catch (error) {
+            const emptyAppointments: BackendAppointment[] = [];
+            setPatientAppointments([]); // Set empty appointments if fetch fails
+          }
+          // const allAppointments = await getAllAppointments(patientId);
+          // console.log("All appointments fetched:", allAppointments);
+          // setPatientAppointments(getPatientAppointments(allAppointments, patientId));
   
           const tags = await getAllTags();
           setAllAvailableTags(tags);
