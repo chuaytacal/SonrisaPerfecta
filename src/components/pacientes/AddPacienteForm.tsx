@@ -60,7 +60,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import PhoneInput from "react-phone-number-input";
 import {
   isValidPhoneNumber,
+  parsePhoneNumber,
   parsePhoneNumberFromString,
+  E164Number
 } from "libphonenumber-js";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
@@ -100,7 +102,7 @@ const pacienteFormSchema = z
     estado: z.enum(["Activo", "Inactivo"], {
       required_error: "Seleccione un estado.",
     }),
-    notas: z.string().optional(),
+    // notas: z.string().optional(),
     etiquetas: z.array(z.string()).optional(),
 
     // Apoderado fields (optional)
@@ -291,7 +293,7 @@ export function AddPacienteForm({
       direccion: "",
       telefono: "",
       estado: "Activo",
-      notas: "",
+      // notas: "",
       etiquetas: [],
       apoderado_tipoDocumento: "DNI",
       apoderado_direccion: "",
@@ -362,6 +364,9 @@ export function AddPacienteForm({
 
       if (isEditMode && initialPacienteData) {
         const persona = initialPacienteData.persona;
+        const phoneFromBackend = persona.telefono;
+        const e164Phone = phoneFromBackend ? `+${phoneFromBackend.replace(/\s+/g, '')}` : "";
+
         defaultVals = {
           ...persona,
           fechaNacimiento: new Date(persona.fechaNacimiento),
@@ -371,7 +376,8 @@ export function AddPacienteForm({
               )
             : new Date(),
           estado: initialPacienteData.estado,
-          notas: initialPacienteData.notas || "",
+          telefono: e164Phone,
+          // notas: initialPacienteData.notas || "",
           etiquetas: initialPacienteData.etiquetas || [],
         };
         if (initialApoderadoData) {
@@ -398,7 +404,7 @@ export function AddPacienteForm({
           fechaNacimiento: new Date(selectedPersonaToPreload.fechaNacimiento),
           fechaIngreso: new Date(),
           estado: "Activo",
-          notas: "",
+          // notas: "",
           etiquetas: [],
         };
       }
@@ -416,6 +422,14 @@ export function AddPacienteForm({
   ]);
 
   async function onSubmit(values: PacienteFormValues) {
+    let formattedPhoneForBackend = '';
+    if (values.telefono) {
+      const phoneNumber = parsePhoneNumber(values.telefono as E164Number);
+      if (phoneNumber) {
+        formattedPhoneForBackend = `${phoneNumber.countryCallingCode}${phoneNumber.nationalNumber}`;
+      }
+    }
+
     if (isEditMode && initialPacienteData) {
       // --- EDIT MODE ---
       try {
@@ -428,18 +442,16 @@ export function AddPacienteForm({
           fechaNacimiento: format(values.fechaNacimiento, "yyyy-MM-dd"),
           sexo: values.sexo,
           direccion: values.direccion,
-          telefono:
-            parsePhoneNumberFromString(values.telefono)?.nationalNumber ||
-            values.telefono.replace(/[^0-9]/g, ""),
+          telefono: formattedPhoneForBackend,
         };
         await api.patch(
-          `/staff/person/${initialPacienteData.persona.id}`,
+          `/staff/person/${initialPacienteData.persona.uuid}`,
           personaPayload
         );
 
         const pacientePayload = {
           estado: values.estado,
-          notas: values.notas || "",
+          // notas: values.notas || "",
         };
         await api.patch(`/patients/${initialPacienteData.id}`, pacientePayload);
 
@@ -513,9 +525,7 @@ export function AddPacienteForm({
             fechaNacimiento: format(values.fechaNacimiento, "yyyy-MM-dd"),
             sexo: values.sexo,
             direccion: values.direccion,
-            telefono:
-              parsePhoneNumberFromString(values.telefono)?.nationalNumber ||
-              values.telefono.replace(/[^0-9]/g, ""),
+            telefono: formattedPhoneForBackend,
             idApoderado: apoderadoUuid,
           };
           const personaResponse = await api.post(
@@ -539,7 +549,7 @@ export function AddPacienteForm({
         const pacientePayload = {
           idPersona: personaUuid,
           estado: values.estado,
-          nota: values.notas || "",
+          // nota: values.notas || "",
         };
         const pacienteResponse = await api.post("/patients", pacientePayload);
         console.log(
@@ -875,10 +885,13 @@ export function AddPacienteForm({
                     <FormControl>
                       <PhoneInput
                         international
+                        countryCallingCodeEditable={false}
                         defaultCountry="PE"
                         placeholder="987 654 321"
-                        {...field}
-                        disabled={isOtherPersonaFieldsDisabled && !isEditMode}
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={isOtherPersonaFieldsDisabled}
+                        className="input"
                       />
                     </FormControl>
                     <FormMessage />
@@ -936,7 +949,7 @@ export function AddPacienteForm({
                   </FormItem>
                 )}
               />
-              <FormField
+              {/* <FormField
                 control={form.control}
                 name="notas"
                 render={({ field }) => (
@@ -951,7 +964,7 @@ export function AddPacienteForm({
                     <FormMessage />
                   </FormItem>
                 )}
-              />
+              /> */}
               <FormField
                 control={form.control}
                 name="etiquetas"
