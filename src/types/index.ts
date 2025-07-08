@@ -176,6 +176,8 @@ export interface Paciente {
   etiquetas: EtiquetaPaciente[];
   avatarUrl?: string;
   notas?: string;
+  nota?: string;
+  idPaciente?: string;
   antecedentesMedicos?: AntecedentesMedicosData;
   idApoderado?: string;
   odontogramaPermanente?: DientesMap;

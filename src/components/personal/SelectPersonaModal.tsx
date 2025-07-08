@@ -95,15 +95,20 @@ export function SelectPersonaModal({
                       <TableCell className="whitespace-nowrap">{`${persona.nombre} ${persona.apellidoPaterno} ${persona.apellidoMaterno}`}</TableCell>
                       <TableCell className="whitespace-nowrap">
                         {(() => {
-                            const phone = persona.telefono;
-                            if (!phone) return <span>N/A</span>;
-                            try {
-                                const phoneNumber = parsePhoneNumberFromString(phone);
-                                if (phoneNumber) {
-                                    return <span><span className="text-muted-foreground">{`+${phoneNumber.countryCallingCode}`}</span> {phoneNumber.nationalNumber}</span>
-                                }
-                            } catch (error) {}
-                            return <span>{phone}</span>;
+                          const phone = persona.telefono;
+                          if (!phone) return <span>N/A</span>;
+                          try {
+                            // Asegúrate que empiece con "+"
+                            const phoneWithPlus = phone.startsWith("+") ? phone : `+${phone}`;
+                            const phoneNumber = parsePhoneNumberFromString(phoneWithPlus);
+
+                            if (phoneNumber) {
+                              return <span>{phoneNumber.formatInternational()}</span>;
+                            }
+                          } catch (error) {
+                            console.error("Error al formatear teléfono:", error);
+                          }
+                          return <span>{phone}</span>;
                         })()}
                       </TableCell>
                       <TableCell className="text-right">
