@@ -214,7 +214,7 @@ export function PaymentSheet({ isOpen, onOpenChange, presupuesto, paciente, item
             // Step 1: Create Payment Header
             const paymentHeaderPayload = {
                 uuidEspecialista: loggedInUserUuid,
-                uuidPaciente: paciente.id,
+                uuidPaciente: paciente.idPaciente,
                 concepto: conceptoTexto,
                 monto: totalACobrar,
                 comprobante,
