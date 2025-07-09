@@ -150,10 +150,9 @@ export default function OdontogramaPage() {
 
   const handleNewOdontogram = async () => {
     try {
-      await createOdontogram(patientId as string);
+      //await createOdontogram(patientId as string);
       toast({ title: "Odontograma creado" });
-      const updated = await fetchOdontogramHistory(patientId as string);
-      setHistorial(updated);
+      setDientes({});
     } catch {
       toast({
         title: "Error",

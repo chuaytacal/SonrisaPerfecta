@@ -338,7 +338,7 @@ export function AppointmentModal({
                     )}
                   />
 
-                  <FormItem>
+                  {/* <FormItem>
                     <FormLabel>Agregar Servicio (Opcional)</FormLabel>
                     <Combobox
                       options={procedimientoOptions}
@@ -364,7 +364,7 @@ export function AppointmentModal({
                         </button>
                       </Badge>
                     ))}
-                  </div>
+                  </div> */}
                 </div>
 
                 <div className="space-y-4 w-full">
@@ -488,7 +488,7 @@ export function AppointmentModal({
                       )}
                     />
                   )}
-                  <FormField
+                  {/* <FormField
                     control={form.control}
                     name="notas"
                     render={({ field }) => (
@@ -503,7 +503,7 @@ export function AppointmentModal({
                         <FormMessage />
                       </FormItem>
                     )}
-                  />
+                  /> */}
                 </div>
               </div>
               <DialogFooter className="p-6 pt-4 border-t flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3">
