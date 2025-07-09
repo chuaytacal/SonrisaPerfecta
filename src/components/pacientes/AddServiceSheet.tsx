@@ -119,7 +119,8 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSuccess, editingBudget
         setItemToDelete(itemToRemove);
         setIsConfirmDeleteOpen(true);
     } else {
-        confirmDeleteItem(itemToRemove.id, false);
+        // confirmDeleteItem(itemToRemove.id, false);
+        setSelectedItems(prev => prev.filter(item => item.id !== itemToRemove.id));
     }
   };
 
@@ -142,18 +143,20 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSuccess, editingBudget
   };
 
   const handleUpdateCantidad = async (itemId: string, newQuantity: number) => {
+    console.log("Updating item quantity", itemId, newQuantity);
     if (newQuantity < 1) return;
-
-    if (editingBudget && !itemId.startsWith('new-item-')) {
-        try {
-            await api.patch(`/payments/budget-item/${itemId}`, { cantidad: newQuantity });
-            toast({ title: "Cantidad actualizada", description: "La cantidad del servicio ha sido modificada." });
-        } catch (error) {
-            console.error("Error updating item quantity:", error);
-            toast({ title: "Error", description: "No se pudo actualizar la cantidad.", variant: "destructive" });
-            return; // Stop on error
-        }
-    }
+    console.log("Updating item quantityasddddddddddddddddd");
+    // if (editingBudget && !itemId.startsWith('new-item-')) {
+    //   console.log("No podemos");
+    //     try {
+    //         await api.patch(`/payments/budget-item/${itemId}`, { cantidad: newQuantity });
+    //         toast({ title: "Cantidad actualizada", description: "La cantidad del servicio ha sido modificada." });
+    //     } catch (error) {
+    //         console.error("Error updating item quantity:", error);
+    //         toast({ title: "Error", description: "No se pudo actualizar la cantidad.", variant: "destructive" });
+    //         return; // Stop on error
+    //     }
+    // }
     
     // Update local state for immediate feedback
     setSelectedItems(prev =>
@@ -163,7 +166,7 @@ export function AddServiceSheet({ isOpen, onOpenChange, onSuccess, editingBudget
             : i
         )
     );
-    onSuccess();
+    // onSuccess();
   };
   
   const total = selectedItems.reduce((acc, item) => acc + item.procedimiento.precioBase * item.cantidad, 0);
