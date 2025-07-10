@@ -94,14 +94,14 @@ export default function DashboardPage() {
     setIsClient(true);
 
     // Fetch KPIs
-    fetch("http://localhost:3001/api/dashboard/specialist")
+    fetch("http://localhost:3001/api/dashboard")
       .then((res) => res.json())
       .then((data) => {
         setKpi({
-          conteoCita: data.conteoCita || 23,
-          conteoPaciente: data.conteoPaciente || 0,
-          conteoIngresos: data.conteoIngresos || 0,
-          conteoPresupuestos: data.conteoPresupuestos || 0,
+          conteoCita: data.citasHoy || 23,
+          conteoPaciente: data.pacientesActivos || 0,
+          conteoIngresos: data.ingresosMes || 0,
+          conteoPresupuestos: data.presupuestosPendientes || 0,
         });
       })
       .catch((err) => console.error("Error al obtener KPIs:", err));
@@ -117,6 +117,26 @@ export default function DashboardPage() {
         setCitasMes(citasFiltradas);
       })
       .catch((err) => console.error("Error al obtener citas:", err));
+
+    // Fetch Actividad Reciente (solo citas)
+    fetch("http://localhost:3001/api/appointments")
+      .then((res) => res.json())
+      .then((data) => {
+        const citasOrdenadas = data
+          .sort(
+            (a: any, b: any) =>
+              new Date(b.fechaCita + "T" + b.horaInicio).getTime() -
+              new Date(a.fechaCita + "T" + a.horaInicio).getTime()
+          )
+          .slice(0, 10)
+          .map((cita: any) => ({
+            type: "cita",
+            data: cita,
+            date: new Date(`${cita.fechaCita}T${cita.horaInicio}`),
+          }));
+        setActividadReciente(citasOrdenadas);
+      })
+      .catch((err) => console.error("Error al obtener actividad reciente:", err));
   }, []);
 
   // KPI Calculations
@@ -170,26 +190,6 @@ export default function DashboardPage() {
   const appointmentStatusChartData = Object.entries(appointmentStatusData).map(
     ([name, value]) => ({ name, value })
   );
-
-  // Fetch Actividad Reciente (solo citas)
-  fetch("http://localhost:3001/api/appointments")
-    .then((res) => res.json())
-    .then((data) => {
-      const citasOrdenadas = data
-        .sort(
-          (a: any, b: any) =>
-            new Date(b.fechaCita + "T" + b.horaInicio).getTime() -
-            new Date(a.fechaCita + "T" + a.horaInicio).getTime()
-        )
-        .slice(0, 10)
-        .map((cita: any) => ({
-          type: "cita",
-          data: cita,
-          date: new Date(`${cita.fechaCita}T${cita.horaInicio}`),
-        }));
-      setActividadReciente(citasOrdenadas);
-    })
-    .catch((err) => console.error("Error al obtener actividad reciente:", err));
 
 
   const STATUS_COLORS: Record<AppointmentState, string> = {
