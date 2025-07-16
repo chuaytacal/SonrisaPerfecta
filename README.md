@@ -133,5 +133,3 @@ src/
 └── middleware.ts          # Middleware de Next.js
 ```
 
-
-Desarrollado con ❤️ para mejorar la gestión de clínicas dentales.
